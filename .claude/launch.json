@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mijn-app",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/devserver.mjs"],
+      "port": 8137
+    }
+  ]
+}

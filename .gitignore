@@ -1,0 +1,36 @@
+# Dependencies (regenerate with: npm install)
+node_modules/
+
+# Bundled Android SDK — external tooling, never committed (~550 MB)
+.android-sdk/
+
+# Generated web bundle (regenerate with: npm run build:web)
+www/
+
+# Android build outputs & machine-specific config
+android/build/
+android/.gradle/
+android/app/build/
+android/captures/
+android/app/release/
+android/app/debug/
+android/local.properties
+android/.idea/
+
+# Gradle
+.gradle/
+
+# IDE
+.idea/
+
+# Old / scratch backups
+_backups/
+*.OUD-backup-*
+index.html.OUD-*
+
+# Local tool settings (may contain machine paths / permissions)
+.claude/settings.local.json
+
+# OS cruft
+.DS_Store
+Thumbs.db

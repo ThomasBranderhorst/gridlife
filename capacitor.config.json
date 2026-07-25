@@ -1,0 +1,14 @@
+{
+  "appId": "nl.gridlife.app",
+  "appName": "GridLife",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#2F7D4F"
+    }
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

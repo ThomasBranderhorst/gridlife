@@ -31,6 +31,10 @@ index.html.OUD-*
 # Local tool settings (may contain machine paths / permissions)
 .claude/settings.local.json
 
+# Kladbestanden van AI-tooling (plannen, tussenresultaten)
+android/.artifacts/
+.artifacts/
+
 # OS cruft
 .DS_Store
 Thumbs.db

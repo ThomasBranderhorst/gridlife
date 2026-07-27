@@ -7,7 +7,8 @@
     "build:web": "node scripts/copy-web-assets.mjs",
     "sync": "npm run build:web && cap sync android",
     "apk": "npm run sync && cd android && gradlew.bat assembleDebug",
-    "test": "node scripts/tests/cases.mjs && node scripts/tests/reken.mjs"
+    "test": "node scripts/tests/cases.mjs && node scripts/tests/reken.mjs",
+    "store:assets": "node scripts/make-store-assets.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^7.4.2"
+    "@capacitor/cli": "^7.4.2",
+    "sharp": "^0.32.6"
   }
 }

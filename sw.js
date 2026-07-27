@@ -3,8 +3,14 @@
    versienummer erbij; vergat je dat te verhogen bij een update, dan bleef de webversie voor altijd op
    de oude app hangen zonder dat iemand dat doorhad. Nu wordt bij elke start de nieuwste versie gepakt
    en is de cache puur een vangnet voor als er geen internet is. Vaste bestanden (lettertype, iconen)
-   blijven wel cache-eerst — die veranderen niet en hoeven het opstarten niet te vertragen. */
-const CACHE = 'gridlife-v37';
+   blijven wel cache-eerst — die hoeven het opstarten niet te vertragen.
+
+   LET OP: "vast" is niet "voor altijd". Verandert er iets aan een bestand in ASSETS hieronder, dan
+   MOET CACHE een nieuwe naam krijgen. Cache-eerst betekent namelijk dat een bezoeker die de app al
+   geopend heeft het oude bestand houdt zolang de cachenaam gelijk blijft; de activate-stap ruimt
+   alleen caches op die anders heten. Dat ging precies zo mis bij de overstap naar het groene icoon:
+   index.html was wel bij, maar het manifest en de iconen bleven op de oude paarse versie staan. */
+const CACHE = 'gridlife-v38';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-maskable.svg', './nunito.woff2'];
 
 self.addEventListener('install', e => {

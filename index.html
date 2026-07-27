@@ -399,7 +399,6 @@ const P={LocalNotifications:plug('LocalNotifications'),Filesystem:plug('Filesyst
 /* ===== OPSLAG ===== */
 const KEY='mijnapp_v1';
 const MODULES=[{k:'uren',naam:'Uren',ico:'klok',oms:'Werkuren bijhouden en controleren'},{k:'potjes',naam:'Potjes / Sparen',ico:'pot',oms:'Vaste lasten, buffers en spaargeld'},{k:'loon',naam:'Loon',ico:'loon',oms:'Loondag en meldingen'},{k:'recept',naam:'Recepten',ico:'recept',oms:'Eigen recepten met categorieën'}];
-const ACCENTS=[['#6c8cff','#8a6cff'],['#34d399','#10b981'],['#fb923c','#f97316'],['#f472b6','#ec4899'],['#38bdf8','#0ea5e9'],['#a78bfa','#7c3aed']];
 const FREQ=[{k:'m',label:'per maand',n:1,u:'m'},{k:'w',label:'per week',n:1,u:'w'},{k:'4w',label:'per 4 weken',n:4,u:'w'},{k:'q',label:'per kwartaal',n:3,u:'m'},{k:'6m',label:'per half jaar',n:6,u:'m'},{k:'j',label:'per jaar',n:1,u:'j'},{k:'x',label:'aangepast…',n:1,u:'m'}];
 const DEFAULT={setup:false,modules:{uren:true,potjes:true,loon:true,recept:true},accent:0,lock:{on:false,pin:''},werkgevers:[],werkCfg:{},shifts:[],potjes:[],rekeningen:[],loon:{mode:'month',dag:25,intervalWeeks:4,start:''},meldingen:true,meldTijd:'08:00',overboek:{},boodschappen:[],lastBackup:null,backup:{on:true,dir:'DOCUMENTS',freq:'change'},receptCategorieen:[],recepten:[]};
 /* Standaard-instelling per werkgever ("houd het simpel"): elke dienst controleren, correctie op een latere dienst. */

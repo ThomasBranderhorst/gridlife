@@ -145,11 +145,15 @@ input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webki
 .statusbadge.none{background:var(--card2);color:var(--muted)}
 .mini{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);border-left:3px solid var(--accent);border-radius:14px;padding:4px 14px 10px;margin:4px 0 12px}
 .mini-h{font-size:11.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;padding:10px 0 2px}
-.kv{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14.5px}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;font-size:14.5px}
 .kv+.kv{border-top:1px solid var(--line)}
 .mini .kv+.kv{border-top:1px solid color-mix(in srgb,var(--accent) 16%,transparent)}
-.kv .k{color:var(--muted);font-weight:600}
-.kv .v{font-weight:800}
+/* Label en waarde mogen allebei afbreken, maar nooit tegen elkaar aan plakken: vaste gap + min-width:0. */
+.kv .k{color:var(--muted);font-weight:600;flex:0 1 auto;min-width:0}
+.kv .v{font-weight:800;flex:0 1 auto;min-width:0;text-align:right;overflow-wrap:anywhere}
+/* Rij met een lange zin als waarde: die past nooit naast het label, dus zet hem eronder. */
+.kv.stack{flex-direction:column;align-items:flex-start;gap:2px}
+.kv.stack .v{text-align:left}
 .potitem{background:var(--bg);border-radius:14px;padding:12px 14px;margin-top:8px}
 .potitem .nm{font-weight:800;flex:1;min-width:0}
 .potitem .itamt{flex-shrink:0;white-space:nowrap;text-align:right;font-weight:600}
@@ -2238,7 +2242,7 @@ function renderLoon(){
     bron.innerHTML=`<div class="kv"><span class="k">Werkgever</span><span class="v">${esc(w)}</span></div>
       <div class="kv"><span class="k">Hoe vaak</span><span class="v">${loonFreqTekst(L)}</span></div>
       <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L)}</span></div>
-      ${L.mode!=='manual'?`<div class="kv"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}
+      ${L.mode!=='manual'?`<div class="kv stack"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}
       <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,4)}</div>
       <button class="ghost" style="width:100%;margin-top:12px" onclick="openWerkCfg('${ws}')">Loondag wijzigen bij ${esc(w)}</button>
       <div class="muted" style="font-size:12.5px;margin-top:6px">Je loondag hoort bij je werkgever. Wissel je van baan, dan zet je de nieuwe werkgever op "in dienst" — de loondag verhuist mee.</div>`;

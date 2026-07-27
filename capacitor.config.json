@@ -4,8 +4,8 @@
   "webDir": "www",
   "plugins": {
     "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_sample",
-      "iconColor": "#2F7D4F"
+      "smallIcon": "ic_stat_gridlife",
+      "iconColor": "#2E7D4F"
     }
   },
   "android": {

@@ -1,9 +1,16 @@
 // Draait het app-script in node met gestubte DOM/localStorage, tegen een meegegeven dataset.
 // Vangt opstartfouten die in de browser pas zichtbaar worden als een half-dood scherm.
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+/* De index.html naast deze tests (repo-root), niet een vast pad — anders test een worktree
+   stiekem de hoofdmap. Regeleindes eerst normaliseren: met CRLF vond de zoekactie hieronder
+   het script-blok niet en werd er rauwe HTML uitgevoerd. */
+const INDEX = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'index.html');
 export function run(data, extra) {
-  const html = fs.readFileSync('C:/Users/brand/Desktop/Android app/index.html', 'utf8');
+  const html = fs.readFileSync(INDEX, 'utf8').replace(/\r\n/g, '\n');
   const i = html.indexOf('<script>\n/* ===== CAPACITOR');
+  if (i < 0) throw new Error('script-blok niet gevonden in ' + INDEX);
   const j = html.lastIndexOf('</script>');
   const body = html.slice(i + 9, j);
   const store = data ? { mijnapp_v1: JSON.stringify(data) } : {};

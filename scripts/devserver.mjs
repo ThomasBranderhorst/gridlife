@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 
 const root = process.cwd();
-const PORT = 8137;
+const PORT = Number(process.env.PORT) || 8137;
 const TYPES = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.json':'application/json', '.webmanifest':'application/manifest+json', '.svg':'image/svg+xml', '.woff2':'font/woff2', '.css':'text/css' };
 
 createServer(async (req, res) => {

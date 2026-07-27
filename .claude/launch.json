@@ -5,7 +5,8 @@
       "name": "mijn-app",
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/devserver.mjs"],
-      "port": 8137
+      "port": 8137,
+      "autoPort": true
     }
   ]
 }

@@ -3201,13 +3201,26 @@ function runConfirmSheet(){const cb=window._confirmCb;window._confirmCb=null;doc
    Bij het openen leggen we vast hoe de velden erbij staan; bij het sluiten vergelijken we.
    Alle manieren om een sheet te verlaten — de Terug-pil, de hardware-terugknop, de veeg omlaag en
    de tik naast het venster — komen uit bij closeSheet of sheetBack, dus die twee zijn genoeg. */
+/* De echte invoervelden van een sheet. De gids toont voorbeeldschermpjes met nagemaakte velden erin;
+   die staan in .gvis en tellen niet mee, anders zou de gids zichzelf als een formulier zien. */
+function sheetVelden(){
+  const s=document.getElementById('sheet');if(!s)return [];
+  return [...s.querySelectorAll('input,select,textarea')].filter(e=>!e.closest('.gvis'));
+}
 function sheetSnapshot(){
   const s=document.getElementById('sheet');if(!s)return '';
-  const velden=[...s.querySelectorAll('input,select,textarea')]
-    .map(e=>(e.type==='checkbox'||e.type==='radio')?(e.checked?'1':'0'):e.value);
+  const velden=sheetVelden().map(e=>(e.type==='checkbox'||e.type==='radio')?(e.checked?'1':'0'):e.value);
   /* Keuzechips zijn geen invoervelden maar veranderen wél wat je opslaat, dus die tellen mee. */
-  const chips=[...s.querySelectorAll('.chip.on,.check.on')].map(e=>e.textContent.trim());
+  const chips=[...s.querySelectorAll('.chip.on,.check.on')].filter(e=>!e.closest('.gvis')).map(e=>e.textContent.trim());
   return velden.join('')+''+chips.join('');
+}
+/* Bewaakt = er valt hier iets in te vullen en er is een knop om het vast te leggen. Eerder keken we
+   naar de knoptekst "Opslaan", maar niet elke bevestigknop heet zo ("Bevestigen - boekt af en logt
+   uitgave"), waardoor die formulieren stilzwijgend onbewaakt bleven. Velden + een primary-knop dekt
+   ze allemaal. */
+function sheetBewaakbaar(){
+  const s=document.getElementById('sheet');
+  return !!s&&sheetVelden().length>0&&!!s.querySelector('.primary');
 }
 function markSheetSaved(){window._sheetSnap=null;}
 /* Alleen bewaakte sheets hebben een momentopname (een string); bij alle andere staat er niets. */
@@ -3220,7 +3233,7 @@ function openSheet(html,backFn){window._sheetBack=backFn||null;
      de functienaam erachter — die varieert (saveShift, wcSave, confirmMarkLoon, ...) en een naam-patroon
      mist dan sommige formulieren zonder dat het ergens opvalt. De knoptekst is de ene garantie die altijd
      klopt: staat er "Opslaan", dan is er ook iets om weg te gooien. */
-  const bewaak=/>Opslaan<\/button>/.test(html);const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=bewaak?sheetSnapshot():null;}
+  const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;}
 function sheetBack(){
   if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;sheetBack();});return;}
   const b=window._sheetBack;if(b)b();else closeSheet();

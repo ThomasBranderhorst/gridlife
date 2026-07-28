@@ -604,7 +604,9 @@ function saveQuiet(){
     return false;
   }
 }
-function save(){saveQuiet();clearTimeout(_buT);_buT=setTimeout(autoBackup,4000);}
+/* Elke opslaan-knop komt hier langs, dus dit is de plek om de bewaking op onopgeslagen wijzigingen
+   gelijk te zetten: wat er nu in het formulier staat is vanaf nu de opgeslagen stand. */
+function save(){saveQuiet();clearTimeout(_buT);_buT=setTimeout(autoBackup,4000);if(typeof window._sheetSnap==='string')window._sheetSnap=sheetSnapshot();}
 
 /* ===== HELPERS ===== */
 const round2=n=>Math.round(((+n||0)+Number.EPSILON)*100)/100;
@@ -928,9 +930,9 @@ const GUIDE=[
 {s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Wat is een toeslag en wat is mijn "eigen deel"?',
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
  t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de kostenpost. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Geldstroom-pagina.`)},
-{s:'Geldstroom',mod:'potjes',feat:'hints',q:'Waarom staat er "wordt meestal 1 dag eerder afgeschreven"?',
- v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Internet</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right"><div style="font-weight:800">${eur(52.5)}</div>${GBADGE('b-wait','Open')}</div></div><div class="muted" style="margin-top:4px">Verwacht rond <b style="color:var(--text)">31 juli</b> — meestal 1 dag eerder dan gepland (±1 dag)</div></div>`),
- t:gt(`De geplande datum is zelden de échte datum. De app kijkt naar de laatste keren dat je deze post afvinkte en berekent hoeveel dagen dat gemiddeld scheelt. Na een paar keer afvinken weet hij dus precies wanneer het geld echt van je rekening gaat.`)},
+{s:'Geldstroom',mod:'potjes',feat:'hints',q:'Waarom staat er bij de ene post "Verwacht rond ..." en bij de andere niet?',
+ v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Internet</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right"><div style="font-weight:800">${eur(52.5)}</div>${GBADGE('b-wait','Open')}</div></div><div class="muted" style="margin-top:4px">Verwacht rond <b style="color:var(--text)">31 juli</b> (±1 dag) · meestal <b style="color:var(--text)">${eur(1.4)} meer</b> dan gepland</div></div>`),
+ t:gt(`De geplande datum en het geplande bedrag zijn zelden precies de échte. De app kijkt naar de laatste keren dat je deze post afvinkte en rekent uit hoeveel dagen én hoeveel euro dat gemiddeld scheelt. Wijkt alleen het bedrag af, dan zie je alleen dat deel.<br><br>Hij heeft daar <b>minstens twee afgevinkte betalingen</b> voor nodig; tot die tijd staat er wat er nog aan ontbreekt. Belangrijk: alleen betalingen die je <b>op de Geldstroom-pagina hebt afgevinkt</b> tellen mee. Boek je iets als losse uitgave, dan weet de app niet welke termijn dat afdekt en telt het dus niet mee voor de voorspelling.`)},
 {s:'Geldstroom',mod:'loon',feat:'loonlog',q:'Hoe vink ik mijn loon af?',
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Netto loon</b><div class="muted">za 25 juli 2026</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:var(--muted)">nog invullen</div>${GBADGE('b-wait','Verwacht')}</div></div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check"></div><span class="muted">Tik om ontvangen te zetten</span></div></div>`),
  t:gt(`Op je loondag verschijnt <b>Netto loon</b> tussen je andere regels op de Geldstroom-pagina. Vink 'm af en vul in wat er echt is binnengekomen. Dat bedrag telt meteen mee in je gemiddelde inkomen en in "hou ik over" — je hoeft het niet nog een keer ergens in te vullen.`)},
@@ -1767,9 +1769,15 @@ function sumLast12(entries){const cut=new Date();cut.setFullYear(cut.getFullYear
    bij regelmatige kosten (benzine): eerste logdatum t/m nu, minimaal 1, maximaal 12. */
 function monthsTracked(dates){const cut=new Date();cut.setFullYear(cut.getFullYear()-1);const ds=(dates||[]).map(d=>new Date(d)).filter(d=>!isNaN(d)&&d>=cut).sort((a,b)=>a-b);if(!ds.length)return 1;const now=new Date();const m=(now.getFullYear()-ds[0].getFullYear())*12+(now.getMonth()-ds[0].getMonth())+1;return Math.max(1,Math.min(12,m));}
 function fuelStats(p){const cut=new Date();cut.setFullYear(cut.getFullYear()-1);let liters=0,lCost=0,count=0,spend=0;const dates=[];(p.log||[]).forEach(x=>{if(x.kind==='ontvangst')return;if(new Date(x.date)<cut)return;count++;spend+=(+x.amount||0);dates.push(x.date);if(+x.l>0){liters+=+x.l;lCost+=(+x.amount||0);}});const perMonth=count?round2(spend/monthsTracked(dates)):null;const perTank=count?round2(spend/count):null;return{count,liters:round2(liters),avgPpl:liters>0?round2(lCost/liters):null,perMonth,perTank};}
+/* De afgevinkte betalingen van deze kostenpost: alleen die met een payIso horen bij een geplande
+   datum en kunnen dus met de planning vergeleken worden. Een los geboekte uitgave heeft geen payIso
+   en telt daarom niet mee — die weet immers niet welke termijn hij afdekt. */
+function hintLogs(p,it,kind){
+  return (p.log||[]).filter(x=>x.itemId===it.id&&x.payIso&&x.date&&(kind==='ontvangst'?x.kind==='ontvangst':x.kind!=='ontvangst'));
+}
 /* Gemiddelde werkelijke betaal-/ontvangstdatum t.o.v. de geplande datum, uit de laatste gekoppelde logs. */
 function dateHint(p,it,kind){
-  const logs=(p.log||[]).filter(x=>x.itemId===it.id&&x.payIso&&x.date&&(kind==='ontvangst'?x.kind==='ontvangst':x.kind!=='ontvangst'));
+  const logs=hintLogs(p,it,kind);
   if(logs.length<2)return null;
   const offs=logs.slice(-6).map(x=>Math.round((new Date(x.date)-new Date(x.payIso))/86400000)).filter(n=>isFinite(n)&&Math.abs(n)<=31);
   if(offs.length<2)return null;
@@ -1777,15 +1785,44 @@ function dateHint(p,it,kind){
   const spread=Math.round((Math.max(...offs)-Math.min(...offs))/2);
   return{a,spread};
 }
-/* Korte hint met de verwachte échte datum: "Verwacht rond 19 september (±2 dagen)".
-   Valt de gemiddelde datum samen met de geplande datum, dan tonen we niets. */
+/* Zelfde truc als dateHint, maar dan voor het bedrag: wijkt het echt afgeschreven bedrag structureel
+   af van wat er in de kostenpost staat? Denk aan een indexering die je nog niet hebt bijgewerkt. */
+function amountHint(p,it,kind){
+  const plan=kind==='ontvangst'?(it.toeslag?+it.toeslag.v:0):+it.v;
+  if(!(plan>0))return null;
+  const logs=hintLogs(p,it,kind);
+  if(logs.length<2)return null;
+  const ds=logs.slice(-6).map(x=>(+x.amount||0)-plan).filter(n=>isFinite(n));
+  if(ds.length<2)return null;
+  const a=round2(ds.reduce((x,y)=>x+y,0)/ds.length);
+  const spread=round2((Math.max(...ds)-Math.min(...ds))/2);
+  return{a,spread};
+}
+/* Regel onder een openstaande betaling met wat de app uit je historie heeft geleerd:
+   "Verwacht rond 19 september (±2 dagen) · meestal € 2,15 meer dan gepland".
+   Datum en bedrag staan los van elkaar: wijkt alleen het bedrag af, dan zie je alleen dat deel.
+   Zijn er nog geen twee afvinkingen, dan zeggen we dát — anders lijkt het alsof de app bij de ene
+   kostenpost wel meedenkt en bij de andere niet, zonder dat je kunt zien waarom. */
 function dateHintRow(x,kind){
   if(!featOn('hints'))return '';
-  const h=dateHint(x.pot,x.it,kind);if(!h||h.a===0)return '';
-  const exp=new Date(x.date);exp.setDate(exp.getDate()+h.a);
-  const when=exp.getDate()+' '+MND[exp.getMonth()];
-  const pm=h.spread>0?' (±'+h.spread+(h.spread===1?' dag':' dagen')+')':'';
-  return `<div class="muted" style="font-size:12px;margin-top:5px">Verwacht rond <b style="color:var(--text)">${when}</b>${pm}</div>`;
+  const rij=t=>`<div class="muted" style="font-size:12px;margin-top:5px">${t}</div>`;
+  const n=hintLogs(x.pot,x.it,kind).length;
+  if(n<2)return rij(n===0
+    ?'Nog niet eerder afgevinkt — na twee keer ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.'
+    :'Eén keer afgevinkt — na de volgende ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.');
+  const delen=[];
+  const h=dateHint(x.pot,x.it,kind);
+  if(h&&h.a!==0){
+    const exp=new Date(x.date);exp.setDate(exp.getDate()+h.a);
+    const pm=h.spread>0?' (±'+h.spread+(h.spread===1?' dag':' dagen')+')':'';
+    delen.push(`Verwacht rond <b style="color:var(--text)">${exp.getDate()+' '+MND[exp.getMonth()]}</b>${pm}`);
+  }
+  const am=amountHint(x.pot,x.it,kind);
+  if(am&&Math.abs(am.a)>=0.01){
+    const pm=am.spread>=0.01?' (±'+eur(am.spread)+')':'';
+    delen.push(`meestal <b style="color:var(--text)">${eur(Math.abs(am.a))} ${am.a>0?'meer':'minder'}</b> dan gepland${pm}`);
+  }
+  return delen.length?rij(delen.join(' · ')):'';
 }
 /* Jaarkost / 12 → eenmalige grote uitgaven worden over 12 maanden uitgesmeerd i.p.v. blind als maandbedrag genomen. */
 function potAvg(p){const s=sumLast12(p.log);return s==null?null:s/12;}
@@ -3155,10 +3192,38 @@ function confirmRich(title,html,confirmLabel,onYes,kind){
 }
 function closeConfirm(){window._confirmCb=null;document.getElementById('confirmOverlay').classList.remove('show');}
 function runConfirmSheet(){const cb=window._confirmCb;window._confirmCb=null;document.getElementById('confirmOverlay').classList.remove('show');if(cb)cb();}
-function openSheet(html,backFn){window._sheetBack=backFn||null;const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();}
-function sheetBack(){const b=window._sheetBack;if(b)b();else closeSheet();}
+/* ===== ONOPGESLAGEN WIJZIGINGEN =====
+   Een sheet wordt bewaakt zodra hij een eigen opslaan-knop heeft. Dat is precies de grens die we
+   willen: alleen daar bestaat "nog niet opgeslagen". Sheets die bij elke tik meteen wegschrijven
+   (thema, functieschakelaars, werkgever-config) hebben zo'n knop niet en vragen dus nooit iets —
+   daar valt namelijk niets weg te gooien. Door het aan de knop te herkennen in plaats van aan een
+   handmatige lijst, doet een formulier dat er later bij komt vanzelf mee.
+   Bij het openen leggen we vast hoe de velden erbij staan; bij het sluiten vergelijken we.
+   Alle manieren om een sheet te verlaten — de Terug-pil, de hardware-terugknop, de veeg omlaag en
+   de tik naast het venster — komen uit bij closeSheet of sheetBack, dus die twee zijn genoeg. */
+function sheetSnapshot(){
+  const s=document.getElementById('sheet');if(!s)return '';
+  const velden=[...s.querySelectorAll('input,select,textarea')]
+    .map(e=>(e.type==='checkbox'||e.type==='radio')?(e.checked?'1':'0'):e.value);
+  /* Keuzechips zijn geen invoervelden maar veranderen wél wat je opslaat, dus die tellen mee. */
+  const chips=[...s.querySelectorAll('.chip.on,.check.on')].map(e=>e.textContent.trim());
+  return velden.join('')+''+chips.join('');
+}
+function markSheetSaved(){window._sheetSnap=null;}
+/* Alleen bewaakte sheets hebben een momentopname (een string); bij alle andere staat er niets. */
+function sheetDirty(){return typeof window._sheetSnap==='string'&&sheetSnapshot()!==window._sheetSnap;}
+function vraagWeggooien(daarna){
+  confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
+}
+function openSheet(html,backFn){window._sheetBack=backFn||null;const bewaak=/onclick="save[A-Z]/.test(html);const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=bewaak?sheetSnapshot():null;}
+function sheetBack(){
+  if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;sheetBack();});return;}
+  const b=window._sheetBack;if(b)b();else closeSheet();
+}
 function sheetOpen(){return document.getElementById('overlay').classList.contains('show');}
-function closeSheet(){const overlay=document.getElementById('overlay');if(!overlay.classList.contains('show'))return;const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
+function closeSheet(){const overlay=document.getElementById('overlay');if(!overlay.classList.contains('show'))return;
+  if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;closeSheet();});return;}
+  window._sheetSnap=null;const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
 function attachSheetDrag(){const sheet=document.getElementById('sheet');const grip=sheet.querySelector('.griparea');if(!grip)return;let startY=0,curY=0,dragging=false;const start=y=>{dragging=true;startY=y;curY=0;sheet.style.transition='none';};const move=y=>{if(!dragging)return;curY=Math.max(0,y-startY);sheet.style.transform='translateY('+curY+'px)';};const end=()=>{if(!dragging)return;dragging=false;sheet.style.transition='';if(curY>110)closeSheet();else sheet.style.transform='';curY=0;};grip.addEventListener('touchstart',e=>start(e.touches[0].clientY),{passive:true});grip.addEventListener('touchmove',e=>move(e.touches[0].clientY),{passive:true});grip.addEventListener('touchend',end);grip.addEventListener('mousedown',e=>{start(e.clientY);const mm=ev=>move(ev.clientY),mu=()=>{end();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);});}
 let _undo=null,_undoT=null;
 function showUndo(msg,fn){_undo=fn;document.getElementById('undomsg').textContent=msg;document.getElementById('undobar').classList.add('show');clearTimeout(_undoT);_undoT=setTimeout(()=>document.getElementById('undobar').classList.remove('show'),5000);}

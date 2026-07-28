@@ -1545,6 +1545,12 @@ function currentPeriodKey(){
 function occInRange(anchorISO,fn,fu,from,to,tot){const out=[];if(!anchorISO)return out;let d=new Date(anchorISO);d.setHours(0,0,0,0);if(isNaN(d))return out;fn=fn||1;fu=fu||'m';let g=0;while(d<from&&g<2000){d=advance(d,fu,fn);g++;}const tt=tot?new Date(tot):null;g=0;while(d<=to&&g<400){if(!tt||d<=tt)out.push(new Date(d));d=advance(d,fu,fn);g++;}return out;}
 function itemPaid(it,d){return !!(it.paidDates&&it.paidDates[isoDate(d)]);}
 function itemReceived(it,d){return !!(it.receivedDates&&it.receivedDates[isoDate(d)]);}
+/* Overgeslagen termijn: deze maand komt de afschrijving of toeslag gewoon even niet. Geen betaling,
+   geen saldo-mutatie, maar wél afgehandeld — anders blijft zo'n termijn eeuwig als "Te laat" staan.
+   Aparte mappen per soort, zodat een overgeslagen toeslag los staat van de afschrijving eronder. */
+function vandaag(){const d=new Date();d.setHours(0,0,0,0);return d;}
+function skipMap(it,kind){const k=kind==='ontvangst'?'recSkipDates':'skipDates';it[k]=it[k]||{};return it[k];}
+function itemSkipped(it,d,kind){const m=kind==='ontvangst'?it.recSkipDates:it.skipDates;return !!(m&&m[isoDate(d)]);}
 function monthStart(d){const x=new Date(d);x.setDate(1);x.setHours(0,0,0,0);return x;}
 function monthEnd(d){const x=new Date(d.getFullYear(),d.getMonth()+1,0);x.setHours(23,59,59,0);return x;}
 function itemNextOcc(it){if(!it.due||it.buffer)return null;const now=new Date();now.setHours(0,0,0,0);const from=monthStart(now);const occ=occInRange(it.due,it.fn,it.fu,from,addMonths(now,36));return occ.find(x=>!itemPaid(it,x))||null;}
@@ -1557,7 +1563,8 @@ function paymentRows(from,to){
       const iso=isoDate(date);const paid=itemPaid(it,date);let amt=paymentAmount(it);let dispDate=date;
       // Betaalde occurrence met een gekoppelde uitgave: toon het werkelijk gelogde bedrag + de echte betaaldatum.
       if(paid){const ref=it.paidDates&&it.paidDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){const a=round2(log.amount);amt={bruto:a,toeslag:amt.toeslag,net:a};if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
-      out.push({pi,pot:p,it,date,dispDate,iso,paid,...amt});
+      const skipped=itemSkipped(it,date,'uitgave');
+      out.push({pi,pot:p,it,date,dispDate,iso,paid,skipped,telaat:!paid&&!skipped&&date<vandaag(),...amt});
     });
   }));
   out.sort((a,b)=>a.date-b.date||a.pot.n.localeCompare(b.pot.n)||a.it.n.localeCompare(b.it.n));return out;
@@ -1569,7 +1576,8 @@ function receiptRows(from,to){
     occInRange(T.date,T.fn,T.fu,from,to,T.tot).forEach(date=>{
       const iso=isoDate(date);const received=itemReceived(it,date);let amount=+T.v||0;let dispDate=date;
       if(received){const ref=it.receivedDates&&it.receivedDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){amount=round2(log.amount);if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
-      out.push({kind:'receipt',pi,pot:p,it,date,dispDate,iso,amount,received,label:T.naam||('Toeslag '+it.n)});
+      const skipped=itemSkipped(it,date,'ontvangst');
+      out.push({kind:'receipt',pi,pot:p,it,date,dispDate,iso,amount,received,skipped,telaat:!received&&!skipped&&date<vandaag(),label:T.naam||('Toeslag '+it.n)});
     });
   }));
   out.sort((a,b)=>a.date-b.date||a.pot.n.localeCompare(b.pot.n)||a.label.localeCompare(b.label));return out;
@@ -1651,9 +1659,24 @@ function unmarkOccurrence(pi,itemId,iso,kind){
     delete map[iso];
   }
 }
+/* Termijn overslaan / weer terugzetten. Raakt het saldo niet: er is immers niets afgeschreven. */
+function skipOccurrence(pi,itemId,iso,kind){
+  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
+  skipMap(it,kind)[iso]=true;
+  haptic();save();closeSheet();render();toast(kind==='ontvangst'?'Komt deze keer niet':'Overgeslagen');
+}
+function unskipOccurrence(pi,itemId,iso,kind){
+  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
+  delete skipMap(it,kind)[iso];
+  haptic();save();render();toast('Weer openstaand');
+}
 function toggleItemPaid(pi,id,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===id);if(!it)return;
   it.paidDates=it.paidDates||{};
+  if(itemSkipped(it,parseISO(iso),'uitgave')){
+    confirmSheet('Toch verwacht?',`"${esc(it.n)}" staat nu als overgeslagen. Wil je deze termijn weer als openstaand zetten?`,'Weer openstaand',()=>unskipOccurrence(pi,id,iso,'uitgave'));
+    return;
+  }
   if(it.paidDates[iso]){
     confirmSheet('Weer op open zetten',`"${it.n}" wordt weer als openstaand gemarkeerd. De gekoppelde uitgave wordt verwijderd en het bedrag komt terug in het saldo.`,'Terugzetten',()=>{
       unmarkOccurrence(pi,id,iso,'uitgave');haptic();save();render();toast('Weer open · saldo hersteld');
@@ -1664,6 +1687,10 @@ function toggleItemPaid(pi,id,iso){
 function toggleItemReceived(pi,id,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===id);if(!it)return;
   it.receivedDates=it.receivedDates||{};
+  if(itemSkipped(it,parseISO(iso),'ontvangst')){
+    confirmSheet('Toch verwacht?','Deze ontvangst staat nu als "komt deze keer niet". Wil je hem weer als openstaand zetten?','Weer openstaand',()=>unskipOccurrence(pi,id,iso,'ontvangst'));
+    return;
+  }
   if(it.receivedDates[iso]){
     confirmSheet('Weer op open zetten','Deze ontvangst wordt weer als openstaand gemarkeerd. Het bedrag gaat weer van het saldo af.','Terugzetten',()=>{
       unmarkOccurrence(pi,id,iso,'ontvangst');haptic();save();render();toast('Weer open · saldo hersteld');
@@ -1677,7 +1704,9 @@ function openMarkPaidSheet(pi,itemId,iso){
     <label>Datum</label><input type="date" id="mp_date" value="${iso}">
     <label>Bedrag</label>${mInput('id="mp_amt"',it.v,'0,00')}
     <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven">
-    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Bevestigen — boekt af en logt uitgave</button>`);
+    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Bevestigen — boekt af en logt uitgave</button>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','uitgave')">Deze termijn komt niet</button>
+    <div class="muted" style="font-size:12px;margin-top:6px">Wordt deze afschrijving een keer overgeslagen? Dan verdwijnt hij uit je openstaande lijst zonder dat er iets van je saldo af gaat. Je kunt dat altijd terugdraaien.</div>`);
   setTimeout(()=>{const el=document.getElementById('mp_amt');if(el){el.focus();el.select&&el.select();}},100);
 }
 function confirmMarkPaid(pi,itemId,iso){
@@ -1693,7 +1722,9 @@ function openMarkReceivedSheet(pi,itemId,iso){
     <label>Datum</label><input type="date" id="mr_date" value="${iso}">
     <label>Bedrag</label>${mInput('id="mr_amt"',it.toeslag.v,'0,00')}
     <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel">
-    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}')">Bevestigen — boekt bij en logt ontvangst</button>`);
+    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}')">Bevestigen — boekt bij en logt ontvangst</button>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst')">Deze termijn komt niet</button>
+    <div class="muted" style="font-size:12px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt de termijn uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
   setTimeout(()=>{const el=document.getElementById('mr_amt');if(el){el.focus();el.select&&el.select();}},100);
 }
 function confirmMarkReceived(pi,itemId,iso){
@@ -1961,7 +1992,10 @@ function renderBetalingen(){
   // al hebt afgevinkt) ook echt terug te vinden is, i.p.v. onzichtbaar buiten het venster te vallen.
   const wide=betalingFilter==='done'||betalingFilter==='all';
   const beide=betalingFilter==='open'||betalingFilter==='all';
-  const from=wide?addMonths(now,-12):monthStart(now);
+  /* Ook de open-filters kijken een jaar terug, anders valt een termijn die je nooit hebt afgevinkt na
+     de maandwissel stilzwijgend uit beeld. Alleen de nog-openstaande blijven daarvan over (de filters
+     hieronder gooien alles wat af is eruit), dus je ziet precies wat er nog moet gebeuren. */
+  const from=addMonths(now,-12);
   const to=wide?addMonths(now,24):monthEnd(addMonths(now,1));
   let payments=paymentRows(from,to).map(x=>({...x,kind:'payment'}));
   let receipts=receiptRows(from,to);
@@ -1991,30 +2025,46 @@ function renderBetalingen(){
   document.getElementById('betKvWrap').innerHTML=kvHtml;
   const short=shortage>0.005;
   document.getElementById('betStatusWrap').innerHTML=`<span class="statusbadge ${short?'short':'ok'}" style="display:flex;justify-content:center;width:100%;box-sizing:border-box">${short?'● Nog '+eur(shortage)+' nodig in je potjes':'● Je potjes dekken deze betalingen'}</span>`;
-  document.getElementById('betalingChips').innerHTML=[['open','Openstaand'],['pay','Te betalen'],['receive','Te ontvangen'],['done','Afgerond'],['all','Alles']].map(([k,l])=>`<span class="chip ${betalingFilter===k?'on':''}" onclick="betalingFilter='${k}';renderBetalingen()">${l}</span>`).join('');
+  /* Het "Te laat"-filter verschijnt alleen als er ook echt iets te laat is — anders staat er een chip
+     die altijd leeg is, en dat is precies het soort ruis dat je op een telefoonscherm niet wil.
+     Het aantal staat erbij, zodat je in één oogopslag ziet of er iets ligt zonder te hoeven filteren. */
+  const teLaatN=payments.filter(x=>x.telaat).length+receipts.filter(x=>x.telaat).length;
+  if(!teLaatN&&betalingFilter==='late')betalingFilter='open';
+  const chips=[['open','Openstaand'],['pay','Te betalen'],['receive','Te ontvangen']]
+    .concat(teLaatN?[['late','Te laat · '+teLaatN]]:[])
+    .concat([['done','Afgerond'],['all','Alles']]);
+  document.getElementById('betalingChips').innerHTML=chips.map(([k,l])=>`<span class="chip ${betalingFilter===k?'on':''}" onclick="betalingFilter='${k}';renderBetalingen()">${l}</span>`).join('');
   let rows=[];
-  if(betalingFilter==='open')rows=payments.filter(x=>!x.paid).concat(receipts.filter(x=>!x.received)).concat(loon.filter(x=>!x.received));
-  else if(betalingFilter==='pay')rows=payments.filter(x=>!x.paid);
-  else if(betalingFilter==='receive')rows=receipts.filter(x=>!x.received).concat(loon.filter(x=>!x.received));
-  else if(betalingFilter==='done')rows=payments.filter(x=>x.paid).concat(receipts.filter(x=>x.received)).concat(loon.filter(x=>x.received));
+  /* Een overgeslagen termijn is afgehandeld: weg uit de open-lijsten, terug te vinden onder Afgerond. */
+  const openUit=x=>!x.paid&&!x.skipped,openOntv=x=>!x.received&&!x.skipped;
+  if(betalingFilter==='open')rows=payments.filter(openUit).concat(receipts.filter(openOntv)).concat(loon.filter(x=>!x.received));
+  else if(betalingFilter==='pay')rows=payments.filter(openUit);
+  else if(betalingFilter==='receive')rows=receipts.filter(openOntv).concat(loon.filter(x=>!x.received));
+  else if(betalingFilter==='late')rows=payments.filter(x=>x.telaat).concat(receipts.filter(x=>x.telaat));
+  else if(betalingFilter==='done')rows=payments.filter(x=>x.paid||x.skipped).concat(receipts.filter(x=>x.received||x.skipped)).concat(loon.filter(x=>x.received));
   else rows=payments.concat(receipts).concat(loon);
   rows.sort((a,b)=>(a.dispDate||a.date)-(b.dispDate||b.date)||(a.pot?a.pot.n:'').localeCompare(b.pot?b.pot.n:''));
   const grp={};rows.forEach(x=>{const k=monthKey(x.dispDate||x.date);(grp[k]=grp[k]||[]).push(x);});
   const keys=Object.keys(grp).sort();
   document.getElementById('betalingList').innerHTML=keys.length?keys.map(k=>{
-    const [y,m]=k.split('-');const open=grp[k].filter(x=>x.kind==='payment'&&!x.paid).reduce((a,x)=>a+x.net,0);const rec=grp[k].filter(x=>x.kind==='receipt'&&!x.received).reduce((a,x)=>a+x.amount,0);
+    const [y,m]=k.split('-');const open=grp[k].filter(x=>x.kind==='payment'&&!x.paid&&!x.skipped).reduce((a,x)=>a+x.net,0);const rec=grp[k].filter(x=>x.kind==='receipt'&&!x.received&&!x.skipped).reduce((a,x)=>a+x.amount,0);
     let hdrR;
     if(betalingFilter==='receive')hdrR=`<b style="color:var(--ok-tx)">+ ${eur(rec)}</b><div class="muted" style="font-size:11px">te ontvangen</div>`;
-    else if(beide&&rec>0)hdrR=`<b>${eur(open)}</b>${open>0?'<span class="muted"> · </span>':''}<b style="color:var(--ok-tx)">+ ${eur(rec)}</b>`;
-    else hdrR=`<b>${eur(open)}</b><div class="muted" style="font-size:11px">${betalingFilter==='done'?'afgerond':'open'}</div>`;
+    else if(beide&&rec>0)hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b>${open>0?'<span class="muted"> · </span>':''}<b style="color:var(--ok-tx)">+ ${eur(rec)}</b>`;
+    else hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b><div class="muted" style="font-size:11px">${betalingFilter==='done'?'afgerond':'open'}</div>`;
     return `<div class="weekhdr"><span><b>${MND[+m-1]} ${y}</b></span><div style="text-align:right">${hdrR}</div></div>${grp[k].map(x=>x.kind==='loon'?loonCard(x):x.kind==='receipt'?receiptCard(x):betalingCard(x)).join('')}`;
-  }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':'Nog geen betalingen of ontvangsten. Voeg kostenposten toe bij een potje.'}</div>`;
+  }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Nog geen betalingen of ontvangsten. Voeg kostenposten toe bij een potje.'}</div>`;
 }
 function betalingCard(x){
-  const st=x.paid?{cls:'b-ok',txt:'Betaald',dot:'var(--green)'}:{cls:'b-wait',txt:'Open',dot:'var(--wait-tx)'};
+  const st=x.skipped?{cls:'b-ok',txt:'Overgeslagen',dot:'var(--muted)'}
+    :x.paid?{cls:'b-ok',txt:'Betaald',dot:'var(--green)'}
+    :x.telaat?{cls:'b-bad',txt:'Te laat',dot:'var(--bad-tx)'}
+    :{cls:'b-wait',txt:'Open',dot:'var(--wait-tx)'};
   const toe=x.toeslag>0?`<div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(x.toeslag)}</div>`:'';
-  const hintRow=!x.paid?dateHintRow(x,'uitgave'):'';const dd=x.dispDate||x.date;
-  return `<div class="shift" onclick="toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.it.n)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap">${eur(x.net)}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${toe}${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.paid?'on':''}" onclick="event.stopPropagation();toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')">${x.paid?'✓':''}</div><span class="muted">${x.paid?'Tik om terug op open te zetten':'Tik om betaald te zetten'}</span></div></div>`;
+  const hintRow=(!x.paid&&!x.skipped)?dateHintRow(x,'uitgave'):'';const dd=x.dispDate||x.date;
+  const bedrag=x.skipped?`<span style="color:var(--muted);text-decoration:line-through">${eur(x.net)}</span>`:`− ${eur(x.net)}`;
+  const actie=x.skipped?'Tik om weer op openstaand te zetten':x.paid?'Tik om terug op open te zetten':'Tik om betaald te zetten';
+  return `<div class="shift" onclick="toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.it.n)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:${x.skipped?'var(--muted)':'var(--bad-tx)'}">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${toe}${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.paid?'on':''}" onclick="event.stopPropagation();toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')">${x.paid?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
 }
 function loonCard(x){
   const st=x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}:{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
@@ -2023,9 +2073,14 @@ function loonCard(x){
   return `<div class="shift" onclick="${action}"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.amount!=null?'var(--ok-tx)':'var(--muted)'};white-space:nowrap">${amt}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();${action}">${x.received?'✓':''}</div><span class="muted">${x.received?'Tik om te bewerken':'Tik om ontvangen te zetten'}</span></div></div>`;
 }
 function receiptCard(x){
-  const st=x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}:{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
-  const hintRow=!x.received?dateHintRow(x,'ontvangst'):'';const dd=x.dispDate||x.date;
-  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:var(--ok-tx);white-space:nowrap">+ ${eur(x.amount)}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')">${x.received?'✓':''}</div><span class="muted">${x.received?'Tik om terug op verwacht te zetten':'Tik om ontvangen te zetten'}</span></div></div>`;
+  const st=x.skipped?{cls:'b-ok',txt:'Komt niet',dot:'var(--muted)'}
+    :x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}
+    :x.telaat?{cls:'b-bad',txt:'Te laat',dot:'var(--bad-tx)'}
+    :{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
+  const hintRow=(!x.received&&!x.skipped)?dateHintRow(x,'ontvangst'):'';const dd=x.dispDate||x.date;
+  const bedrag=x.skipped?`<span style="text-decoration:line-through">${eur(x.amount)}</span>`:`+ ${eur(x.amount)}`;
+  const actie=x.skipped?'Tik om weer op verwacht te zetten':x.received?'Tik om terug op verwacht te zetten':'Tik om ontvangen te zetten';
+  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
 }
 
 function renderAlleUitgaven(){
@@ -2037,7 +2092,7 @@ function renderAlleUitgaven(){
   all.forEach(u=>{const d=new Date(u.x.date);let k;if(per==='w')k=isoWeekYear(d)+'-W'+pad(isoWeek(d));else if(per==='m')k=isoDate(d).slice(0,7);else k='alles';(grp[k]=grp[k]||[]).push(u);});
   const keys=Object.keys(grp).sort().reverse();
   const lblK=k=>{if(per==='alles')return uitOntvLabel('Alle ').toLowerCase().replace(/^a/,'A');if(per==='w')return 'Week '+parseInt(k.split('-W')[1])+' · '+k.slice(0,4);const[y,m]=k.split('-');return MND[+m-1]+' '+y;};
-  document.getElementById('alleUitWrap').innerHTML=`<div class="row" style="gap:8px;margin-bottom:12px">${[['w','Per week'],['m','Per maand'],['alles','Alles']].map(([k,l])=>`<span class="chip ${per===k?'on':''}" onclick="window._uper='${k}';renderAlleUitgaven()">${l}</span>`).join('')}</div>${keys.length?keys.map(k=>{const totUit=grp[k].filter(u=>u.x.kind!=='ontvangst').reduce((a,u)=>a+(+u.x.amount||0),0);const totOntv=grp[k].filter(u=>u.x.kind==='ontvangst').reduce((a,u)=>a+(+u.x.amount||0),0);return `<div class="row between" style="margin:10px 0 2px"><b>${lblK(k)}</b><b>${eur(totUit)}${totOntv?' <span style="color:var(--ok-tx)">+ '+eur(totOntv)+'</span>':''}</b></div>${grp[k].map(u=>{const isRec=u.x.kind==='ontvangst';const amtHtml=isRec?`<b style="color:var(--ok-tx)">+ ${eur(u.x.amount)}</b>`:`<b>${eur(u.x.amount)}</b>`;const act=u.loon?`openLoonLog('${u.eid}')`:`openUitgaveEdit(${u.pi},${u.idx},'uit')`;return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer;gap:10px" onclick="${act}"><div style="flex:1;min-width:0">${amtHtml} <span class="muted">· ${esc(u.pot)}${u.x.item?' · '+esc(u.x.item):''}</span><div class="muted">${new Date(u.x.date).toLocaleDateString('nl-NL')}${u.x.l?' · '+(+u.x.l).toLocaleString('nl-NL')+' L':''}${u.x.once?' · eenmalig':''}${u.x.note?' · '+esc(u.x.note):''}</div></div><button class="tiny ghost" onclick="event.stopPropagation();${act}">Bewerk</button></div>`;}).join('')}`;}).join(''):'<div class="empty">Nog geen uitgaven of ontvangsten gelogd.</div>'}`;
+  document.getElementById('alleUitWrap').innerHTML=`<div class="row" style="gap:8px;margin-bottom:12px">${[['w','Per week'],['m','Per maand'],['alles','Alles']].map(([k,l])=>`<span class="chip ${per===k?'on':''}" onclick="window._uper='${k}';renderAlleUitgaven()">${l}</span>`).join('')}</div>${keys.length?keys.map(k=>{const totUit=grp[k].filter(u=>u.x.kind!=='ontvangst').reduce((a,u)=>a+(+u.x.amount||0),0);const totOntv=grp[k].filter(u=>u.x.kind==='ontvangst').reduce((a,u)=>a+(+u.x.amount||0),0);return `<div class="row between" style="margin:10px 0 2px"><b>${lblK(k)}</b><b><span style="color:var(--bad-tx)">− ${eur(totUit)}</span>${totOntv?' <span style="color:var(--ok-tx)">+ '+eur(totOntv)+'</span>':''}</b></div>${grp[k].map(u=>{const isRec=u.x.kind==='ontvangst';const amtHtml=isRec?`<b style="color:var(--ok-tx)">+ ${eur(u.x.amount)}</b>`:`<b style="color:var(--bad-tx)">− ${eur(u.x.amount)}</b>`;const act=u.loon?`openLoonLog('${u.eid}')`:`openUitgaveEdit(${u.pi},${u.idx},'uit')`;return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer;gap:10px" onclick="${act}"><div style="flex:1;min-width:0">${amtHtml} <span class="muted">· ${esc(u.pot)}${u.x.item?' · '+esc(u.x.item):''}</span><div class="muted">${new Date(u.x.date).toLocaleDateString('nl-NL')}${u.x.l?' · '+(+u.x.l).toLocaleString('nl-NL')+' L':''}${u.x.once?' · eenmalig':''}${u.x.note?' · '+esc(u.x.note):''}</div></div><button class="tiny ghost" onclick="event.stopPropagation();${act}">Bewerk</button></div>`;}).join('')}`;}).join(''):'<div class="empty">Nog geen uitgaven of ontvangsten gelogd.</div>'}`;
 }
 function openUitgave(pre,itemId){
   if(!db.potjes.length){toast('Maak eerst een potje aan');return;}
@@ -3214,10 +3269,9 @@ function sheetSnapshot(){
   const chips=[...s.querySelectorAll('.chip.on,.check.on')].filter(e=>!e.closest('.gvis')).map(e=>e.textContent.trim());
   return velden.join('')+''+chips.join('');
 }
-/* Bewaakt = er valt hier iets in te vullen en er is een knop om het vast te leggen. Eerder keken we
-   naar de knoptekst "Opslaan", maar niet elke bevestigknop heet zo ("Bevestigen - boekt af en logt
-   uitgave"), waardoor die formulieren stilzwijgend onbewaakt bleven. Velden + een primary-knop dekt
-   ze allemaal. */
+/* Bewaakt = er valt hier iets in te vullen én er is een knop om het vast te leggen. Eerder keken we naar
+   de knoptekst "Opslaan", maar niet elke bevestigknop heet zo ("Bevestigen — boekt af en logt uitgave"),
+   waardoor die formulieren stilzwijgend onbewaakt bleven. Velden + een primary-knop dekt ze allemaal. */
 function sheetBewaakbaar(){
   const s=document.getElementById('sheet');
   return !!s&&sheetVelden().length>0&&!!s.querySelector('.primary');
@@ -3229,11 +3283,7 @@ function vraagWeggooien(daarna){
   confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
 }
 function openSheet(html,backFn){window._sheetBack=backFn||null;
-  /* Bewaakt = heeft een eigen opslaan-knop. Herkennen we aan de knoptekst ">Opslaan</button>", niet aan
-     de functienaam erachter — die varieert (saveShift, wcSave, confirmMarkLoon, ...) en een naam-patroon
-     mist dan sommige formulieren zonder dat het ergens opvalt. De knoptekst is de ene garantie die altijd
-     klopt: staat er "Opslaan", dan is er ook iets om weg te gooien. */
-  const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;}
+const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;}
 function sheetBack(){
   if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;sheetBack();});return;}
   const b=window._sheetBack;if(b)b();else closeSheet();

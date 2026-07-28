@@ -507,11 +507,29 @@ function migrate(){
   if(!Array.isArray(db.docTypes)||!db.docTypes.length)db.docTypes=['ID-kaart','Paspoort','Rijbewijs','Bankpas','Zorgpas'];
   if(!Array.isArray(db.loonLog))db.loonLog=[];
   if(!db.feat||typeof db.feat!=='object')db.feat={}; // functie-schakelaars: ontbrekend = aan
-  /* De data stuurt de zichtbaarheid: heb je een brandstof-potje, dan hoort de brandstof-functie aan.
+  /* De data stuurt de zichtbaarheid: heb je gegevens van een functie, dan hoort die functie aan.
      "Aan" = het ontbreken van de sleutel, dus bij het importeren van een back-up waarin de functie aan
-     stond is er niets dat een eerder op false gezette schakelaar overschrijft. Zonder deze regel zag je
-     je eigen benzine-potje na een import niet meer als brandstof-potje (functie stond "uit"). */
-  if(db.feat.fuel===false&&(db.potjes||[]).some(p=>p&&p.fuel))delete db.feat.fuel;
+     stond is er niets dat een eerder op false gezette schakelaar overschrijft. Zonder deze regel zie je
+     je eigen gegevens na een import niet meer terug, puur omdat de schakelaar uit stond.
+     Alleen functies die iets tonen wat je zelf hebt ingevoerd staan hier. De schakelaars onder Data
+     (back-up, exporteren, importeren, PDF) blijven met rust: dat zijn keuzes over wat de app mag doen,
+     niet over het verbergen van gegevens die je al hebt. */
+  const HEEFT_DATA={
+    fuel:()=>(db.potjes||[]).some(p=>p&&p.fuel),
+    buffers:()=>(db.potjes||[]).some(p=>(p.items||[]).some(i=>i&&i.buffer)),
+    toeslag:()=>(db.potjes||[]).some(p=>(p.items||[]).some(i=>i&&i.toeslag)),
+    ontvangst:()=>(db.potjes||[]).some(p=>(p.log||[]).some(x=>x&&x.kind==='ontvangst')),
+    once:()=>(db.potjes||[]).some(p=>(p.log||[]).some(x=>x&&x.once)),
+    documenten:()=>(db.documenten||[]).length>0,
+    loonlog:()=>(db.loonLog||[]).length>0,
+    contract:()=>Object.keys(db.contract||{}).length>0,
+    comp:()=>(db.shifts||[]).some(s=>s&&s.ctrl),
+    receptcat:()=>(db.receptCategorieen||[]).length>0,
+    receptfav:()=>(db.recepten||[]).some(r=>r&&r.fav),
+    receptporties:()=>(db.recepten||[]).some(r=>r&&r.porties),
+    profiel:()=>!!db.naam,
+  };
+  Object.keys(HEEFT_DATA).forEach(k=>{try{if(db.feat[k]===false&&HEEFT_DATA[k]())delete db.feat[k];}catch(e){}});
   if(!db.theme)db.theme='system';
   // oud meldingen-model (db.meld) -> nieuw per-type model (db.meldCfg)
   if(!db.meldCfg){const M=db.meld||{};db.meldCfg={
@@ -1346,8 +1364,17 @@ function shiftCard(s){
   const dot=badgeInfo?`<span class="dot" style="background:${badgeInfo.dot}"></span>`:'';
   return `<div class="shift" onclick="openShift('${s.id}')"><div class="head"><div><b>${dot}${esc(s.werk)}</b><div class="muted">${DAG[d.getDay()]} ${d.getDate()} ${MND[d.getMonth()]} · ${s.start}–${s.end}${(+s.pauze)?` · ${fmtPauze(s.pauze)} pauze`:''}</div></div><div style="text-align:right"><div style="font-weight:700">${fmtDur(hoursOf(s))}</div>${badge}</div></div>${infoBlock}</div>`;
 }
+/* Welke werkgever staat voor bij een nieuwe dienst. Filter je op de Uren-pagina op een werkgever, dan
+   is dat vrijwel altijd degene waarvoor je de dienst invoert. Staat het filter op "Alles", dan de
+   werkgever die in dienst is - er kan er maar een tegelijk in dienst zijn, dus dat is in de praktijk
+   je hoofdbaan. Pas als niemand in dienst staat valt hij terug op de eerste uit de lijst. */
+function standaardWerkgever(){
+  const sel=document.getElementById('filterWerk');const f=sel&&sel.value;
+  if(f&&(db.werkgevers||[]).includes(f))return f;
+  return actiefWerk()||db.werkgevers[0]||'';
+}
 function openShift(id,preset){
-  const s=preset||(id?db.shifts.find(x=>x.id===id):{id:null,werk:db.werkgevers[0]||'',date:isoDate(new Date()),start:'12:00',end:'16:00',pauze:15,status:'wait',note:''});
+  const s=preset||(id?db.shifts.find(x=>x.id===id):{id:null,werk:standaardWerkgever(),date:isoDate(new Date()),start:'12:00',end:'16:00',pauze:15,status:'wait',note:''});
   const werkVeld=db.werkgevers.length?`<select id="f_werk">${db.werkgevers.map(w=>`<option ${w===s.werk?'selected':''}>${esc(w)}</option>`).join('')}</select>`:`<input id="f_werk" placeholder="Bijv. Jumbo" value="${esc(s.werk||'')}">`;
   openSheet(`<div class="row between"><h2 style="margin:0">${id?'Dienst bewerken':'Nieuwe dienst'}</h2>${id?`<button class="tiny ghost" onclick="dupShift('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Kopie</button>`:''}</div>
     <label>Werkgever</label>${werkVeld}
@@ -1922,7 +1949,7 @@ function renderPotjes(){
     return `<div class="pot" id="pot${i}"><div class="ph"><div ${tog} style="flex:1"><b>${esc(p.n)}</b>${p.note?`<div class="muted" style="margin-top:2px;font-style:italic">${esc(p.note)}</div>`:''}</div>${t>0?`<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleOverboek(${i})">${on?'✓':''}</div>`:''}</div>
       <div class="pot-sum" ${tog}><div style="flex:1;min-width:0">${potSumInner}</div><span class="cvx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;display:block"><path d="M6 9.5l6 6 6-6"/></svg></span></div>
       <div class="sub">${fuelPanel}${monthPanel}${items}${advies}
-      <button class="ghost" style="width:100%;margin-top:12px" onclick="openPotDetailEdit(${i})">Potje bewerken</button>
+      <button class="ghost" style="width:100%;margin-top:12px" onclick="openPotDetailEdit(${i},'potjes')">Potje bewerken</button>
       ${p.target?`<div class="muted" style="margin-top:6px">${(+p.saldo||0)<+p.target?'<span style="color:var(--amber)">onder streefbuffer '+eur(p.target)+'</span>':'boven streefbuffer '+eur(p.target)}</div>`:''}
       </div></div>`;
   }).join(''):`<div class="empty">Nog geen potjes.<br>Tik op Beheren om te beginnen.<br><span style="font-size:12px">Tip: een potje zonder kostenposten is gewoon een spaarpotje (bijv. Bunq).</span></div>`;
@@ -2227,9 +2254,9 @@ function openPotEdit(){
 }
 function renderPotBeheer(){
   const c=document.getElementById('potBeheer');if(!c)return;
-  c.innerHTML=db.potjes.length?db.potjes.map((p,i)=>`<div class="mrow" data-pi="${i}"><span class="draghandle" onpointerdown="startPotDrag(event,this)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px;display:block"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><div style="flex:1" onclick="openPotDetailEdit(${i})"><b>${esc(p.n)}</b><div class="muted">${p.items.length?p.items.length+' kostenpost'+(p.items.length===1?'':'en'):'spaarpotje'} · ${eur(p.saldo)}</div></div><span class="muted" onclick="openPotDetailEdit(${i})" style="padding:0 8px;font-size:18px">›</span></div>`).join(''):'<div class="empty">Nog geen potjes.</div>';
+  c.innerHTML=db.potjes.length?db.potjes.map((p,i)=>`<div class="mrow" data-pi="${i}"><span class="draghandle" onpointerdown="startPotDrag(event,this)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px;display:block"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><div style="flex:1" onclick="openPotDetailEdit(${i},'beheer')"><b>${esc(p.n)}</b><div class="muted">${p.items.length?p.items.length+' kostenpost'+(p.items.length===1?'':'en'):'spaarpotje'} · ${eur(p.saldo)}</div></div><span class="muted" onclick="openPotDetailEdit(${i},'beheer')" style="padding:0 8px;font-size:18px">›</span></div>`).join(''):'<div class="empty">Nog geen potjes.</div>';
 }
-function newPot(){db.potjes.push({n:'Nieuw potje',saldo:0,log:[],items:[]});save();openPotDetailEdit(db.potjes.length-1);}
+function newPot(){db.potjes.push({n:'Nieuw potje',saldo:0,log:[],items:[]});save();openPotDetailEdit(db.potjes.length-1,'beheer');}
 function startPotDrag(e,handle){
   e.preventDefault();e.stopPropagation();
   const row=handle.closest('.mrow');const cont=row.parentNode;row.classList.add('dragging');haptic(8);
@@ -2241,8 +2268,15 @@ function startPotDrag(e,handle){
     save();renderPotBeheer();render();haptic(6);};
   document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
 }
-function openPotDetailEdit(pi){
-  const p=db.potjes[pi];if(!p)return openPotEdit();
+/* vanaf = waar je dit scherm opende. Vanuit "Potjes beheren" hoort Terug daar weer heen; vanuit de
+   knop op een potjeskaart hoort Terug gewoon het venster te sluiten, terug naar de Potjes-pagina.
+   De keuze blijft hangen zodat een omweg via een kostenpost je niet alsnog in het verkeerde
+   scherm laat eindigen. */
+let _potVanaf='beheer';
+function openPotDetailEdit(pi,vanaf){
+  if(vanaf)_potVanaf=vanaf;
+  const uitPotjes=_potVanaf==='potjes';
+  const p=db.potjes[pi];if(!p)return uitPotjes?closeSheet():openPotEdit();
   openSheet(`<h2>Potje bewerken</h2>
     <label>Naam</label><input id="pe_naam" value="${esc(p.n)}" placeholder="bijv. Vaste Lasten">
     <label style="margin-top:14px">Huidig saldo</label>${mInput('id="pe_saldo"',p.saldo,'0,00')}
@@ -2256,9 +2290,10 @@ function openPotDetailEdit(pi){
     <div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Geen kostenposten? Dan is dit een spaarpotje met alleen een saldo.</div>
     <div id="peItems"></div>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="savePotNaam(${pi});openItemEdit(${pi},-1)">Kostenpost toevoegen</button>
-    <div class="row" style="margin-top:18px"><button class="danger" onclick="delPot(${pi})">Verwijderen</button><button class="primary" style="flex:1" onclick="savePotNaam(${pi});openPotEdit();render()">Klaar</button></div>`,openPotEdit);
+    <div class="row" style="margin-top:18px"><button class="danger" onclick="delPot(${pi})">Verwijderen</button><button class="primary" style="flex:1" onclick="savePotNaam(${pi});potDetailKlaar()">Klaar</button></div>`,uitPotjes?null:openPotEdit);
   renderPeItems(pi);
 }
+function potDetailKlaar(){if(_potVanaf==='potjes')closeSheet();else openPotEdit();render();}
 function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${it.toeslag?' · toeslag':''}${(it.due&&!it.buffer)?' · '+new Date(it.due).getDate()+' '+MND[new Date(it.due).getMonth()].slice(0,3)+' '+new Date(it.due).getFullYear():''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen kostenposten.</div>';}
 function peFuelToggle(el){tgl(el);const b=document.getElementById('pe_fuelBudget');if(b)b.style.display=el.classList.contains('on')?'block':'none';}
 function savePotNaam(pi){const el=document.getElementById('pe_naam');if(el&&el.value.trim())db.potjes[pi].n=el.value.trim();const sb=document.getElementById('pe_saldo');if(sb){const v=moneyNum(sb.value);db.potjes[pi].saldo=v==null?0:v;}const nt=document.getElementById('pe_note');if(nt)db.potjes[pi].note=nt.value.trim();const ft=document.getElementById('pe_fuel');if(ft)db.potjes[pi].fuel=ft.classList.contains('on');const mb=document.getElementById('pe_maand');if(mb)db.potjes[pi].maand=moneyNum(mb.value)||0;save();}
@@ -3224,7 +3259,7 @@ async function exportOverzichtPDF(){
   }catch(e){toast('PDF mislukt: '+(e&&e.message||e));}
 }
 function importData(e){const f=e.target.files[0];if(!f)return;if(!featOn('backup')||!featOn('import')){toast('Importeren staat uit');return;}const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);mergeImport(d);save();applyModules();applyAccent();render();}catch(x){toast('Ongeldig bestand');}};rd.readAsText(f);e.target.value='';}
-function mergeImport(d){let added=0;if(Array.isArray(d.werkgevers))d.werkgevers.forEach(w=>{if(w&&!db.werkgevers.includes(w))db.werkgevers.push(w);});if(Array.isArray(d.receptCategorieen))d.receptCategorieen.forEach(c=>{if(c&&!db.receptCategorieen.includes(c))db.receptCategorieen.push(c);});if(Array.isArray(d.shifts)){const key=s=>[s.date,s.start,s.end,s.werk,s.note||''].join('|');const have=new Set(db.shifts.map(key));d.shifts.forEach(s=>{if(!s.date)return;const k=key(s);if(have.has(k))return;have.add(k);db.shifts.push({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:s.werk||db.werkgevers[0]||'Werk',date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''});added++;});}if(Array.isArray(d.potjes))d.potjes.forEach(p=>{if(p&&p.n&&!db.potjes.some(x=>x.n===p.n))db.potjes.push(p);});if(Array.isArray(d.rekeningen))d.rekeningen.forEach(r=>{if(r&&r.naam&&!db.rekeningen.some(x=>x.naam===r.naam))db.rekeningen.push(r);});if(Array.isArray(d.recepten))d.recepten.forEach(r=>{if(r&&r.n&&!db.recepten.some(x=>x.n===r.n))db.recepten.push(r);});if(d.loon&&typeof d.loon==='object')db.loon=Object.assign(db.loon,d.loon);if(typeof d.accent==='number')db.accent=d.accent;if(d.modules)db.modules=Object.assign(db.modules,d.modules);if(d.contract&&typeof d.contract==='object')db.contract=Object.assign(db.contract||{},d.contract);if(d.meldTijd)db.meldTijd=d.meldTijd;if(typeof d.meldingen==='boolean')db.meldingen=d.meldingen;if(d.overboek&&typeof d.overboek==='object')Object.keys(d.overboek).forEach(mk=>{db.overboek[mk]=Object.assign(db.overboek[mk]||{},d.overboek[mk]);});if(Array.isArray(d.loonLog)){db.loonLog=db.loonLog||[];const have=new Set(db.loonLog.map(x=>x.date+'|'+x.amount));d.loonLog.forEach(x=>{if(!x||!x.date)return;const k2=x.date+'|'+x.amount;if(have.has(k2))return;have.add(k2);db.loonLog.push(x);});}if(Array.isArray(d.documenten)){db.documenten=db.documenten||[];d.documenten.forEach(x=>{if(x&&x.verloopt&&!db.documenten.some(y=>(y.n||y.type)===(x.n||x.type)&&y.verloopt===x.verloopt))db.documenten.push(x);});}if(Array.isArray(d.docTypes)){db.docTypes=db.docTypes||[];d.docTypes.forEach(t=>{if(t&&!db.docTypes.includes(t))db.docTypes.push(t);});}if(d.meldCfg&&typeof d.meldCfg==='object')db.meldCfg=Object.assign(db.meldCfg||{},d.meldCfg);if(d.feat&&typeof d.feat==='object')db.feat=Object.assign(db.feat||{},d.feat);if(d.theme)db.theme=d.theme;if(d.periode!==undefined&&(!db.periode||(d.periode&&d.periode>db.periode)))db.periode=d.periode;if(d.werkCfg&&typeof d.werkCfg==='object')db.werkCfg=Object.assign(db.werkCfg||{},d.werkCfg);if(Array.isArray(d.tegoed)){db.tegoed=db.tegoed||[];const have=new Set(db.tegoed.map(x=>x.id));d.tegoed.forEach(x=>{if(x&&x.id&&!have.has(x.id)){have.add(x.id);db.tegoed.push(x);}});}migrate();toast(added?('Toegevoegd: '+added+' diensten'):'Samengevoegd');}
+function mergeImport(d){let added=0;if(Array.isArray(d.werkgevers))d.werkgevers.forEach(w=>{if(w&&!db.werkgevers.includes(w))db.werkgevers.push(w);});if(Array.isArray(d.receptCategorieen))d.receptCategorieen.forEach(c=>{if(c&&!db.receptCategorieen.includes(c))db.receptCategorieen.push(c);});if(Array.isArray(d.shifts)){const key=s=>[s.date,s.start,s.end,s.werk,s.note||''].join('|');const have=new Set(db.shifts.map(key));d.shifts.forEach(s=>{if(!s.date)return;const k=key(s);if(have.has(k))return;have.add(k);db.shifts.push({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:s.werk||db.werkgevers[0]||'Werk',date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''});added++;});}if(Array.isArray(d.potjes))d.potjes.forEach(p=>{if(p&&p.n&&!db.potjes.some(x=>x.n===p.n))db.potjes.push(p);});if(Array.isArray(d.rekeningen))d.rekeningen.forEach(r=>{if(r&&r.naam&&!db.rekeningen.some(x=>x.naam===r.naam))db.rekeningen.push(r);});if(Array.isArray(d.recepten))d.recepten.forEach(r=>{if(r&&r.n&&!db.recepten.some(x=>x.n===r.n))db.recepten.push(r);});if(d.loon&&typeof d.loon==='object')db.loon=Object.assign(db.loon,d.loon);if(typeof d.accent==='number')db.accent=d.accent;if(d.modules)db.modules=Object.assign(db.modules,d.modules);if(d.contract&&typeof d.contract==='object')db.contract=Object.assign(db.contract||{},d.contract);if(d.meldTijd)db.meldTijd=d.meldTijd;if(typeof d.meldingen==='boolean')db.meldingen=d.meldingen;if(d.overboek&&typeof d.overboek==='object')Object.keys(d.overboek).forEach(mk=>{db.overboek[mk]=Object.assign(db.overboek[mk]||{},d.overboek[mk]);});if(Array.isArray(d.loonLog)){db.loonLog=db.loonLog||[];const have=new Set(db.loonLog.map(x=>x.date+'|'+x.amount));d.loonLog.forEach(x=>{if(!x||!x.date)return;const k2=x.date+'|'+x.amount;if(have.has(k2))return;have.add(k2);db.loonLog.push(x);});}if(Array.isArray(d.documenten)){db.documenten=db.documenten||[];d.documenten.forEach(x=>{if(x&&x.verloopt&&!db.documenten.some(y=>(y.n||y.type)===(x.n||x.type)&&y.verloopt===x.verloopt))db.documenten.push(x);});}if(Array.isArray(d.docTypes)){db.docTypes=db.docTypes||[];d.docTypes.forEach(t=>{if(t&&!db.docTypes.includes(t))db.docTypes.push(t);});}if(d.meldCfg&&typeof d.meldCfg==='object')db.meldCfg=Object.assign(db.meldCfg||{},d.meldCfg);if(d.feat&&typeof d.feat==='object')db.feat=Object.assign(db.feat||{},d.feat);if(typeof d.naam==='string'&&d.naam.trim())db.naam=d.naam.trim();if(d.backup&&typeof d.backup==='object')db.backup=Object.assign(db.backup||{},d.backup);if(d.theme)db.theme=d.theme;if(d.periode!==undefined&&(!db.periode||(d.periode&&d.periode>db.periode)))db.periode=d.periode;if(d.werkCfg&&typeof d.werkCfg==='object')db.werkCfg=Object.assign(db.werkCfg||{},d.werkCfg);if(Array.isArray(d.tegoed)){db.tegoed=db.tegoed||[];const have=new Set(db.tegoed.map(x=>x.id));d.tegoed.forEach(x=>{if(x&&x.id&&!have.has(x.id)){have.add(x.id);db.tegoed.push(x);}});}migrate();toast(added?('Toegevoegd: '+added+' diensten'):'Samengevoegd');}
 
 /* ===== UTIL ===== */
 function downloadFile(name,content,type){const b=new Blob([content],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}

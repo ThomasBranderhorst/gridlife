@@ -2370,7 +2370,7 @@ function renderLoon(){
       <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L)}</span></div>
       ${L.mode!=='manual'?`<div class="kv stack"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}
       <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,4)}</div>
-      <button class="ghost" style="width:100%;margin-top:12px" onclick="openWerkCfg('${ws}')">Loondag wijzigen bij ${esc(w)}</button>
+      <button class="ghost" style="width:100%;margin-top:12px" onclick="openWerkCfg('${ws}','loon')">Loondag wijzigen bij ${esc(w)}</button>
       <div class="muted" style="font-size:12.5px;margin-top:6px">Je loondag hoort bij je werkgever. Wissel je van baan, dan zet je de nieuwe werkgever op "in dienst" — de loondag verhuist mee.</div>`;
   }else{
     bron.innerHTML=(moduleOn('uren')&&!(db.werkgevers||[]).length)
@@ -2927,7 +2927,7 @@ function renderBhList(){
       return `<div style="padding:12px 0;border-top:${i?'1px solid var(--line)':'none'}"><div class="row between" style="align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(w)}</b><span class="badge ${act?'b-ok':''}" ${act?'':'style="background:var(--card2);color:var(--muted)"'}>${act?'In dienst':'Uit dienst'}</span></div>
         <div class="muted" style="font-size:12.5px;margin-top:2px">${bits.join(' &middot; ')||'Nog niets ingesteld'}</div></div>
-        <div class="row" style="gap:6px;flex-shrink:0"><button class="tiny ghost" onclick="openWerkCfg('${ws}')">Instellingen</button><button class="tiny danger" onclick="bhDel(${i})">✕</button></div>
+        <div class="row" style="gap:6px;flex-shrink:0"><button class="tiny ghost" onclick="openWerkCfg('${ws}','beheer')">Instellingen</button><button class="tiny danger" onclick="bhDel(${i})">✕</button></div>
       </div></div>`;
     }).join('')||'<div class="muted">Nog leeg.</div>';
   }else{
@@ -2943,7 +2943,7 @@ function bhAdd(){const v=val('bhNew').trim();if(!v)return;const b=BEHEER.find(x=
       if(alEen)c.actief=false;
       db.werkCfg[v]=c;}
   }
-  document.getElementById('bhNew').value='';haptic();save();renderBhList();if(isNew&&window._bk==='werkgevers')openWerkCfg(v);}
+  document.getElementById('bhNew').value='';haptic();save();renderBhList();if(isNew&&window._bk==='werkgevers')openWerkCfg(v,'beheer');}
 function bhDel(i){
   const b=BEHEER.find(x=>x.k===window._bk);const list=b.get();const c=list[i];if(c==null)return;
   const msg=(window._bk==='werkgevers'&&db.shifts.some(s=>s.werk===c))?`"${c}" heeft nog diensten. Toch verwijderen?`:(window._bk==='doctypes'&&(db.documenten||[]).some(d=>d.type===c))?`"${c}" wordt nog gebruikt door een document. Toch verwijderen?`:`"${c}" wordt verwijderd.`;
@@ -2952,8 +2952,12 @@ function bhDel(i){
 /* Eén instellingenscherm per werkgever: dienstverband (in dienst + contract-uren), loon (loondag/frequentie)
    en uren-controle (ritme, hoe missende uren rechtgezet worden en wanneer nabetaald wordt).
    Verschijnt ook meteen bij het toevoegen van een nieuwe werkgever. */
-function openWerkCfg(w){
+/* vanaf = waar je dit scherm opende. Vanuit Instellingen -> Werkgevers hoort Terug (en Opslaan) daar
+   weer heen; open je het via "Loondag wijzigen" op de Loon-pagina, dan hoor je gewoon terug te komen
+   op Loon in plaats van in een beheerscherm te belanden waar je niet vandaan kwam. */
+function openWerkCfg(w,vanaf){
   window._wcName=w;
+  if(vanaf)window._wcVanaf=vanaf;
   window._wc=Object.assign(defWerkCfg(),db.werkCfg[w]||{});
   window._wc.loon=schoonLoonCfg((db.werkCfg[w]&&db.werkCfg[w].loon)||db.loon);
   window._wcContract=(db.contract&&db.contract[w]!=null)?String(db.contract[w]).replace('.',','):'';
@@ -3009,7 +3013,7 @@ function renderWerkCfg(){
     ${c.correctie==='nabetaald'?`<label style="margin-top:12px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast interval'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}`:''}</div>`;
   openSheet(`<h2>${esc(w)}</h2><div class="muted" style="margin-bottom:12px">Alles over deze werkgever op één plek. Weet je iets niet zeker? Tik onderaan "Herstel standaard" — dan zet de app alles op een veilige keuze.</div>
     ${dienst}${loonBlok}${ctrlBlok}
-    <div class="row" style="margin-top:18px;gap:8px"><button class="ghost" onclick="wcSimpel()">Herstel standaard</button><button class="primary" style="flex:1" onclick="wcSave()">Opslaan</button></div>`,()=>openBeheerSheet('werkgevers'));
+    <div class="row" style="margin-top:18px;gap:8px"><button class="ghost" onclick="wcSimpel()">Herstel standaard</button><button class="primary" style="flex:1" onclick="wcSave()">Opslaan</button></div>`,window._wcVanaf==='loon'?null:()=>openBeheerSheet('werkgevers'));
 }
 /* Leest de losse invoervelden terug vóór een her-render of het opslaan (anders raak je getikte waarden kwijt). */
 function wcReadNums(){
@@ -3089,7 +3093,7 @@ function wcSaveDoen(){
   const cv=String(window._wcContract||'').replace(',','.').trim();
   if(cv==='')delete db.contract[w];else db.contract[w]=parseFloat(cv)||0;
   syncLoonVanWerk();
-  save();scheduleLoonMeldingen();closeSheet();openBeheerSheet('werkgevers');render();
+  save();scheduleLoonMeldingen();closeSheet();if(window._wcVanaf!=='loon')openBeheerSheet('werkgevers');render();
   toast(overgenomen?`${w} is nu je werkgever (${overgenomen} uit dienst)`:'Opgeslagen');
 }
 

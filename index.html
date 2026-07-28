@@ -3215,7 +3215,12 @@ function sheetDirty(){return typeof window._sheetSnap==='string'&&sheetSnapshot(
 function vraagWeggooien(daarna){
   confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
 }
-function openSheet(html,backFn){window._sheetBack=backFn||null;const bewaak=/onclick="save[A-Z]/.test(html);const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=bewaak?sheetSnapshot():null;}
+function openSheet(html,backFn){window._sheetBack=backFn||null;
+  /* Bewaakt = heeft een eigen opslaan-knop. Herkennen we aan de knoptekst ">Opslaan</button>", niet aan
+     de functienaam erachter — die varieert (saveShift, wcSave, confirmMarkLoon, ...) en een naam-patroon
+     mist dan sommige formulieren zonder dat het ergens opvalt. De knoptekst is de ene garantie die altijd
+     klopt: staat er "Opslaan", dan is er ook iets om weg te gooien. */
+  const bewaak=/>Opslaan<\/button>/.test(html);const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=bewaak?sheetSnapshot():null;}
 function sheetBack(){
   if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;sheetBack();});return;}
   const b=window._sheetBack;if(b)b();else closeSheet();

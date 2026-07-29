@@ -1843,11 +1843,14 @@ function markOccurrence(pi,itemId,iso,kind,amount,date,note,label,raakSaldo,toeI
   else{if(raak)p.saldo=round2((+p.saldo||0)-amt);it.paidDates=it.paidDates||{};it.paidDates[iso]=id;}
   return id;
 }
-/* Bij welke toeslag hoort deze ontvangst-boeking? Nieuwe boekingen zeggen het zelf (toeId). Bij een
-   oude boeking zoeken we de toeslag die deze termijn heeft afgevinkt, en anders de eerste. */
+/* Bij welke toeslag hoort deze ontvangst-boeking? Nieuwe boekingen zeggen het zelf (toeId). Wijst die
+   toeId nergens meer naar (de toeslag is intussen verwijderd), dan is de boeking bewust een wees: niet
+   gokken naar een andere toeslag van dezelfde kostenpost, want dan zou opslaan zonder wijzigen zomaar
+   de datum-administratie van díe toeslag overschrijven. Alleen een écht oude boeking - van vóór er een
+   toeId werd opgeslagen - mag terugvallen op de termijn-match of de enige/eerste toeslag. */
 function toeVanLog(it,x){
   if(!it)return null;
-  if(x&&x.toeId){const t=toeVan(it,x.toeId);if(t)return t;}
+  if(x&&x.toeId)return toeVan(it,x.toeId);
   if(x&&x.payIso){const t=toeslagenOf(it).find(T=>T.receivedDates&&T.receivedDates[x.payIso]===x.id);if(t)return t;}
   return toeVan(it,'');
 }

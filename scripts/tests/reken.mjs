@@ -304,6 +304,169 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   meld('elke toeslag een eigen regel op de Geldstroom-pagina', !r.fout&&e.n===2&&e.labels.slice().sort().join('|')==='Werkvergoeding|Zorgtoeslag', JSON.stringify(r.extra||r.fout));
   meld('toeslag afvinken raakt alleen die toeslag', !r.fout&&String(e.ontvangen)==='t1'&&String(e.open)==='t2', JSON.stringify(r.extra||r.fout));
 }
+// 22. datum kostenpost verschuift binnen dezelfde maand: afgevinkte termijn blijft gedekt, geen dubbele open regel
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[{id:'L1',date:'2026-07-10',amount:800,kind:'uitgave',item:'Huur',itemId:'a',payIso:'2026-07-10'}],items:[
+    {id:'a',n:'Huur',v:800,fn:1,fu:'m',due:'2026-07-22',paidDates:{'2026-07-10':'L1'},skipDates:{}},
+  ]}]});
+  const r=run(d,a=>{
+    const rows=a.paymentRows(new Date(2026,6,1),new Date(2026,6,31));
+    return {n:rows.length,paid:rows.filter(x=>x.paid).length,iso:rows.map(x=>x.iso)};
+  });
+  const e=r.extra||{};
+  meld('datum binnen dezelfde maand verschoven: geen dubbele juli-regel', !r.fout&&e.n===1&&e.paid===1&&e.iso[0]==='2026-07-10', JSON.stringify(r.extra||r.fout));
+}
+// 23. datum kostenpost springt naar een andere maand: de vastgelegde termijn blijft (historie), en er komt een nieuwe open termijn bij in het nieuwe schema
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[{id:'L1',date:'2026-06-05',amount:800,kind:'uitgave',item:'Huur',itemId:'a',payIso:'2026-06-05'}],items:[
+    {id:'a',n:'Huur',v:800,fn:1,fu:'m',due:'2026-07-22',paidDates:{'2026-06-05':'L1'},skipDates:{}},
+  ]}]});
+  const r=run(d,a=>a.paymentRows(new Date(2026,5,1),new Date(2026,6,31)).map(x=>x.iso+':'+(x.paid?'betaald':'open')));
+  meld('kostenpost-datum sprong naar volgende maand: juni blijft betaald, juli komt apart open te staan', !r.fout&&JSON.stringify(r.extra)==='["2026-06-05:betaald","2026-07-22:open"]', JSON.stringify(r.extra||r.fout));
+}
+// 24. datum van één toeslag verschuiven laat een andere toeslag op dezelfde kostenpost ongemoeid
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{'2026-07-20':'x'},recSkipDates:{}},
+      {id:'t2',naam:'Werk',v:30,fn:1,fu:'m',date:'2026-07-20',receivedDates:{'2026-07-20':'y'},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    const it=a.db.potjes[0].items[0];
+    /* alleen t1 verzetten, naar de 25e - zelfde maand, dus de afgevinkte termijn blijft gedekt */
+    a.toeslagenOf(it)[0].date='2026-07-25';
+    const rows=a.receiptRows(new Date(2026,6,1),new Date(2026,6,31));
+    return {n:rows.length,t1:rows.find(x=>x.toeId==='t1'),t2:rows.find(x=>x.toeId==='t2')};
+  });
+  const e=r.extra||{};
+  meld('toeslag-datum verschuift onafhankelijk van andere toeslag op dezelfde kostenpost', !r.fout&&e.n===2&&e.t1&&e.t1.received&&e.t1.iso==='2026-07-20'&&e.t2&&e.t2.received&&e.t2.iso==='2026-07-20', JSON.stringify(r.extra||r.fout));
+}
+// 25. toeslag met verstreken "loopt tot": telt niet meer mee in het maandbedrag en levert geen rijen meer op ná die datum
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Gestopt',v:47,fn:1,fu:'m',date:'2026-01-20',tot:'2026-03-15',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>({
+    mnd:a.itToeslagMnd(a.db.potjes[0].items[0]),
+    voorTot:a.receiptRows(new Date(2026,1,1),new Date(2026,1,28)).length,
+    naTot:a.receiptRows(new Date(2026,6,1),new Date(2026,6,31)).length,
+  }));
+  const e=r.extra||{};
+  meld('gestopte toeslag: telt niet meer mee, geen rijen meer na "loopt tot"', !r.fout&&e.mnd===0&&e.voorTot===1&&e.naTot===0, JSON.stringify(r.extra||r.fout));
+}
+// 26. toeslag zonder ontvangstdatum levert geen termijnen op en crasht niet
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Nog niet gepland',v:47,fn:1,fu:'m',date:null,receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>({rows:a.receiptRows(new Date(2026,6,1),new Date(2026,6,31)).length,
+                      termijnen:a.openTermijnen(a.db.potjes[0].items[0],'ontvangst','2026-07-20','t1').length}));
+  const e=r.extra||{};
+  meld('toeslag zonder datum: geen rijen, geen termijnen, geen crash', !r.fout&&e.rows===0&&e.termijnen===0, JSON.stringify(r.extra||r.fout));
+}
+// 27. kostenpost zonder enige toeslag: ontvangst-termijnen zijn leeg, ook zonder toeId
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Huur',v:800,fn:1,fu:'m',due:'2026-07-22',paidDates:{}}]}]});
+  const r=run(d,a=>({toe:a.toeslagenOf(a.db.potjes[0].items[0]).length,
+                      termijnen:a.openTermijnen(a.db.potjes[0].items[0],'ontvangst','2026-07-20').length,
+                      uitTermijnen:a.openTermijnen(a.db.potjes[0].items[0],'uitgave','2026-07-20').length}));
+  const e=r.extra||{};
+  meld('kostenpost zonder toeslag: geen ontvangst-termijnen, uitgave-termijnen werken gewoon door', !r.fout&&e.toe===0&&e.termijnen===0&&e.uitTermijnen>0, JSON.stringify(r.extra||r.fout));
+}
+// 28. een toeslag verwijderen terwijl er al een ontvangst voor geboekt is: de boeking blijft gewoon bestaan, alleen ontkoppeld van een bestaande toeslag
+{
+  const d=basis({potjes:[{n:'P',saldo:47,log:[{id:'L1',date:'2026-07-20',amount:47,kind:'ontvangst',item:'Zorgtoeslag',itemId:'a',payIso:'2026-07-20',toeId:'t1'}],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{'2026-07-20':'L1'},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    const it=a.db.potjes[0].items[0];
+    it.toeslagen.splice(0,1); // toeslag weg, log-entry blijft
+    return {toeVanLog:a.toeVanLog(it,a.db.potjes[0].log[0]),logBlijft:a.db.potjes[0].log.length,saldo:a.db.potjes[0].saldo};
+  });
+  const e=r.extra||{};
+  meld('toeslag verwijderd terwijl er al een ontvangst voor geboekt is: boeking blijft staan, alleen ontkoppeld', !r.fout&&e.toeVanLog===null&&e.logBlijft===1&&e.saldo===47, JSON.stringify(r.extra||r.fout));
+}
+// 28b. diezelfde wees-boeking mag NIET stilzwijgend aan een andere, nog bestaande toeslag van dezelfde
+// kostenpost gaan hangen - anders overschrijft een simpele "openen en opslaan" de datum-administratie
+// van die andere toeslag.
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[
+    {id:'L1',date:'2026-08-20',amount:47,kind:'ontvangst',item:'Zorgtoeslag',itemId:'a',payIso:'2026-08-20',toeId:'t1'},
+    {id:'L2',date:'2026-08-20',amount:30,kind:'ontvangst',item:'Werkvergoeding',itemId:'a',payIso:'2026-08-20',toeId:'t2'},
+  ],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-08-20',receivedDates:{'2026-08-20':'L1'},recSkipDates:{}},
+      // t2 (Werkvergoeding) bestaat expres niet meer in de lijst - alsof hij net verwijderd is.
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    const it=a.db.potjes[0].items[0];
+    const wees=a.db.potjes[0].log[1]; // L2, wijst naar de verdwenen t2
+    const gevonden=a.toeVanLog(it,wees);
+    return {gevonden,t1OngemoeidVoorFix:a.toeslagenOf(it)[0].receivedDates};
+  });
+  const e=r.extra||{};
+  meld('boeking met verwijderde toeslag adopteert niet stiekem een andere toeslag', !r.fout&&e.gevonden===null&&e.t1OngemoeidVoorFix['2026-08-20']==='L1', JSON.stringify(r.extra||r.fout));
+}
+// 29. vijf toeslagen op één kostenpost: correct totaal, elk zijn eigen regel, geen prestatieprobleem
+{
+  const T=[];for(let i=1;i<=5;i++)T.push({id:'t'+i,naam:'Toeslag '+i,v:10*i,fn:1,fu:'m',date:'2026-07-'+(10+i),receivedDates:{},recSkipDates:{}});
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Combi',v:500,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:T}]}]});
+  const r=run(d,a=>({mnd:a.itToeslagMnd(a.db.potjes[0].items[0]),rows:a.receiptRows(new Date(2026,6,1),new Date(2026,6,31)).length}));
+  const e=r.extra||{};
+  meld('vijf toeslagen: 10+20+30+40+50=150 opgeteld, elk een eigen rij', !r.fout&&e.mnd===150&&e.rows===5, JSON.stringify(r.extra||r.fout));
+}
+// 30. dubbele boeking-detectie werkt per toeslag: zelfde bedrag/dag op dezelfde toeslag is verdacht, op een andere toeslag niet
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[{id:'L1',date:'2026-07-20',amount:47,kind:'ontvangst',item:'Zorgtoeslag',itemId:'a',payIso:'2026-07-20',toeId:'t1'}],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{'2026-07-20':'L1'},recSkipDates:{}},
+      {id:'t2',naam:'Werk',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    /* markOccurrence op t2 mag niet struikelen over de al bestaande boeking op t1 - andere termijn. */
+    const id=a.markOccurrence(0,'a','2026-07-20','ontvangst',47,'2026-07-20','','Werk',true,'t2');
+    return {id:!!id,t2ontvangen:a.toeReceived(a.toeVan(a.db.potjes[0].items[0],'t2'),new Date(2026,6,20)),saldo:a.db.potjes[0].saldo};
+  });
+  const e=r.extra||{};
+  meld('boeken op een andere toeslag met hetzelfde bedrag/dag lukt gewoon', !r.fout&&e.id&&e.t2ontvangen&&e.saldo===47, JSON.stringify(r.extra||r.fout));
+}
+// 31. amountHint/dateHint zijn per toeslag geïsoleerd: twee toeslagen met een verschillend patroon beïnvloeden elkaar niet
+{
+  const mkLog=(id,payIso,date,amt,toeId)=>({id,date,amount:amt,kind:'ontvangst',itemId:'a',payIso,toeId});
+  const d=basis({potjes:[{n:'P',saldo:0,log:[
+    mkLog('l1','2026-05-20','2026-05-22',50,'t1'),mkLog('l2','2026-06-20','2026-06-22',50,'t1'), // t1: altijd 2 dagen later, altijd +3
+    mkLog('l3','2026-05-20','2026-05-20',30,'t2'),mkLog('l4','2026-06-20','2026-06-20',30,'t2'), // t2: precies op tijd, precies gepland bedrag
+  ],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'A',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+      {id:'t2',naam:'B',v:30,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    const p=a.db.potjes[0],it=p.items[0];
+    const h1=a.dateHint(p,it,'ontvangst','t1'),am1=a.amountHint(p,it,'ontvangst','t1');
+    const h2=a.dateHint(p,it,'ontvangst','t2'),am2=a.amountHint(p,it,'ontvangst','t2');
+    return {h1:h1&&h1.a,am1:am1&&am1.a,h2:h2&&h2.a,am2:am2&&am2.a};
+  });
+  const e=r.extra||{};
+  meld('datum/bedrag-hints per toeslag geïsoleerd: t1 wijkt af, t2 klopt precies', !r.fout&&e.h1===2&&e.am1===3&&e.h2===0&&e.am2===0, JSON.stringify(r.extra||r.fout));
+}
+// 32. buffer-kostenpost blijft werken en heeft nooit toeslagen (regressie na de migratie)
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Onderhoud',buffer:true,v:25,fn:1,fu:'m',paidDates:{},receivedDates:{}}]}]});
+  const r=run(d,a=>({toe:a.toeslagenOf(a.db.potjes[0].items[0]).length,mnd:a.itMnd(a.db.potjes[0].items[0])}));
+  const e=r.extra||{};
+  meld('buffer-kostenpost: geen toeslagen, maandbedrag blijft gewoon werken', !r.fout&&e.toe===0&&e.mnd===25, JSON.stringify(r.extra||r.fout));
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

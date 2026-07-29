@@ -894,7 +894,7 @@ const GUIDE=[
 /* ---------- UREN ---------- */
 {s:'Uren',mod:'uren',q:'Hoe voeg ik een gewerkte dienst toe?',
  v:gv(`<div class="row" style="gap:8px;margin-bottom:8px"><div style="flex:1">${GLBL('Van')}${GINP('09:00')}</div><div style="flex:1">${GLBL('Tot')}${GINP('17:30')}</div></div><div style="margin-bottom:10px">${GLBL('Pauze')}${GINP('30 min')}</div>${GSHIFT('Jumbo','ma 20 juli','09:00–17:30 · 30 min pauze','8u 00m',GBADGE('b-wait','Te controleren'),'var(--wait-tx)')}`),
- t:gt(`Tik op de ronde <b>＋</b>-knop op het Uren-scherm, kies je werkgever en vul begin, eind en pauze in. De app rekent zelf uit hoeveel uur je gewerkt hebt en telt het op bij je week- en maandtotaal. Een dienst bewerken of verwijderen doe je door erop te tikken.`)},
+ t:gt(`Tik op de ronde <b>＋</b>-knop op het Uren-scherm, kies je werkgever en vul begin, eind en pauze in. De app rekent zelf uit hoeveel uur je gewerkt hebt en telt het op bij je week- en maandtotaal. Een dienst bewerken of verwijderen doe je door erop te tikken.<br><br>Staat er al een dienst bij dezelfde werkgever op dezelfde dag met dezelfde tijden, dan vraagt de app of je er echt nog een wilt — handig als je bij het bijwerken van je historie niet meer weet of je hem al had ingevoerd.`)},
 {s:'Uren',mod:'uren',feat:'comp',q:'Wat betekent "uren controleren" en waarom zou ik dat doen?',
  v:gv(`<div class="tegoed" style="background:var(--wait-bg);margin-bottom:8px"><b style="color:var(--wait-tx)">2 diensten te controleren</b><div class="muted" style="margin-top:3px">Tik om te controleren</div></div><div class="card" style="margin-bottom:0;padding:12px 14px"><div class="row between" style="align-items:center"><div><b>Jumbo</b><div class="muted" style="font-size:12.5px">ma 20 jul · 8u 00m</div></div></div><div class="grid2" style="margin-top:10px"><button class="tiny" style="background:var(--ok-bg);color:var(--ok-tx)">Klopt</button><button class="tiny" style="background:var(--bad-bg);color:var(--bad-tx)">Klopt niet</button></div></div>`),
  t:gt(`Werkgevers maken fouten met urenregistratie. Zodra jouw werkgever de uren klaarzet, vergelijk je ze met wat er in de app staat en tik je <b>Klopt</b> of <b>Klopt niet</b>. Zo weet je altijd zeker dat je krijgt betaald voor wat je gewerkt hebt — en zie je bovenaan het Uren-scherm in één oogopslag wat er nog open staat.`)},
@@ -948,7 +948,7 @@ const GUIDE=[
  t:gt(`Zet bij een potje het brandstof-vlaggetje aan (Potje bewerken → Geavanceerde opties). Bij elke tankbeurt kun je dan ook <b>liters en literprijs</b> invullen — het bedrag wordt automatisch berekend. De app houdt je gemiddelde per maand én per tankbeurt bij en adviseert wat je maandelijks opzij kunt zetten.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Hoe log ik een uitgave?',
  v:gv(`<div style="margin-bottom:8px">${GLBL('Bedrag')}<div class="money"><span>€</span><input value="52,50" readonly style="cursor:default"></div>${GLBL('Potje')}${GINP('Vaste Lasten')}${GLBL('Kostenpost')}${GINP('Internet')}</div><div class="statusbadge ok" style="margin-bottom:0">● Dekt de termijn van 10 mrt 2026 af · 5 dagen eerder betaald</div>`),
- t:gt(`Tik op de <b>＋</b>-knop op de Potjes-pagina. Kies het potje, vul het bedrag in en koppel het aan een kostenpost. Het saldo van dat potje gaat automatisch omlaag, en als je koppelt aan een geplande betaling wordt die meteen afgevinkt op de Geldstroom-pagina.<br><br>Ook handig om je historie bij te werken: zet de datum op wanneer er echt is afgeschreven, ook maanden terug. De app kiest dan zelf de termijn die daar het dichtst bij ligt en laat zien hoeveel dat scheelt — schreef de bank op de 5e af terwijl de vaste datum de 10e is, dan dekt dat gewoon die termijn af. Klopt de gekozen termijn niet, dan zet je hem in de lijst eronder om. Dit werkt net zo voor een toeslag die je terugkrijgt.`)},
+ t:gt(`Tik op de <b>＋</b>-knop op de Potjes-pagina. Kies het potje, vul het bedrag in en koppel het aan een kostenpost. Het saldo van dat potje gaat automatisch omlaag, en als je koppelt aan een geplande betaling wordt die meteen afgevinkt op de Geldstroom-pagina.<br><br>Ook handig om je historie bij te werken: zet de datum op wanneer er echt is afgeschreven, ook jaren terug. De app kiest dan zelf de termijn die daar het dichtst bij ligt en laat zien hoeveel dat scheelt — schreef de bank op de 5e af terwijl de vaste datum de 10e is, dan dekt dat gewoon die termijn af. Klopt de gekozen termijn niet, dan zet je hem in de lijst eronder om.<br><br>Boek je iets uit een <b>eerdere maand</b>, dan zet de app het vinkje "Saldo van het potje bijwerken" automatisch <b>uit</b>. Dat geld is toen al van je rekening gegaan en zit dus al verwerkt in het saldo dat je nu ziet; nog een keer afboeken zou dubbel tellen. Voor deze maand staat het vinkje gewoon aan. Je kunt het altijd zelf omzetten.<br><br>Staat er al een boeking van hetzelfde bedrag op dezelfde dag in dat potje, dan vraagt de app of je er echt nog een wilt. Je kunt altijd doorgaan — twee keer tanken op één dag kan immers.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'once',q:'Wat is een "eenmalige" uitgave?',
  v:gv(`<div class="row between" style="align-items:center"><div style="flex:1"><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en adviezen</div></div><div class="check on">✓</div></div>`),
  t:gt(`Soms doe je een uitgave die niets zegt over je normale patroon — een dure eenmalige reparatie bijvoorbeeld. Vink 'm aan als eenmalig (onder <b>Geavanceerd</b> in het uitgave-scherm): het geld gaat gewoon van je saldo af, maar de app laat 'm buiten de gemiddeldes en buffer-adviezen. Zo blijft dat advies realistisch.`)},
@@ -965,6 +965,9 @@ const GUIDE=[
 {s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Wat is een toeslag en wat is mijn "eigen deel"?',
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
  t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de kostenpost. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Geldstroom-pagina.`)},
+{s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Hoe boek ik een toeslag die ik heb ontvangen?',
+ v:gv(`<div style="margin-bottom:8px">${GLBL('Soort')}<div class="row" style="gap:8px"><span class="chip">Uitgave</span><span class="chip on">Ontvangst</span></div>${GLBL('Kostenpost')}${GINP('Zorgtoeslag — bij Menzis zorgverzekering')}</div><div class="statusbadge ok" style="margin-bottom:0">● Dekt de termijn van 20 mrt 2026 af</div>`),
+ t:gt(`Een toeslag hangt aan de kostenpost waar hij bij hoort, en is dus geen aparte regel in de lijst. Zet het scherm op <b>Ontvangst</b> en kies de kostenpost: de naam van de toeslag staat er dan bij, en de app koppelt aan de datums van de <b>toeslag</b> — niet aan die van de afschrijving.<br><br>Staat er bij een kostenpost geen toeslag, dan valt er niets te koppelen en zegt de app dat erbij. Je kunt het bedrag dan nog steeds als losse ontvangst boeken.`)},
 {s:'Geldstroom',mod:'potjes',feat:'hints',q:'Waarom staat er bij de ene post "Verwacht rond ..." en bij de andere niet?',
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Internet</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right"><div style="font-weight:800">${eur(52.5)}</div>${GBADGE('b-wait','Open')}</div></div><div class="muted" style="margin-top:4px">Verwacht rond <b style="color:var(--text)">31 juli</b> (±1 dag) · meestal <b style="color:var(--text)">${eur(1.4)} meer</b> dan gepland</div></div>`),
  t:gt(`De geplande datum en het geplande bedrag zijn zelden precies de échte. De app kijkt naar de laatste keren dat je deze post afvinkte en rekent uit hoeveel dagen én hoeveel euro dat gemiddeld scheelt. Wijkt alleen het bedrag af, dan zie je alleen dat deel.<br><br>Hij heeft daar <b>minstens twee afgevinkte betalingen</b> voor nodig; tot die tijd staat er wat er nog aan ontbreekt. Belangrijk: alleen betalingen die je <b>op de Geldstroom-pagina hebt afgevinkt</b> tellen mee. Boek je iets als losse uitgave, dan weet de app niet welke termijn dat afdekt en telt het dus niet mee voor de voorspelling.`)},
@@ -1441,8 +1444,18 @@ function saveShift(id){
       s.ctrl={st:'afw',min:parseDuur(val('f_afw'))||0,opgelost:keep?!!prev.opgelost:false,via:keep?prev.via:'',corrShiftId:keep?prev.corrShiftId:'',nabetaalDatum:keep?prev.nabetaalDatum:'',nabOntvangen:keep?!!prev.nabOntvangen:false,note:keep?prev.note:''};
     }else s.ctrl={st:stt,min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''};
   }else s.ctrl=old&&old.ctrl?old.ctrl:{st:'todo',min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''};
-  if(id){const i=db.shifts.findIndex(x=>x.id===id);db.shifts[i]=s;}else db.shifts.push(s);
-  haptic();save();closeSheet();render();toast('Opgeslagen');
+  /* Zelfde werkgever op dezelfde dag met dezelfde tijden: vrijwel altijd per ongeluk twee keer
+     ingevoerd. Waarschuwen en niet blokkeren, want een dubbele dienst op een dag kan echt. */
+  const dub=db.shifts.find(x=>x&&x.id!==s.id&&x.werk===s.werk&&x.date===s.date&&x.start===s.start&&x.end===s.end);
+  const leg=()=>{
+    if(id){const i=db.shifts.findIndex(x=>x.id===id);db.shifts[i]=s;}else db.shifts.push(s);
+    haptic();save();closeSheet();render();toast('Opgeslagen');
+  };
+  if(dub&&!id){
+    confirmSheet('Staat deze dienst er al?',`Er staat al een dienst bij ${s.werk} op ${new Date(s.date).toLocaleDateString('nl-NL')} van ${s.start} tot ${s.end}. Wil je er nog een toevoegen?`,'Toch toevoegen',leg);
+    return;
+  }
+  leg();
 }
 /* ===== UREN-CONTROLE (per dienst: te controleren / klopt / afwijking, met rechtzetten) ===== */
 function openControle(){
@@ -1708,19 +1721,39 @@ function confirmMarkLoon(iso){
    De log-entry onthoudt via payIso welke occurrence 'm afdekt, zodat uitvinken of de log-entry verwijderen
    elkaar automatisch weer terugdraaien. Oudere paidDates/receivedDates (waarde true, geen gekoppelde log-entry)
    blijven werken via de legacy-tak in unmarkOccurrence. */
-function markOccurrence(pi,itemId,iso,kind,amount,date,note,label){
+/* Hoort een boeking het saldo te raken? Alles uit een eerdere maand is historie: dat geld is toen al
+   van je rekening gegaan en zit dus al verwerkt in het saldo dat je nu ziet. Nog een keer afboeken zou
+   dubbel tellen. Binnen de huidige maand is het wel actueel, dus dan staat het vinkje aan. */
+function saldoStandaard(dateIso){
+  const d=parseISO(dateIso);if(!d)return true;
+  return d>=monthStart(vandaag());
+}
+/* Zelfde potje, zelfde dag, zelfde bedrag en dezelfde soort: bijna altijd per ongeluk twee keer
+   geboekt. Bijna, want twee keer tanken op een dag kan echt gebeuren - dus waarschuwen, niet blokkeren. */
+function dubbeleBoeking(p,date,amt,ontv,negeerId){
+  return (p.log||[]).find(x=>x&&x.id!==negeerId&&x.date===date
+    &&Math.abs((+x.amount||0)-amt)<0.005&&((x.kind==='ontvangst')===!!ontv));
+}
+function markOccurrence(pi,itemId,iso,kind,amount,date,note,label,raakSaldo){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!p||!it)return null;
   const id=rnd();const amt=round2(amount)||0;
   p.log=p.log||[];
-  p.log.push({id,date:date||iso,amount:amt,note:note||'',item:label||it.n,itemId:it.id,kind,payIso:iso});
-  if(kind==='ontvangst'){p.saldo=round2((+p.saldo||0)+amt);it.receivedDates=it.receivedDates||{};it.receivedDates[iso]=id;}
-  else{p.saldo=round2((+p.saldo||0)-amt);it.paidDates=it.paidDates||{};it.paidDates[iso]=id;}
+  const raak=raakSaldo!==false;
+  const entry={id,date:date||iso,amount:amt,note:note||'',item:label||it.n,itemId:it.id,kind,payIso:iso};
+  if(!raak)entry.geenSaldo=true;
+  p.log.push(entry);
+  if(kind==='ontvangst'){if(raak)p.saldo=round2((+p.saldo||0)+amt);it.receivedDates=it.receivedDates||{};it.receivedDates[iso]=id;}
+  else{if(raak)p.saldo=round2((+p.saldo||0)-amt);it.paidDates=it.paidDates||{};it.paidDates[iso]=id;}
   return id;
 }
 function removeLogEntry(pi,idx){
   const p=db.potjes[pi];const x=p&&p.log[idx];if(!p||!x)return;
-  if(x.kind==='ontvangst')p.saldo=round2((+p.saldo||0)-(+x.amount||0));
-  else p.saldo=round2((+p.saldo||0)+(+x.amount||0));
+  /* Was deze boeking puur voor het overzicht, dan is het saldo er nooit mee veranderd en hoort het
+     bij verwijderen ook niet terug te komen. */
+  if(!x.geenSaldo){
+    if(x.kind==='ontvangst')p.saldo=round2((+p.saldo||0)-(+x.amount||0));
+    else p.saldo=round2((+p.saldo||0)+(+x.amount||0));
+  }
   if(x.payIso&&x.itemId){
     const it=p.items.find(i=>i.id===x.itemId);
     if(it){const map=x.kind==='ontvangst'?it.receivedDates:it.paidDates;if(map&&map[x.payIso]===x.id)delete map[x.payIso];}
@@ -1782,30 +1815,48 @@ function toggleItemReceived(pi,id,iso){
 function openMarkPaidSheet(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
   openSheet(`<h2>Betaling markeren</h2><div class="muted" style="margin-bottom:10px">${esc(it.n)}</div>
-    <label>Datum</label><input type="date" id="mp_date" value="${iso}">
+    <label>Datum</label><input type="date" id="mp_date" value="${iso}" onchange="markSaldoStand('mp')">
     <label>Bedrag</label>${mInput('id="mp_amt"',it.v,'0,00')}
-    <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven">
+    <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mp_saldoUitleg"></div></div><div class="check" id="mp_saldo" onclick="tgl(this);markSaldoInfo('mp')"></div></div>
     <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Bevestigen — boekt af en logt uitgave</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','uitgave')">Deze termijn komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Wordt deze afschrijving een keer overgeslagen? Dan verdwijnt hij uit je openstaande lijst zonder dat er iets van je saldo af gaat. Je kunt dat altijd terugdraaien.</div>`);
+  markSaldoStand('mp');
   setTimeout(()=>{const el=document.getElementById('mp_amt');if(el){el.focus();el.select&&el.select();}},100);
+}
+/* Zelfde regel als bij het uitgave-scherm: een termijn uit een eerdere maand is historie, dus dan
+   staat het saldo-vinkje standaard uit. Zie saldoStandaard. */
+function markSaldoStand(pre){
+  const c=document.getElementById(pre+'_saldo');if(!c)return;
+  const aan=saldoStandaard(val(pre+'_date'));
+  c.classList.toggle('on',aan);c.textContent=aan?'✓':'';
+  markSaldoInfo(pre);
+}
+function markSaldoInfo(pre){
+  const c=document.getElementById(pre+'_saldo'),i=document.getElementById(pre+'_saldoUitleg');if(!c||!i)return;
+  const aan=c.classList.contains('on'),oud=!saldoStandaard(val(pre+'_date'));
+  i.textContent=aan
+    ?(oud?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'Je saldo verandert met dit bedrag.')
+    :'Alleen vastleggen voor je overzicht; je saldo blijft zoals het is.';
 }
 function confirmMarkPaid(pi,itemId,iso){
   const amt=moneyNum(val('mp_amt'));const date=val('mp_date')||iso;const note=val('mp_note')||'';
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
   const amount=amt==null?(+it.v||0):amt;
-  markOccurrence(pi,itemId,iso,'uitgave',amount,date,note);
+  const chk=document.getElementById('mp_saldo');
+  markOccurrence(pi,itemId,iso,'uitgave',amount,date,note,null,!chk||chk.classList.contains('on'));
   haptic();save();closeSheet();render();toast('Betaald · saldo −'+eur(amount));
 }
 function openMarkReceivedSheet(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it||!it.toeslag)return;
   openSheet(`<h2>Ontvangst markeren</h2><div class="muted" style="margin-bottom:10px">${esc(it.toeslag.naam||('Toeslag '+it.n))}</div>
-    <label>Datum</label><input type="date" id="mr_date" value="${iso}">
+    <label>Datum</label><input type="date" id="mr_date" value="${iso}" onchange="markSaldoStand('mr')">
     <label>Bedrag</label>${mInput('id="mr_amt"',it.toeslag.v,'0,00')}
-    <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel">
+    <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mr_saldoUitleg"></div></div><div class="check" id="mr_saldo" onclick="tgl(this);markSaldoInfo('mr')"></div></div>
     <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}')">Bevestigen — boekt bij en logt ontvangst</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst')">Deze termijn komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt de termijn uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
+  markSaldoStand('mr');
   setTimeout(()=>{const el=document.getElementById('mr_amt');if(el){el.focus();el.select&&el.select();}},100);
 }
 function confirmMarkReceived(pi,itemId,iso){
@@ -1813,7 +1864,8 @@ function confirmMarkReceived(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
   const amount=amt==null?(it.toeslag?+it.toeslag.v||0:0):amt;
   const label=it.toeslag&&it.toeslag.naam?it.toeslag.naam:('Toeslag '+it.n);
-  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label);
+  const chk=document.getElementById('mr_saldo');
+  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label,!chk||chk.classList.contains('on'));
   haptic();save();closeSheet();render();toast('Ontvangen · saldo +'+eur(amount));
 }
 /* KALENDERMAAND-METHODE.
@@ -2141,7 +2193,9 @@ function betalingCard(x){
     :x.paid?{cls:'b-ok',txt:'Betaald',dot:'var(--green)'}
     :x.telaat?{cls:'b-bad',txt:'Te laat',dot:'var(--bad-tx)'}
     :{cls:'b-wait',txt:'Open',dot:'var(--wait-tx)'};
-  const toe=x.toeslag>0?`<div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(x.toeslag)}</div>`:'';
+  /* Deze regel kijkt vooruit: van dit bedrag komt straks een deel terug. Zodra de betaling afgerond
+     of overgeslagen is heeft de toeslag zijn eigen regel op deze pagina, en is dit alleen nog ruis. */
+  const toe=(x.toeslag>0&&!x.paid&&!x.skipped)?`<div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(x.toeslag)}</div>`:'';
   const hintRow=(!x.paid&&!x.skipped)?dateHintRow(x,'uitgave'):'';const dd=x.dispDate||x.date;
   const bedrag=x.skipped?`<span style="color:var(--muted);text-decoration:line-through">${eur(x.net)}</span>`:`− ${eur(x.net)}`;
   const actie=x.skipped?'Tik om weer op openstaand te zetten':x.paid?'Tik om terug op open te zetten':'Tik om betaald te zetten';
@@ -2185,17 +2239,23 @@ function openUitgave(pre,itemId){
     <div class="muted" style="margin-bottom:8px" id="u_saldoInfo">Het saldo van het gekozen potje daalt met dit bedrag.</div>
     <label id="u_potLbl">Uit welk potje?</label><select id="u_pot" onchange="uitgaveKostSel()">${db.potjes.map((p,i)=>`<option value="${i}" ${i===pi?'selected':''}>${esc(p.n)} · ${eur(p.saldo)}</option>`).join('')}</select>
     <label>Kostenpost (optioneel)</label><select id="u_item" onchange="uitgaveLinkToggle()"></select>
-    <div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this);uitgaveLinkVeld()"></div></div><div id="u_occWrap" style="display:none"><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div></div>
+    <div class="muted" id="u_geenLink" style="display:none;font-size:12.5px;margin-top:12px"></div><div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this);uitgaveLinkVeld()"></div></div><div id="u_occWrap" style="display:none"><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div></div>
     <div id="u_fuelWrap" style="display:none"><div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="u_l" inputmode="decimal" placeholder="bijv. 32,5" oninput="fuelCalc('u')"></div><div><label>Prijs per liter</label>${mInput('id="u_ppl" oninput="fuelCalc(\'u\')"','','2,05')}</div></div><div class="muted" style="font-size:12px;margin-top:4px">Bedrag wordt automatisch berekend (liters × prijs). Alleen een bedrag invullen mag ook.</div></div>
     <label>Bedrag</label>${mInput('id="u_amt"',selIt?selIt.v:'','bijv. 405')}
-    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()">
+    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="u_saldoUitleg"></div></div><div class="check on" id="u_saldo" onclick="tgl(this);uitgaveSaldoInfo()">✓</div></div>
     <label>Omschrijving (optioneel)</label><input id="u_note" placeholder="bijv. keerring vervangen">
     ${featOn('once')?`<span class="adv" onclick="var a=document.getElementById('u_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span>
     <div id="u_adv" style="display:none"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check" id="u_once" onclick="tgl(this)"></div></div></div>`:''}
     <button class="primary" style="width:100%;margin-top:14px" onclick="saveUitgave()">Opslaan</button>`);
   uitgaveKostSel(itemId||'');
 }
-function uitgaveKostSel(selectedId){const pi=+val('u_pot');const p=db.potjes[pi];const sel=document.getElementById('u_item');if(sel)sel.innerHTML=`<option value="">— geen —</option>`+((p&&p.items)?p.items.map(it=>`<option value="${esc(it.id)}" ${it.id===selectedId?'selected':''}>${esc(it.n)}</option>`).join(''):'');const fw=document.getElementById('u_fuelWrap');if(fw)fw.style.display=(p&&p.fuel&&window._uKind!=='ontvangst')?'block':'none';uitgaveLinkToggle();}
+/* In de ontvangst-modus koppel je aan de toeslag van een kostenpost, niet aan de kostenpost zelf.
+   Daarom staat de naam van de toeslag erbij - anders kies je "Menzis zorgverzekering" en zie je
+   nergens dat je Zorgtoeslag aan het boeken bent. */
+function uitgaveKostSel(selectedId){const pi=+val('u_pot');const p=db.potjes[pi];const sel=document.getElementById('u_item');
+  const ontv=window._uKind==='ontvangst';
+  const naam=it=>(ontv&&it.toeslag&&(it.toeslag.naam||('Toeslag '+it.n)))?`${esc(it.toeslag.naam||('Toeslag '+it.n))} — bij ${esc(it.n)}`:esc(it.n);
+  if(sel)sel.innerHTML=`<option value="">— geen —</option>`+((p&&p.items)?p.items.map(it=>`<option value="${esc(it.id)}" ${it.id===selectedId?'selected':''}>${naam(it)}</option>`).join(''):'');const fw=document.getElementById('u_fuelWrap');if(fw)fw.style.display=(p&&p.fuel&&window._uKind!=='ontvangst')?'block':'none';uitgaveLinkToggle();}
 function uKindSel(k){
   window._uKind=k;const ontv=k==='ontvangst';
   document.getElementById('uk_uit').classList.toggle('on',!ontv);document.getElementById('uk_ontv').classList.toggle('on',ontv);
@@ -2244,6 +2304,21 @@ function dichtstbijTermijn(lijst,dateIso){
   return best;
 }
 /* Regel onder de keuzelijst: hoeveel scheelt je betaaldatum met de termijn die je afdekt. */
+/* Het saldo-vinkje volgt standaard de datum: boek je iets van een eerdere maand, dan is dat historie
+   en hoort je saldo niet nog een keer mee te bewegen. Je kunt het altijd zelf omzetten. */
+function uitgaveSaldoStand(){
+  const c=document.getElementById('u_saldo');if(!c)return;
+  const aan=saldoStandaard(val('u_date'));
+  c.classList.toggle('on',aan);c.textContent=aan?'✓':'';
+  uitgaveSaldoInfo();
+}
+function uitgaveSaldoInfo(){
+  const c=document.getElementById('u_saldo'),i=document.getElementById('u_saldoUitleg');if(!c||!i)return;
+  const aan=c.classList.contains('on'),oud=!saldoStandaard(val('u_date'));
+  i.textContent=aan
+    ?(oud?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'Je saldo verandert met dit bedrag.')
+    :'Alleen vastleggen voor je overzicht; je saldo blijft zoals het is.';
+}
 /* De termijn-keuze hoort er pas te staan als je ook echt wilt koppelen. */
 function uitgaveLinkVeld(){
   const c=document.getElementById('u_link'),w=document.getElementById('u_occWrap');
@@ -2266,6 +2341,14 @@ function uitgaveLinkToggle(){
   const lijst=openTermijnen(it,kind,val('u_date'));
   const eligible=!!it&&lijst.length>0;
   wrap.style.display=eligible?'block':'none';
+  /* Kies je in ontvangst-modus een kostenpost zonder toeslag, dan valt er niets te koppelen. Dat
+     zonder uitleg laten verdwijnen is verwarrend, dus zeggen we waarom. */
+  const geen=document.getElementById('u_geenLink');
+  if(geen){
+    const toon=!!it&&!eligible&&ontv&&!it.toeslag;
+    geen.style.display=toon?'block':'none';
+    if(toon)geen.textContent=`Bij "${esc(it.n)}" staat geen toeslag, dus er is geen termijn om deze ontvangst aan te koppelen.`;
+  }
   const lbl=document.getElementById('u_linkLbl');
   if(lbl)lbl.textContent=ontv?'Ook als ontvangen markeren?':'Ook als betaald markeren?';
   if(!eligible)return;
@@ -2274,33 +2357,48 @@ function uitgaveLinkToggle(){
   const auto=dichtstbijTermijn(lijst,val('u_date'));const kies=auto?isoDate(auto):'';
   const sel=document.getElementById('u_occ');
   if(sel)sel.innerHTML=lijst.map(d=>`<option value="${isoDate(d)}" ${isoDate(d)===kies?'selected':''}>${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</option>`).join('');
-  uitgaveOccInfo();uitgaveLinkVeld();
+  uitgaveOccInfo();uitgaveLinkVeld();uitgaveSaldoStand();
 }
 function saveUitgave(){
   const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;
   const amt=moneyNum(val('u_amt'))||0;if(!amt){toast('Vul een bedrag in');return;}
+  const date=val('u_date')||isoDate(new Date());
+  const ontv=window._uKind==='ontvangst';
+  const dub=dubbeleBoeking(p,date,amt,ontv);
+  if(dub){
+    const wat=dub.item?`"${esc(dub.item)}"`:(ontv?"een ontvangst":"een uitgave");
+    confirmSheet('Staat dit er al?',`Op ${new Date(date).toLocaleDateString('nl-NL')} staat in dit potje al ${wat} van ${eur(dub.amount)}. Wil je er nog een toevoegen?`,'Toch toevoegen',saveUitgaveDoen);
+    return;
+  }
+  saveUitgaveDoen();
+}
+function saveUitgaveDoen(){
+  const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;
+  const amt=moneyNum(val('u_amt'))||0;if(!amt)return;
   const itId=val('u_item')||'';const it=itId?p.items.find(x=>x.id===itId):null;
   const date=val('u_date')||isoDate(new Date());const note=val('u_note');
   const once=!!(document.getElementById('u_once')&&document.getElementById('u_once').classList.contains('on'));
   const l=p.fuel?(parseFloat(String(val('u_l')||'').replace(',','.'))||0):0;
   const ppl=p.fuel?(moneyNum(val('u_ppl'))||0):0;
   const extra=x=>{if(once)x.once=true;if(l>0)x.l=round2(l);if(ppl>0)x.ppl=round2(ppl);};
+  const saldoChk=document.getElementById('u_saldo');
+  const raak=!saldoChk||saldoChk.classList.contains('on');
   const linkChk=document.getElementById('u_link');
   const ontvK=window._uKind==='ontvangst';
   const occIso=val('u_occ')||'';
   const wantLink=!!(it&&occIso&&linkChk&&linkChk.classList.contains('on'));
   if(wantLink){
     const label=ontvK?((it.toeslag&&it.toeslag.naam)||('Toeslag '+it.n)):null;
-    const lid=markOccurrence(pi,it.id,occIso,ontvK?'ontvangst':'uitgave',amt,date,note,label);
+    const lid=markOccurrence(pi,it.id,occIso,ontvK?'ontvangst':'uitgave',amt,date,note,label,raak);
     if(lid){const le=p.log.find(z=>z.id===lid);if(le&&!ontvK)extra(le);
       haptic();save();closeSheet();render();toast(ontvK?'Ontvangst gekoppeld':'Uitgave toegevoegd en gekoppeld als betaald');return;}
   }
   p.log=p.log||[];
-  const ontv=window._uKind==='ontvangst';
-  const entry={id:rnd(),date,amount:amt,note,item:it?it.n:'',itemId:it?it.id:'',kind:ontv?'ontvangst':'uitgave'};if(!ontv)extra(entry);
+  const entry={id:rnd(),date,amount:amt,note,item:it?it.n:'',itemId:it?it.id:'',kind:ontvK?'ontvangst':'uitgave'};if(!ontvK)extra(entry);
+  if(!raak)entry.geenSaldo=true;
   p.log.push(entry);
-  p.saldo=round2((+p.saldo||0)+(ontv?amt:-amt));
-  haptic();save();closeSheet();render();toast(ontv?'Ontvangst toegevoegd':'Uitgave toegevoegd');
+  if(raak)p.saldo=round2((+p.saldo||0)+(ontvK?amt:-amt));
+  haptic();save();closeSheet();render();toast(ontvK?'Ontvangst toegevoegd':'Uitgave toegevoegd');
 }
 function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];const x=p.log[idx];if(!x)return;window._uitBackTab=backTab||window._ovTab||'pot';const isRec=x.kind==='ontvangst';
   const linkInfo=x.payIso?(()=>{const d=new Date(x.payIso);return `<div class="statusbadge ok" style="margin-bottom:12px">Gekoppeld aan betaling · ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</div>`;})():`<div class="statusbadge none" style="margin-bottom:12px">Losse ${isRec?'ontvangst':'uitgave'}, niet gekoppeld aan een betaling</div>`;
@@ -2543,9 +2641,17 @@ function openLoonLog(id){
 function saveLoonLog(id){
   const amt=moneyNum(val('ll_amt'));if(!amt){toast('Vul een bedrag in');return;}
   const date=val('ll_date')||isoDate(new Date());const note=val('ll_note');
-  if(id){const x=db.loonLog.find(v=>v.id===id);if(x){x.date=date;x.amount=round2(amt);x.note=note;}}
-  else db.loonLog.push({id:rnd(),date,amount:round2(amt),note});
-  haptic();save();closeSheet();render();toast('Opgeslagen');
+  const leg=()=>{
+    if(id){const x=db.loonLog.find(v=>v.id===id);if(x){x.date=date;x.amount=round2(amt);x.note=note;}}
+    else db.loonLog.push({id:rnd(),date,amount:round2(amt),note});
+    haptic();save();closeSheet();render();toast('Opgeslagen');
+  };
+  const dub=(db.loonLog||[]).find(x=>x&&x.id!==id&&x.date===date&&Math.abs((+x.amount||0)-round2(amt))<0.005);
+  if(dub&&!id){
+    confirmSheet('Staat dit loon er al?',`Er staat al een loon-ontvangst van ${eur(dub.amount)} op ${new Date(date).toLocaleDateString('nl-NL')}. Wil je er nog een toevoegen?`,'Toch toevoegen',leg);
+    return;
+  }
+  leg();
 }
 function delLoonLog(id){
   const i=db.loonLog.findIndex(v=>v.id===id);if(i<0)return;

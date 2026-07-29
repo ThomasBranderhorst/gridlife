@@ -930,8 +930,8 @@ const GUIDE=[
  v:gv(`<div class="mini" style="margin-bottom:0"><div class="mini-h">Tanken · laatste 12 maanden</div>${GKV('Gemiddeld per maand',eur(54.94))}${GKV('Gemiddeld per tankbeurt',eur(68.68))}${GKV('Getankt','126,4 L')}${GKV('Gemiddelde literprijs',eur(2.18))}${GKV('Tankbeurten','4')}<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(55)}/mnd</b></span><button class="tiny primary">Overnemen</button></div></div>`),
  t:gt(`Zet bij een potje het brandstof-vlaggetje aan (Potje bewerken → Geavanceerde opties). Bij elke tankbeurt kun je dan ook <b>liters en literprijs</b> invullen — het bedrag wordt automatisch berekend. De app houdt je gemiddelde per maand én per tankbeurt bij en adviseert wat je maandelijks opzij kunt zetten.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Hoe log ik een uitgave?',
- v:gv(`<div style="margin-bottom:8px">${GLBL('Bedrag')}<div class="money"><span>€</span><input value="52,50" readonly style="cursor:default"></div>${GLBL('Potje')}${GINP('Vaste Lasten')}${GLBL('Kostenpost')}${GINP('Internet')}</div><div class="statusbadge ok" style="margin-bottom:0">● Markeert Internet als betaald · 1 aug 2026</div>`),
- t:gt(`Tik op de <b>＋</b>-knop op de Potjes-pagina. Kies het potje, vul het bedrag in en koppel het aan een kostenpost. Het saldo van dat potje gaat automatisch omlaag, en als je koppelt aan een geplande betaling wordt die meteen afgevinkt op de Geldstroom-pagina.`)},
+ v:gv(`<div style="margin-bottom:8px">${GLBL('Bedrag')}<div class="money"><span>€</span><input value="52,50" readonly style="cursor:default"></div>${GLBL('Potje')}${GINP('Vaste Lasten')}${GLBL('Kostenpost')}${GINP('Internet')}</div><div class="statusbadge ok" style="margin-bottom:0">● Dekt de termijn van 10 mrt 2026 af · 5 dagen eerder betaald</div>`),
+ t:gt(`Tik op de <b>＋</b>-knop op de Potjes-pagina. Kies het potje, vul het bedrag in en koppel het aan een kostenpost. Het saldo van dat potje gaat automatisch omlaag, en als je koppelt aan een geplande betaling wordt die meteen afgevinkt op de Geldstroom-pagina.<br><br>Ook handig om je historie bij te werken: zet de datum op wanneer er echt is afgeschreven, ook maanden terug. De app kiest dan zelf de termijn die daar het dichtst bij ligt en laat zien hoeveel dat scheelt — schreef de bank op de 5e af terwijl de vaste datum de 10e is, dan dekt dat gewoon die termijn af. Klopt de gekozen termijn niet, dan zet je hem in de lijst eronder om. Dit werkt net zo voor een toeslag die je terugkrijgt.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'once',q:'Wat is een "eenmalige" uitgave?',
  v:gv(`<div class="row between" style="align-items:center"><div style="flex:1"><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en adviezen</div></div><div class="check on">✓</div></div>`),
  t:gt(`Soms doe je een uitgave die niets zegt over je normale patroon — een dure eenmalige reparatie bijvoorbeeld. Vink 'm aan als eenmalig (onder <b>Geavanceerd</b> in het uitgave-scherm): het geld gaat gewoon van je saldo af, maar de app laat 'm buiten de gemiddeldes en buffer-adviezen. Zo blijft dat advies realistisch.`)},
@@ -2131,10 +2131,10 @@ function openUitgave(pre,itemId){
     <div class="muted" style="margin-bottom:8px" id="u_saldoInfo">Het saldo van het gekozen potje daalt met dit bedrag.</div>
     <label id="u_potLbl">Uit welk potje?</label><select id="u_pot" onchange="uitgaveKostSel()">${db.potjes.map((p,i)=>`<option value="${i}" ${i===pi?'selected':''}>${esc(p.n)} · ${eur(p.saldo)}</option>`).join('')}</select>
     <label>Kostenpost (optioneel)</label><select id="u_item" onchange="uitgaveLinkToggle()"></select>
-    <div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px" id="u_linkInfo"></div></div><div class="check" id="u_link" onclick="tgl(this)"></div></div></div>
+    <div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this)"></div></div><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div>
     <div id="u_fuelWrap" style="display:none"><div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="u_l" inputmode="decimal" placeholder="bijv. 32,5" oninput="fuelCalc('u')"></div><div><label>Prijs per liter</label>${mInput('id="u_ppl" oninput="fuelCalc(\'u\')"','','2,05')}</div></div><div class="muted" style="font-size:12px;margin-top:4px">Bedrag wordt automatisch berekend (liters × prijs). Alleen een bedrag invullen mag ook.</div></div>
     <label>Bedrag</label>${mInput('id="u_amt"',selIt?selIt.v:'','bijv. 405')}
-    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}">
+    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()">
     <label>Omschrijving (optioneel)</label><input id="u_note" placeholder="bijv. keerring vervangen">
     ${featOn('once')?`<span class="adv" onclick="var a=document.getElementById('u_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span>
     <div id="u_adv" style="display:none"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check" id="u_once" onclick="tgl(this)"></div></div></div>`:''}
@@ -2154,18 +2154,55 @@ function uKindSel(k){
 }
 function tgl(el){el.classList.toggle('on');el.textContent=el.classList.contains('on')?'✓':'';}
 function fuelCalc(px){const l=parseFloat(String(val(px+'_l')||'').replace(',','.'));const ppl=moneyNum(val(px+'_ppl'));if(l>0&&ppl>0){const el=document.getElementById(px+'_amt');if(el)el.value=moneyVal(round2(l*ppl));}}
+/* Openstaande termijnen van een kostenpost: een jaar terug (om je historie bij te werken) en een
+   kwartaal vooruit. Al afgevinkte en overgeslagen termijnen vallen af, want die zijn al afgehandeld. */
+function openTermijnen(it,kind){
+  if(!it||it.buffer)return [];
+  const ontv=kind==='ontvangst';const T=ontv?it.toeslag:null;
+  const anker=ontv?(T&&T.date):it.due;
+  if(!anker)return [];
+  const fn=ontv?(T.fn||1):(it.fn||1),fu=ontv?(T.fu||'m'):(it.fu||'m');
+  const nu=vandaag();
+  return occInRange(anker,fn,fu,addMonths(nu,-12),addMonths(nu,3),ontv?T.tot:null)
+    .filter(d=>!(ontv?itemReceived(it,d):itemPaid(it,d))&&!itemSkipped(it,d,kind));
+}
+/* Welke termijn hoort bij een betaling op deze datum: de dichtstbijzijnde openstaande. Staat de vaste
+   datum op de 10e en schreef de bank op de 5e af, dan is dat gewoon die termijn - vijf dagen eerder.
+   Pas als een betaling ongeveer midden tussen twee termijnen valt is de keuze echt dubieus, en daar
+   is de keuzelijst voor. */
+function dichtstbijTermijn(lijst,dateIso){
+  const d=parseISO(dateIso);if(!d||!lijst.length)return null;
+  let best=null,bd=Infinity;
+  lijst.forEach(x=>{const v=Math.abs(x-d);if(v<bd){bd=v;best=x;}});
+  return best;
+}
+/* Regel onder de keuzelijst: hoeveel scheelt je betaaldatum met de termijn die je afdekt. */
+function uitgaveOccInfo(){
+  const info=document.getElementById('u_linkInfo');if(!info)return;
+  const sel=document.getElementById('u_occ');
+  const t=sel&&sel.value?parseISO(sel.value):null;const b=parseISO(val('u_date'));
+  if(!t||!b){info.textContent='';return;}
+  const dg=Math.round((b-t)/86400000);
+  info.textContent=dg===0?'Precies op de geplande datum.'
+    :(Math.abs(dg)+' dag'+(Math.abs(dg)===1?'':'en')+(dg<0?' eerder':' later')+' dan gepland.');
+}
 function uitgaveLinkToggle(){
   const pi=+val('u_pot');const p=db.potjes[pi];const itId=val('u_item')||'';
   const it=itId&&p?p.items.find(x=>x.id===itId):null;
   const wrap=document.getElementById('u_linkWrap');if(!wrap)return;
-  const eligible=!!(it&&it.due&&!it.buffer)&&window._uKind!=='ontvangst';
+  const ontv=window._uKind==='ontvangst';const kind=ontv?'ontvangst':'uitgave';
+  const lijst=openTermijnen(it,kind);
+  const eligible=!!it&&lijst.length>0;
   wrap.style.display=eligible?'block':'none';
-  const chk=document.getElementById('u_link');if(chk){chk.classList.remove('on');chk.textContent='';chk.style.pointerEvents='';chk.style.opacity='';}
-  if(eligible){
-    const occ=itemNextOcc(it);
-    document.getElementById('u_linkInfo').textContent=occ?('Markeert '+occ.getDate()+' '+MND[occ.getMonth()].slice(0,3)+' '+occ.getFullYear()+' als betaald'):'Geen openstaande betaaldatum gevonden';
-    if(!occ&&chk){chk.style.pointerEvents='none';chk.style.opacity='.4';}
-  }
+  const lbl=document.getElementById('u_linkLbl');
+  if(lbl)lbl.textContent=ontv?'Ook als ontvangen markeren?':'Ook als betaald markeren?';
+  if(!eligible)return;
+  /* De keuzelijst springt bij elke datumwijziging terug naar de dichtstbijzijnde termijn; daarna kun
+     je hem met de hand nog omzetten. */
+  const auto=dichtstbijTermijn(lijst,val('u_date'));const kies=auto?isoDate(auto):'';
+  const sel=document.getElementById('u_occ');
+  if(sel)sel.innerHTML=lijst.map(d=>`<option value="${isoDate(d)}" ${isoDate(d)===kies?'selected':''}>${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</option>`).join('');
+  uitgaveOccInfo();
 }
 function saveUitgave(){
   const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;
@@ -2177,10 +2214,14 @@ function saveUitgave(){
   const ppl=p.fuel?(moneyNum(val('u_ppl'))||0):0;
   const extra=x=>{if(once)x.once=true;if(l>0)x.l=round2(l);if(ppl>0)x.ppl=round2(ppl);};
   const linkChk=document.getElementById('u_link');
-  const wantLink=!!(it&&it.due&&!it.buffer&&linkChk&&linkChk.classList.contains('on'));
+  const ontvK=window._uKind==='ontvangst';
+  const occIso=val('u_occ')||'';
+  const wantLink=!!(it&&occIso&&linkChk&&linkChk.classList.contains('on'));
   if(wantLink){
-    const occ=itemNextOcc(it);
-    if(occ){const lid=markOccurrence(pi,it.id,isoDate(occ),'uitgave',amt,date,note);if(lid){const le=p.log.find(z=>z.id===lid);if(le)extra(le);}haptic();save();closeSheet();render();toast('Uitgave toegevoegd en gekoppeld als betaald');return;}
+    const label=ontvK?((it.toeslag&&it.toeslag.naam)||('Toeslag '+it.n)):null;
+    const lid=markOccurrence(pi,it.id,occIso,ontvK?'ontvangst':'uitgave',amt,date,note,label);
+    if(lid){const le=p.log.find(z=>z.id===lid);if(le&&!ontvK)extra(le);
+      haptic();save();closeSheet();render();toast(ontvK?'Ontvangst gekoppeld':'Uitgave toegevoegd en gekoppeld als betaald');return;}
   }
   p.log=p.log||[];
   const ontv=window._uKind==='ontvangst';

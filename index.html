@@ -2214,6 +2214,14 @@ function renderBetalingen(){
     return `<div class="weekhdr"><span><b>${MND[+m-1]} ${y}</b></span><div style="text-align:right">${hdrR}</div></div>${grp[k].map(x=>x.kind==='loon'?loonCard(x):x.kind==='receipt'?receiptCard(x):betalingCard(x)).join('')}`;
   }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Nog geen betalingen of ontvangsten. Voeg kostenposten toe bij een potje.'}</div>`;
 }
+/* Op een afgeronde regel staat de datum waarop het geld echt van je rekening ging of binnenkwam. Dat
+   is meestal niet de dag die in je kostenpost staat, en dan is onduidelijk welke termijn je nu eigenlijk
+   ziet. Wijken ze af, dan zetten we de termijn erbij - hetzelfde wat het bewerkscherm toont. */
+function termijnSuffix(x){
+  const d=x.dispDate,t=x.date;
+  if(!d||!t||isoDate(d)===isoDate(t))return '';
+  return ` · voor de termijn van ${t.getDate()} ${MND[t.getMonth()].slice(0,3)}`;
+}
 function betalingCard(x){
   const st=x.skipped?{cls:'b-ok',txt:'Overgeslagen',dot:'var(--muted)'}
     :x.paid?{cls:'b-ok',txt:'Betaald',dot:'var(--green)'}
@@ -2225,7 +2233,7 @@ function betalingCard(x){
   const hintRow=(!x.paid&&!x.skipped)?dateHintRow(x,'uitgave'):'';const dd=x.dispDate||x.date;
   const bedrag=x.skipped?`<span style="color:var(--muted);text-decoration:line-through">${eur(x.net)}</span>`:`− ${eur(x.net)}`;
   const actie=x.skipped?'Tik om weer op openstaand te zetten':x.paid?'Tik om terug op open te zetten':'Tik om betaald te zetten';
-  return `<div class="shift" onclick="toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.it.n)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:${x.skipped?'var(--muted)':'var(--bad-tx)'}">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${toe}${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.paid?'on':''}" onclick="event.stopPropagation();toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')">${x.paid?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
+  return `<div class="shift" onclick="toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.it.n)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:${x.skipped?'var(--muted)':'var(--bad-tx)'}">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${toe}${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.paid?'on':''}" onclick="event.stopPropagation();toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')">${x.paid?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
 }
 function loonCard(x){
   const st=x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}:{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
@@ -2241,7 +2249,7 @@ function receiptCard(x){
   const hintRow=(!x.received&&!x.skipped)?dateHintRow(x,'ontvangst'):'';const dd=x.dispDate||x.date;
   const bedrag=x.skipped?`<span style="text-decoration:line-through">${eur(x.amount)}</span>`:`+ ${eur(x.amount)}`;
   const actie=x.skipped?'Tik om weer op verwacht te zetten':x.received?'Tik om terug op verwacht te zetten':'Tik om ontvangen te zetten';
-  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
+  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
 }
 
 function renderAlleUitgaven(){

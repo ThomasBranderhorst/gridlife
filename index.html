@@ -3312,7 +3312,10 @@ function openMeldSheet(k){
     <textarea id="ms_tekst" style="min-height:64px" placeholder="Eigen tekst...">${esc(cfg.tekst||'')}</textarea>
     <div class="muted" style="font-size:12px;margin-top:6px">Leeg = standaard: <i>"${esc(MELD_DEFTEKST[k]||'')}"</i></div>
     <div class="muted" style="font-size:12px;margin-top:3px">Bouwstenen: {naam}, {bedrag}, {datum}, {wanneer}.</div>
-    <button class="primary" style="width:100%;margin-top:18px" onclick="saveMeldSheet()">Opslaan</button>`);
+    <button class="primary" style="width:100%;margin-top:18px" onclick="saveMeldSheet()">Opslaan</button>`,null,
+    /* De herinner-momenten staan in window._msCfg en niet in een invoerveld: zonder deze tussenstand
+       merkt de app niet dat je er een toevoegt of weghaalt. */
+    'melding:'+k,()=>window._msCfg.reminders);
   msRenderRems();
 }
 function msTijd(eigen){const c=window._msCfg;c.tijd=eigen?(val('ms_tijd')||db.meldTijd||'08:00'):'';document.getElementById('ms_tvast').classList.toggle('on',!c.tijd);document.getElementById('ms_teigen').classList.toggle('on',!!c.tijd);document.getElementById('ms_tijd').style.display=c.tijd?'block':'none';}
@@ -3527,6 +3530,8 @@ function bhDel(i){
    weer heen; open je het via "Loondag wijzigen" op de Loon-pagina, dan hoor je gewoon terug te komen
    op Loon in plaats van in een beheerscherm te belanden waar je niet vandaan kwam. */
 function openWerkCfg(w,vanaf){
+  /* Opnieuw beginnen bij deze werkgever: de vorige vergelijkingsbasis hoort hier niet meer bij. */
+  markSheetSaved();
   window._wcName=w;
   if(vanaf)window._wcVanaf=vanaf;
   window._wc=Object.assign(defWerkCfg(),db.werkCfg[w]||{});
@@ -3584,7 +3589,12 @@ function renderWerkCfg(){
     ${c.correctie==='nabetaald'?`<label style="margin-top:12px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast interval'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}`:''}</div>`;
   openSheet(`<h2>${esc(w)}</h2><div class="muted" style="margin-bottom:12px">Alles over deze werkgever op één plek. Weet je iets niet zeker? Tik onderaan "Herstel standaard" — dan zet de app alles op een veilige keuze.</div>
     ${dienst}${loonBlok}${ctrlBlok}
-    <div class="row" style="margin-top:18px;gap:8px"><button class="ghost" onclick="wcSimpel()">Herstel standaard</button><button class="primary" style="flex:1" onclick="wcSave()">Opslaan</button></div>`,window._wcVanaf==='loon'?null:()=>openBeheerSheet('werkgevers'));
+    <div class="row" style="margin-top:18px;gap:8px"><button class="ghost" onclick="wcSimpel()">Herstel standaard</button><button class="primary" style="flex:1" onclick="wcSave()">Opslaan</button></div>`,
+    window._wcVanaf==='loon'?null:()=>openBeheerSheet('werkgevers'),
+    /* Dit scherm tekent zichzelf na elke keuze opnieuw en houdt je wijzigingen in window._wc bij, dus
+       het geeft allebei mee: dezelfde naam (basis blijft staan) en de tussenstand. */
+    'werkgever:'+w,
+    ()=>{wcReadNums();return [window._wc,window._wcContract];});
 }
 /* Leest de losse invoervelden terug vóór een her-render of het opslaan (anders raak je getikte waarden kwijt). */
 function wcReadNums(){
@@ -3976,7 +3986,7 @@ function sheetSnapshot(){
   const velden=sheetVelden().map(e=>(e.type==='checkbox'||e.type==='radio')?(e.checked?'1':'0'):e.value);
   /* Keuzechips zijn geen invoervelden maar veranderen wél wat je opslaat, dus die tellen mee. */
   const chips=[...s.querySelectorAll('.chip.on,.check.on')].filter(e=>!e.closest('.gvis')).map(e=>e.textContent.trim());
-  return velden.join('')+''+chips.join('');
+  return velden.join('')+''+chips.join('')+''+sheetStandTekst();
 }
 /* Bewaakt = er valt hier iets in te vullen én er is een knop om het vast te leggen. Eerder keken we naar
    de knoptekst "Opslaan", maar niet elke bevestigknop heet zo ("Bevestigen — boekt af en logt uitgave"),
@@ -3985,7 +3995,7 @@ function sheetBewaakbaar(){
   const s=document.getElementById('sheet');
   return !!s&&sheetVelden().length>0&&!!s.querySelector('.primary');
 }
-function markSheetSaved(){snapStop();window._sheetSnap=null;}
+function markSheetSaved(){snapStop();window._sheetSnap=null;window._sheetNaam=null;window._sheetStand=null;}
 /* De momentopname wordt pas gemaakt als de opener helemaal klaar is, niet halverwege. Veel schermen
    vullen na openSheet nog velden bij: het uitgave-scherm laadt zijn kostenpost-lijst en termijnen pas
    daarna, en zet het saldo-vinkje naar de datum. Namen we de stand meteen op, dan was zo'n scherm al
@@ -3996,11 +4006,34 @@ function snapStop(){if(_snapT){clearTimeout(_snapT);_snapT=null;}}
 function snapSoon(){snapStop();window._sheetSnap=null;_snapT=setTimeout(()=>{_snapT=null;window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;},0);}
 /* Alleen bewaakte sheets hebben een momentopname (een string); bij alle andere staat er niets. */
 function sheetDirty(){return typeof window._sheetSnap==='string'&&sheetSnapshot()!==window._sheetSnap;}
+/* Niet elk scherm houdt je wijzigingen in zijn invoervelden bij. De werkgever-pagina en het
+   meldingen-scherm verzamelen alles eerst in een tussenobject en schrijven dat pas weg als je opslaat;
+   een herinnering die je toevoegt is dan nergens in een veld te zien. Zulke schermen geven dat object
+   mee, zodat de bewaking ook ziet wat buiten de velden om verandert. */
+function sheetStandTekst(){
+  const f=window._sheetStand;if(typeof f!=='function')return '';
+  try{return JSON.stringify(f())||'';}catch(e){return '';}
+}
 function vraagWeggooien(daarna){
   confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
 }
-function openSheet(html,backFn){window._sheetBack=backFn||null;
-const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();snapSoon();}
+/* naam: alleen nodig voor schermen die zichzelf opnieuw tekenen terwijl je ze invult. De werkgever-
+   pagina bouwt na elke keuze het hele scherm opnieuw op; dat is geen nieuw scherm, dus de
+   vergelijkingsbasis moet blijven staan. Zonder dit werd die basis bij elke tik gelijkgetrokken en
+   merkte de app nooit dat je iets had veranderd. Bij dezelfde naam blijft de eerste stand gelden.
+   stand: functie die de tussenstand teruggeeft van een scherm dat niet alles in velden bijhoudt. */
+function openSheet(html,backFn,naam,stand){
+  const zelfdeScherm=!!naam&&naam===window._sheetNaam&&sheetOpen();
+  window._sheetNaam=naam||null;
+  window._sheetStand=stand||null;
+  openSheetHtml(html,backFn);
+  /* Bij een hertekening van hetzelfde scherm blijft de bestaande basis staan - of de basis die nog
+     onderweg is van de eerste tekening. Is er geen van beide, dan is er ook niets te behouden. */
+  if(zelfdeScherm&&(typeof window._sheetSnap==='string'||_snapT))return;
+  snapSoon();
+}
+function openSheetHtml(html,backFn){window._sheetBack=backFn||null;
+const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();}
 function sheetBack(){
   if(sheetDirty()){vraagWeggooien(()=>{markSheetSaved();sheetBack();});return;}
   const b=window._sheetBack;if(b)b();else closeSheet();

@@ -259,6 +259,51 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   const r2=run(d2,a=>a.featOn('fuel'));
   meld('geen benzine-potje: uitgezette functie blijft uit', !r2.fout && r2.extra===false, String(r2.extra));
 }
+// 19. migratie: de oude enkele toeslag wordt de eerste van de lijst, mét zijn afvinkgeschiedenis
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[{id:'L1',date:'2026-07-20',amount:47,kind:'ontvangst',item:'Zorgtoeslag',itemId:'a',payIso:'2026-07-20'}],items:[
+    {id:'a',n:'Zorg',v:148.2,fn:1,fu:'m',due:'2026-07-29',paidDates:{},receivedDates:{'2026-07-20':'L1'},recSkipDates:{'2026-08-20':true},
+     toeslag:{naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20'}},
+  ]}]});
+  const r=run(d,a=>{const it=a.db.potjes[0].items[0];const T=a.toeslagenOf(it)[0];
+    return {n:a.toeslagenOf(it).length,naam:T.naam,ontv:T.receivedDates['2026-07-20'],skip:!!T.recSkipDates['2026-08-20'],
+            oud:it.toeslag===undefined&&it.receivedDates===undefined,logToe:a.db.potjes[0].log[0].toeId===T.id};});
+  const e=r.extra||{};
+  meld('migratie: één toeslag met zijn ontvangsten en overslagen', !r.fout&&e.n===1&&e.naam==='Zorgtoeslag'&&e.ontv==='L1'&&e.skip&&e.oud&&e.logToe, JSON.stringify(r.extra||r.fout));
+}
+// 20. meerdere toeslagen op één kostenpost tellen samen op in je eigen deel
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+      {id:'t2',naam:'Werkgever',v:120,fn:1,fu:'j',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+      {id:'t3',naam:'Gestopt',v:99,fn:1,fu:'m',date:'2026-01-20',tot:'2026-03-01',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>({toe:+a.itToeslagMnd(a.db.potjes[0].items[0]).toFixed(2),eigen:+a.itMnd(a.db.potjes[0].items[0]).toFixed(2)}));
+  const e=r.extra||{};
+  meld('meerdere toeslagen: 47 + 120/12 opgeteld, gestopte telt niet mee', !r.fout&&e.toe===57&&e.eigen===143, JSON.stringify(r.extra||r.fout));
+}
+// 21. elke toeslag heeft zijn eigen regel én zijn eigen afvinkadministratie
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+      {id:'t2',naam:'Werkvergoeding',v:30,fn:1,fu:'m',date:'2026-07-20',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{
+    const rows=a.receiptRows(new Date(2026,6,1),new Date(2026,6,31));
+    /* Twee toeslagen op dezelfde dag: de ene afvinken mag de andere niet meenemen. */
+    a.markOccurrence(0,'a','2026-07-20','ontvangst',47,'2026-07-20','','Zorgtoeslag',true,'t1');
+    const na=a.receiptRows(new Date(2026,6,1),new Date(2026,6,31));
+    return {n:rows.length,labels:rows.map(x=>x.label),
+            ontvangen:na.filter(x=>x.received).map(x=>x.toeId),open:na.filter(x=>!x.received).map(x=>x.toeId)};
+  });
+  const e=r.extra||{};
+  meld('elke toeslag een eigen regel op de Geldstroom-pagina', !r.fout&&e.n===2&&e.labels.slice().sort().join('|')==='Werkvergoeding|Zorgtoeslag', JSON.stringify(r.extra||r.fout));
+  meld('toeslag afvinken raakt alleen die toeslag', !r.fout&&String(e.ontvangen)==='t1'&&String(e.open)==='t2', JSON.stringify(r.extra||r.fout));
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

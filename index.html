@@ -517,7 +517,7 @@ function migrate(){
   const HEEFT_DATA={
     fuel:()=>(db.potjes||[]).some(p=>p&&p.fuel),
     buffers:()=>(db.potjes||[]).some(p=>(p.items||[]).some(i=>i&&i.buffer)),
-    toeslag:()=>(db.potjes||[]).some(p=>(p.items||[]).some(i=>i&&i.toeslag)),
+    toeslag:()=>(db.potjes||[]).some(p=>(p.items||[]).some(i=>toeslagenOf(i).length>0)),
     ontvangst:()=>(db.potjes||[]).some(p=>(p.log||[]).some(x=>x&&x.kind==='ontvangst')),
     once:()=>(db.potjes||[]).some(p=>(p.log||[]).some(x=>x&&x.once)),
     documenten:()=>(db.documenten||[]).length>0,
@@ -606,6 +606,35 @@ function migrate(){
       const per=it.per||'m';if(per==='x'){it.fn=it.n2||1;it.fu=it.u2||'m';}else{it.fn=1;it.fu=per;}
       delete it.per;delete it.n2;delete it.u2;delete it.type;delete it.saldo0;
       if(it.toeslag){const T=it.toeslag;const tp=T.per||'m';if(tp==='x'){T.fn=T.n2||1;T.fu=T.u2||'m';}else{T.fn=1;T.fu=tp;}delete T.per;delete T.n2;delete T.u2;}
+    });
+  });
+  /* Een kostenpost kan meerdere toeslagen hebben (was: hooguit één). De afvink-administratie verhuist
+     mee naar de toeslag zelf: die stond op de kostenpost en was alleen op datum gesleuteld, dus twee
+     toeslagen die op dezelfde dag binnenkomen zouden elkaar afvinken. Wat er stond wordt de eerste
+     toeslag in de lijst, zodat er voor de gebruiker niets verandert. */
+  (db.potjes||[]).forEach(p=>{
+    (p.items||[]).forEach(it=>{
+      if(!Array.isArray(it.toeslagen)){
+        it.toeslagen=[];
+        if(it.toeslag&&typeof it.toeslag==='object'){
+          const T=Object.assign({},it.toeslag);
+          T.receivedDates=(it.receivedDates&&!Array.isArray(it.receivedDates))?it.receivedDates:{};
+          T.recSkipDates=(it.recSkipDates&&!Array.isArray(it.recSkipDates))?it.recSkipDates:{};
+          it.toeslagen.push(T);
+        }
+      }
+      delete it.toeslag;delete it.receivedDates;delete it.recSkipDates;
+      it.toeslagen.forEach(T=>{
+        if(!T.id)T.id=rnd();
+        if(!T.receivedDates||Array.isArray(T.receivedDates))T.receivedDates={};
+        if(!T.recSkipDates||Array.isArray(T.recSkipDates))T.recSkipDates={};
+      });
+      /* Oude ontvangst-boekingen wijzen alleen naar de kostenpost. Na de migratie is er precies één
+         toeslag om ze aan te hangen, dus die koppeling kan er meteen bij. */
+      if(it.toeslagen.length===1){
+        const tid=it.toeslagen[0].id;
+        (p.log||[]).forEach(x=>{if(x&&x.kind==='ontvangst'&&x.itemId===it.id&&!x.toeId)x.toeId=tid;});
+      }
     });
   });
 }
@@ -964,10 +993,10 @@ const GUIDE=[
  t:gt(`Tik op de kaart of op het vierkantje. De app vraagt om het <b>echte bedrag</b> en de datum — die mag afwijken van wat er gepland stond. Het saldo van het bijbehorende potje wordt bijgewerkt en de betaling verhuist naar Afgerond. Per ongeluk afgevinkt? Tik 'm opnieuw aan en bevestig. Was het saldo meeveranderd, dan komt het bedrag terug; boekte je iets uit een eerdere maand met het saldo-vinkje uit, dan blijft je saldo ook nu ongemoeid.<br><br>Is een termijn blijven staan omdat hij nog niet af is, dan krijgt hij het label <b>Te laat</b> en blijft hij openstaan tot je hem afvinkt. Komt een afschrijving een keer gewoon niet? Kies dan in datzelfde scherm <b>Deze termijn komt niet</b>. Er gaat dan niets van je saldo af en de termijn verdwijnt uit je openstaande lijst — je vindt hem doorgestreept terug onder Afgerond, en met één tik zet je hem weer op openstaand.`)},
 {s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Wat is een toeslag en wat is mijn "eigen deel"?',
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
- t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de kostenpost. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Geldstroom-pagina.`)},
+ t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de kostenpost. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Geldstroom-pagina.<br><br>Komt er bij één kostenpost <b>meer dan één</b> bedrag terug — bijvoorbeeld zorgtoeslag én een vergoeding van je werk? Dan zet je ze allebei bij die kostenpost neer (Potje bewerken → kostenpost → Toeslag toevoegen). Elke toeslag heeft zijn eigen bedrag, ritme en datums, en krijgt een eigen regel op de Geldstroom-pagina; voor je eigen deel worden ze bij elkaar opgeteld.`)},
 {s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Hoe boek ik een toeslag die ik heb ontvangen?',a:{lbl:'Ontvangst toevoegen',fn:"go('potjes');setTimeout(openUitgave,200)"},
  v:gv(`<div style="margin-bottom:8px">${GLBL('Soort')}<div class="row" style="gap:8px"><span class="chip">Uitgave</span><span class="chip on">Ontvangst</span></div>${GLBL('Kostenpost')}${GINP('Zorgtoeslag — bij Menzis zorgverzekering')}</div><div class="statusbadge ok" style="margin-bottom:0">● Dekt de termijn van 20 mrt 2026 af</div>`),
- t:gt(`Een toeslag hangt aan de kostenpost waar hij bij hoort, en is dus geen aparte regel in de lijst. Zet het scherm op <b>Ontvangst</b> en kies de kostenpost: de naam van de toeslag staat er dan bij, en de app koppelt aan de datums van de <b>toeslag</b> — niet aan die van de afschrijving.<br><br>Staat er bij een kostenpost geen toeslag, dan valt er niets te koppelen en zegt de app dat erbij. Je kunt het bedrag dan nog steeds als losse ontvangst boeken.`)},
+ t:gt(`Een toeslag hangt aan de kostenpost waar hij bij hoort, en is dus geen aparte regel in de lijst. Zet het scherm op <b>Ontvangst</b> en kies de toeslag: die staat in de lijst met de kostenpost erachter ("Zorgtoeslag — bij Menzis"), en de app koppelt aan de datums van de <b>toeslag</b> — niet aan die van de afschrijving. Horen er meerdere toeslagen bij één kostenpost, dan staat elke toeslag apart in die lijst.<br><br>Staat er bij een kostenpost geen toeslag, dan valt er niets te koppelen en zegt de app dat erbij. Je kunt het bedrag dan nog steeds als losse ontvangst boeken.`)},
 {s:'Geldstroom',mod:'potjes',feat:'hints',q:'Waarom staat er bij de ene post "Verwacht rond ..." en bij de andere niet?',a:{lbl:'Naar Geldstroom',fn:"go('betalingen')"},
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Internet</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right"><div style="font-weight:800">${eur(52.5)}</div>${GBADGE('b-wait','Open')}</div></div><div class="muted" style="margin-top:4px">Verwacht rond <b style="color:var(--text)">31 juli</b> (±1 dag) · meestal <b style="color:var(--text)">${eur(1.4)} meer</b> dan gepland</div></div>`),
  t:gt(`De geplande datum en het geplande bedrag zijn zelden precies de échte. De app kijkt naar de laatste keren dat je deze post afvinkte en rekent uit hoeveel dagen én hoeveel euro dat gemiddeld scheelt. Wijkt alleen het bedrag af, dan zie je alleen dat deel.<br><br>Hij heeft daar <b>minstens twee afgevinkte betalingen</b> voor nodig; tot die tijd staat er wat er nog aan ontbreekt.<br><br>Pas je later de datum van de kostenpost aan, dan blijven al afgevinkte termijnen op hun oorspronkelijke datum staan. Dat is met opzet: die datum is waar de app het verschil mee uitrekent, en zou hij meeschuiven dan verdween precies de afwijking die je wilde meten. Nieuwe betalingen volgen gewoon je nieuwe datum, dus het gemiddelde schuift er vanzelf naartoe. Belangrijk: alleen betalingen die je <b>op de Geldstroom-pagina hebt afgevinkt</b> tellen mee. Boek je iets als losse uitgave, dan weet de app niet welke termijn dat afdekt en telt het dus niet mee voor de voorspelling.`)},
@@ -1608,7 +1637,16 @@ function renderStats(){
 function monthsPer(u,n){n=+n||1;return u==='d'?n/30.44:u==='w'?n/4.348:u==='m'?n:n*12;}
 function perMndOf(v,fn,fu){const mo=monthsPer(fu||'m',fn||1);return mo?(+v||0)/mo:(+v||0);}
 function itMndBruto(it){return (it.ov!=null&&it.ov!=='')?+it.ov:perMndOf(it.v,it.fn,it.fu);}
-function itToeslagMnd(it){const T=it.toeslag;if(!T||!T.v)return 0;if(T.tot&&new Date(T.tot)<new Date())return 0;return perMndOf(T.v,T.fn,T.fu);}
+/* Een kostenpost kan meerdere toeslagen hebben; ze staan altijd in een lijst, ook als het er één is. */
+function toeslagenOf(it){return (it&&Array.isArray(it.toeslagen))?it.toeslagen:[];}
+function toeVan(it,toeId){const L=toeslagenOf(it);if(!L.length)return null;return toeId?(L.find(t=>t.id===toeId)||null):L[0];}
+function toeLabel(it,T){return (T&&T.naam)?T.naam:('Toeslag '+((it&&it.n)||''));}
+/* De administratie van afgevinkte en overgeslagen termijnen: bij een uitgave hangt die aan de
+   kostenpost, bij een ontvangst aan de toeslag zelf. */
+function markBron(it,kind,toeId){return kind==='ontvangst'?toeVan(it,toeId):it;}
+/* Een toeslag telt niet meer mee zodra zijn einddatum voorbij is. */
+function toeMnd(T){if(!T||!T.v)return 0;if(T.tot&&new Date(T.tot)<new Date())return 0;return perMndOf(T.v,T.fn,T.fu);}
+function itToeslagMnd(it){return toeslagenOf(it).reduce((a,T)=>a+toeMnd(T),0);}
 function itMnd(it){return Math.max(0,itMndBruto(it)-itToeslagMnd(it));}
 function freqTxt(fn,fu){fn=fn||1;fu=fu||'m';if(fn===1&&fu==='m')return 'per maand';if(fn===1&&fu==='w')return 'per week';if(fn===1&&fu==='d')return 'per dag';if(fn===1&&fu==='j')return 'per jaar';if(fn===4&&fu==='w')return 'per 4 weken';if(fn===3&&fu==='m')return 'per kwartaal';const U={d:'dagen',w:'weken',m:'maanden',j:'jaar'};return 'elke '+fn+' '+U[fu];}
 /* Maandelijks opzij = som van de kostenposten + (bij brandstofpotjes) het handmatige benzine-maandbedrag. */
@@ -1648,13 +1686,14 @@ function occInRange(anchorISO,fn,fu,from,to,tot){
   return out;
 }
 function itemPaid(it,d){return !!(it.paidDates&&it.paidDates[isoDate(d)]);}
-function itemReceived(it,d){return !!(it.receivedDates&&it.receivedDates[isoDate(d)]);}
+function toeReceived(T,d){return !!(T&&T.receivedDates&&T.receivedDates[isoDate(d)]);}
 /* Overgeslagen termijn: deze maand komt de afschrijving of toeslag gewoon even niet. Geen betaling,
    geen saldo-mutatie, maar wél afgehandeld — anders blijft zo'n termijn eeuwig als "Te laat" staan.
    Aparte mappen per soort, zodat een overgeslagen toeslag los staat van de afschrijving eronder. */
 function vandaag(){const d=new Date();d.setHours(0,0,0,0);return d;}
-function skipMap(it,kind){const k=kind==='ontvangst'?'recSkipDates':'skipDates';it[k]=it[k]||{};return it[k];}
-function itemSkipped(it,d,kind){const m=kind==='ontvangst'?it.recSkipDates:it.skipDates;return !!(m&&m[isoDate(d)]);}
+/* bron = de kostenpost bij een uitgave, de toeslag bij een ontvangst (zie markBron). */
+function skipMap(bron,kind){const k=kind==='ontvangst'?'recSkipDates':'skipDates';bron[k]=bron[k]||{};return bron[k];}
+function itemSkipped(bron,d,kind){if(!bron)return false;const m=kind==='ontvangst'?bron.recSkipDates:bron.skipDates;return !!(m&&m[isoDate(d)]);}
 function monthStart(d){const x=new Date(d);x.setDate(1);x.setHours(0,0,0,0);return x;}
 function monthEnd(d){const x=new Date(d.getFullYear(),d.getMonth()+1,0);x.setHours(23,59,59,0);return x;}
 function itemNextOcc(it){if(!it.due||it.buffer)return null;const now=new Date();now.setHours(0,0,0,0);const from=monthStart(now);const occ=occInRange(it.due,it.fn,it.fu,from,addMonths(now,36));return occ.find(x=>!itemPaid(it,x))||null;}
@@ -1684,9 +1723,10 @@ function zelfdeTermijn(a,b,fn,fu){
   return Math.abs(a-b)<halveTermijn(fn,fu);
 }
 /* De termijnen die je zelf hebt vastgelegd: afgevinkt of overgeslagen. */
-function vasteTermijnen(it,kind){
-  const a=kind==='ontvangst'?it.receivedDates:it.paidDates;
-  const b=kind==='ontvangst'?it.recSkipDates:it.skipDates;
+function vasteTermijnen(bron,kind){
+  if(!bron)return [];
+  const a=kind==='ontvangst'?bron.receivedDates:bron.paidDates;
+  const b=kind==='ontvangst'?bron.recSkipDates:bron.skipDates;
   return Object.keys(a||{}).concat(Object.keys(b||{})).map(iso=>parseISO(iso)).filter(Boolean);
 }
 function paymentRows(from,to){
@@ -1714,20 +1754,20 @@ function paymentRows(from,to){
 }
 function receiptRows(from,to){
   const out=[];
-  db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
-    const T=it.toeslag;if(!T||!T.date||!T.v)return;
-    const vast=vasteTermijnen(it,'ontvangst');
+  db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>toeslagenOf(it).forEach(T=>{
+    if(!T.date||!T.v)return;
+    const vast=vasteTermijnen(T,'ontvangst');
     const lijst=occInRange(T.date,T.fn,T.fu,from,to,T.tot).filter(d=>!vast.some(v=>zelfdeTermijn(v,d,T.fn,T.fu)));
     const gezien=new Set(lijst.map(isoDate));
     vast.forEach(d=>{const iso=isoDate(d);if(gezien.has(iso))return;gezien.add(iso);lijst.push(d);});
     lijst.sort((a,b)=>a-b);
     lijst.forEach(date=>{
-      const iso=isoDate(date);const received=itemReceived(it,date);let amount=+T.v||0;let dispDate=date;
-      if(received){const ref=it.receivedDates&&it.receivedDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){amount=round2(log.amount);if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
-      const skipped=itemSkipped(it,date,'ontvangst');
-      out.push({kind:'receipt',pi,pot:p,it,date,dispDate,iso,amount,received,skipped,telaat:!received&&!skipped&&date<vandaag(),label:T.naam||('Toeslag '+it.n)});
+      const iso=isoDate(date);const received=toeReceived(T,date);let amount=+T.v||0;let dispDate=date;
+      if(received){const ref=T.receivedDates&&T.receivedDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){amount=round2(log.amount);if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
+      const skipped=itemSkipped(T,date,'ontvangst');
+      out.push({kind:'receipt',pi,pot:p,it,toe:T,toeId:T.id,date,dispDate,iso,amount,received,skipped,telaat:!received&&!skipped&&date<vandaag(),label:toeLabel(it,T)});
     });
-  }));
+  })));
   out.sort((a,b)=>a.date-b.date||a.pot.n.localeCompare(b.pot.n)||a.label.localeCompare(b.label));return out;
 }
 /* Loon als ontvangst op de Geldstroom-pagina. Een loondag geldt als ontvangen zodra er een loon-log-entry
@@ -1788,17 +1828,28 @@ function dubbeleBoeking(p,date,amt,ontv,negeerId){
   return (p.log||[]).find(x=>x&&x.id!==negeerId&&x.date===date
     &&Math.abs((+x.amount||0)-amt)<0.005&&((x.kind==='ontvangst')===!!ontv));
 }
-function markOccurrence(pi,itemId,iso,kind,amount,date,note,label,raakSaldo){
+function markOccurrence(pi,itemId,iso,kind,amount,date,note,label,raakSaldo,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!p||!it)return null;
+  const T=kind==='ontvangst'?toeVan(it,toeId):null;
+  if(kind==='ontvangst'&&!T)return null;
   const id=rnd();const amt=round2(amount)||0;
   p.log=p.log||[];
-  const raak=raakSaldo!==false;
   const entry={id,date:date||iso,amount:amt,note:note||'',item:label||it.n,itemId:it.id,kind,payIso:iso};
+  const raak=raakSaldo!==false;
   if(!raak)entry.geenSaldo=true;
+  if(T)entry.toeId=T.id;
   p.log.push(entry);
-  if(kind==='ontvangst'){if(raak)p.saldo=round2((+p.saldo||0)+amt);it.receivedDates=it.receivedDates||{};it.receivedDates[iso]=id;}
+  if(kind==='ontvangst'){if(raak)p.saldo=round2((+p.saldo||0)+amt);T.receivedDates=T.receivedDates||{};T.receivedDates[iso]=id;}
   else{if(raak)p.saldo=round2((+p.saldo||0)-amt);it.paidDates=it.paidDates||{};it.paidDates[iso]=id;}
   return id;
+}
+/* Bij welke toeslag hoort deze ontvangst-boeking? Nieuwe boekingen zeggen het zelf (toeId). Bij een
+   oude boeking zoeken we de toeslag die deze termijn heeft afgevinkt, en anders de eerste. */
+function toeVanLog(it,x){
+  if(!it)return null;
+  if(x&&x.toeId){const t=toeVan(it,x.toeId);if(t)return t;}
+  if(x&&x.payIso){const t=toeslagenOf(it).find(T=>T.receivedDates&&T.receivedDates[x.payIso]===x.id);if(t)return t;}
+  return toeVan(it,'');
 }
 function removeLogEntry(pi,idx){
   const p=db.potjes[pi];const x=p&&p.log[idx];if(!p||!x)return;
@@ -1810,32 +1861,36 @@ function removeLogEntry(pi,idx){
   }
   if(x.payIso&&x.itemId){
     const it=p.items.find(i=>i.id===x.itemId);
-    if(it){const map=x.kind==='ontvangst'?it.receivedDates:it.paidDates;if(map&&map[x.payIso]===x.id)delete map[x.payIso];}
+    const bron=x.kind==='ontvangst'?toeVanLog(it,x):it;
+    if(bron){const map=x.kind==='ontvangst'?bron.receivedDates:bron.paidDates;if(map&&map[x.payIso]===x.id)delete map[x.payIso];}
   }
   p.log.splice(idx,1);
 }
-function unmarkOccurrence(pi,itemId,iso,kind){
+function unmarkOccurrence(pi,itemId,iso,kind,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!p||!it)return;
-  const map=kind==='ontvangst'?it.receivedDates:it.paidDates;
+  const bron=markBron(it,kind,toeId);if(!bron)return;
+  const map=kind==='ontvangst'?bron.receivedDates:bron.paidDates;
   const ref=map&&map[iso];
   if(typeof ref==='string'){
     const idx=(p.log||[]).findIndex(x=>x.id===ref);
     if(idx>-1)removeLogEntry(pi,idx);else delete map[iso];
   }else if(ref){
-    if(kind==='ontvangst'){const amt=it.toeslag?+it.toeslag.v||0:0;p.saldo=round2((+p.saldo||0)-amt);}
+    if(kind==='ontvangst'){const amt=+bron.v||0;p.saldo=round2((+p.saldo||0)-amt);}
     else{const amt=+it.v||0;p.saldo=round2((+p.saldo||0)+amt);}
     delete map[iso];
   }
 }
 /* Termijn overslaan / weer terugzetten. Raakt het saldo niet: er is immers niets afgeschreven. */
-function skipOccurrence(pi,itemId,iso,kind){
+function skipOccurrence(pi,itemId,iso,kind,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
-  skipMap(it,kind)[iso]=true;
+  const bron=markBron(it,kind,toeId);if(!bron)return;
+  skipMap(bron,kind)[iso]=true;
   haptic();save();closeSheet();render();toast(kind==='ontvangst'?'Komt deze keer niet':'Overgeslagen');
 }
-function unskipOccurrence(pi,itemId,iso,kind){
+function unskipOccurrence(pi,itemId,iso,kind,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
-  delete skipMap(it,kind)[iso];
+  const bron=markBron(it,kind,toeId);if(!bron)return;
+  delete skipMap(bron,kind)[iso];
   haptic();save();render();toast('Weer openstaand');
 }
 /* Sinds je een boeking kunt vastleggen zonder het saldo te raken, mag geen enkele tekst nog blind
@@ -1844,17 +1899,19 @@ function unskipOccurrence(pi,itemId,iso,kind){
    geboekt bestaat vaak alleen doordat jij hem hebt vastgelegd - je kostenpost begint dan later. Zet je
    zo een termijn "terug op open", dan is er daarna niets meer om te tonen en verdwijnt hij. Dat mag de
    knop niet verzwijgen. */
-function inSchema(it,iso,kind){
+function inSchema(it,iso,kind,toeId){
   const d=parseISO(iso);if(!d)return false;
-  const ontv=kind==='ontvangst';const T=ontv?it.toeslag:null;
-  const anker=ontv?(T&&T.date):it.due;if(!anker)return false;
+  const ontv=kind==='ontvangst';const T=ontv?toeVan(it,toeId):null;
+  if(ontv&&!T)return false;
+  const anker=ontv?T.date:it.due;if(!anker)return false;
   const fn=ontv?(T.fn||1):(it.fn||1),fu=ontv?(T.fu||'m'):(it.fu||'m');
   const van=new Date(d);van.setDate(van.getDate()-1);
   const tot=new Date(d);tot.setDate(tot.getDate()+1);
   return occInRange(anker,fn,fu,van,tot,ontv?T.tot:null).some(o=>isoDate(o)===iso);
 }
-function raakteSaldo(p,it,iso,kind){
-  const map=kind==='ontvangst'?it.receivedDates:it.paidDates;
+function raakteSaldo(p,it,iso,kind,toeId){
+  const bron=markBron(it,kind,toeId);if(!bron)return true;
+  const map=kind==='ontvangst'?bron.receivedDates:bron.paidDates;
   const ref=map&&map[iso];
   if(typeof ref!=='string')return true; /* oude afvinkingen zonder log-entry boekten altijd */
   const le=(p.log||[]).find(x=>x.id===ref);
@@ -1879,23 +1936,24 @@ function toggleItemPaid(pi,id,iso){
   }
   else openMarkPaidSheet(pi,id,iso);
 }
-function toggleItemReceived(pi,id,iso){
+function toggleItemReceived(pi,id,iso,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===id);if(!it)return;
-  it.receivedDates=it.receivedDates||{};
-  if(itemSkipped(it,parseISO(iso),'ontvangst')){
-    confirmSheet('Toch verwacht?','Deze ontvangst staat nu als "komt deze keer niet". Wil je hem weer als openstaand zetten?','Weer openstaand',()=>unskipOccurrence(pi,id,iso,'ontvangst'));
+  const T=toeVan(it,toeId);if(!T)return;
+  T.receivedDates=T.receivedDates||{};
+  if(itemSkipped(T,parseISO(iso),'ontvangst')){
+    confirmSheet('Toch verwacht?','Deze ontvangst staat nu als "komt deze keer niet". Wil je hem weer als openstaand zetten?','Weer openstaand',()=>unskipOccurrence(pi,id,iso,'ontvangst',toeId));
     return;
   }
-  if(it.receivedDates[iso]){
-    const raakte=raakteSaldo(p,it,iso,'ontvangst');const blijft=inSchema(it,iso,'ontvangst');
+  if(T.receivedDates[iso]){
+    const raakte=raakteSaldo(p,it,iso,'ontvangst',toeId);const blijft=inSchema(it,iso,'ontvangst',toeId);
     const saldoTxt=raakte?' Het bedrag gaat weer van het saldo af.':' Je saldo blijft zoals het is, want deze boeking heeft het nooit veranderd.';
     confirmSheet(blijft?'Weer op open zetten':'Ontvangst verwijderen',
       (blijft?'Deze ontvangst wordt weer als openstaand gemarkeerd.':'Deze termijn staat niet in het schema van deze toeslag, dus hij verdwijnt uit je overzicht in plaats van open te blijven staan. De ontvangst wordt verwijderd.')+saldoTxt,
       blijft?'Terugzetten':'Verwijderen',()=>{
-      unmarkOccurrence(pi,id,iso,'ontvangst');haptic();save();render();toast(blijft?(raakte?'Weer open · saldo hersteld':'Weer open'):'Verwijderd');
+      unmarkOccurrence(pi,id,iso,'ontvangst',toeId);haptic();save();render();toast(blijft?(raakte?'Weer open · saldo hersteld':'Weer open'):'Verwijderd');
     });
   }
-  else openMarkReceivedSheet(pi,id,iso);
+  else openMarkReceivedSheet(pi,id,iso,toeId);
 }
 function openMarkPaidSheet(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
@@ -1933,26 +1991,27 @@ function confirmMarkPaid(pi,itemId,iso){
   markOccurrence(pi,itemId,iso,'uitgave',amount,date,note,null,raak);
   haptic();save();closeSheet();render();toast(raak?'Betaald · saldo −'+eur(amount):'Betaald · saldo ongewijzigd');
 }
-function openMarkReceivedSheet(pi,itemId,iso){
-  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it||!it.toeslag)return;
-  openSheet(`<h2>Ontvangst markeren</h2><div class="muted" style="margin-bottom:10px">${esc(it.toeslag.naam||('Toeslag '+it.n))}</div>
+function openMarkReceivedSheet(pi,itemId,iso,toeId){
+  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);const T=toeVan(it,toeId);if(!it||!T)return;
+  toeId=T.id;
+  openSheet(`<h2>Ontvangst markeren</h2><div class="muted" style="margin-bottom:10px">${esc(toeLabel(it,T))} — bij ${esc(it.n)}</div>
     <label>Datum</label><input type="date" id="mr_date" value="${iso}" onchange="markSaldoStand('mr')">
-    <label>Bedrag</label>${mInput('id="mr_amt"',it.toeslag.v,'0,00')}
+    <label>Bedrag</label>${mInput('id="mr_amt"',T.v,'0,00')}
     <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mr_saldoUitleg"></div></div><div class="check" id="mr_saldo" onclick="tgl(this);markSaldoInfo('mr')"></div></div>
-    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}')">Bevestigen — boekt bij en logt ontvangst</button>
-    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst')">Deze termijn komt niet</button>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}','${toeId}')">Bevestigen — boekt bij en logt ontvangst</button>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst','${toeId}')">Deze termijn komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt de termijn uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
   markSaldoStand('mr');
   setTimeout(()=>{const el=document.getElementById('mr_amt');if(el){el.focus();el.select&&el.select();}},100);
 }
-function confirmMarkReceived(pi,itemId,iso){
+function confirmMarkReceived(pi,itemId,iso,toeId){
   const amt=moneyNum(val('mr_amt'));const date=val('mr_date')||iso;const note=val('mr_note')||'';
-  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
-  const amount=amt==null?(it.toeslag?+it.toeslag.v||0:0):amt;
-  const label=it.toeslag&&it.toeslag.naam?it.toeslag.naam:('Toeslag '+it.n);
+  const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);const T=toeVan(it,toeId);if(!it||!T)return;
+  const amount=amt==null?(+T.v||0):amt;
+  const label=toeLabel(it,T);
   const chk=document.getElementById('mr_saldo');
   const raak=!chk||chk.classList.contains('on');
-  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label,raak);
+  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label,raak,T.id);
   haptic();save();closeSheet();render();toast(raak?'Ontvangen · saldo +'+eur(amount):'Ontvangen · saldo ongewijzigd');
 }
 /* KALENDERMAAND-METHODE.
@@ -2027,12 +2086,15 @@ function fuelStats(p){const cut=new Date();cut.setFullYear(cut.getFullYear()-1);
 /* De afgevinkte betalingen van deze kostenpost: alleen die met een payIso horen bij een geplande
    datum en kunnen dus met de planning vergeleken worden. Een los geboekte uitgave heeft geen payIso
    en telt daarom niet mee — die weet immers niet welke termijn hij afdekt. */
-function hintLogs(p,it,kind){
-  return (p.log||[]).filter(x=>x.itemId===it.id&&x.payIso&&x.date&&(kind==='ontvangst'?x.kind==='ontvangst':x.kind!=='ontvangst'));
+/* Bij een ontvangst gaat het per toeslag: twee toeslagen op dezelfde kostenpost hebben elk hun eigen
+   ritme, dus hun boekingen mogen niet op één hoop. */
+function hintLogs(p,it,kind,toeId){
+  const ontv=kind==='ontvangst';
+  return (p.log||[]).filter(x=>x.itemId===it.id&&x.payIso&&x.date&&(ontv?(x.kind==='ontvangst'&&(!toeId||x.toeId===toeId)):x.kind!=='ontvangst'));
 }
 /* Gemiddelde werkelijke betaal-/ontvangstdatum t.o.v. de geplande datum, uit de laatste gekoppelde logs. */
-function dateHint(p,it,kind){
-  const logs=hintLogs(p,it,kind);
+function dateHint(p,it,kind,toeId){
+  const logs=hintLogs(p,it,kind,toeId);
   if(logs.length<2)return null;
   const offs=logs.slice(-6).map(x=>Math.round((new Date(x.date)-new Date(x.payIso))/86400000)).filter(n=>isFinite(n)&&Math.abs(n)<=31);
   if(offs.length<2)return null;
@@ -2042,10 +2104,10 @@ function dateHint(p,it,kind){
 }
 /* Zelfde truc als dateHint, maar dan voor het bedrag: wijkt het echt afgeschreven bedrag structureel
    af van wat er in de kostenpost staat? Denk aan een indexering die je nog niet hebt bijgewerkt. */
-function amountHint(p,it,kind){
-  const plan=kind==='ontvangst'?(it.toeslag?+it.toeslag.v:0):+it.v;
+function amountHint(p,it,kind,toeId){
+  const plan=kind==='ontvangst'?(+(toeVan(it,toeId)||{}).v||0):+it.v;
   if(!(plan>0))return null;
-  const logs=hintLogs(p,it,kind);
+  const logs=hintLogs(p,it,kind,toeId);
   if(logs.length<2)return null;
   const ds=logs.slice(-6).map(x=>(+x.amount||0)-plan).filter(n=>isFinite(n));
   if(ds.length<2)return null;
@@ -2061,18 +2123,18 @@ function amountHint(p,it,kind){
 function dateHintRow(x,kind){
   if(!featOn('hints'))return '';
   const rij=t=>`<div class="muted" style="font-size:12px;margin-top:5px">${t}</div>`;
-  const n=hintLogs(x.pot,x.it,kind).length;
+  const n=hintLogs(x.pot,x.it,kind,x.toeId).length;
   if(n<2)return rij(n===0
     ?'Nog niet eerder afgevinkt — na twee keer ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.'
     :'Eén keer afgevinkt — na de volgende ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.');
   const delen=[];
-  const h=dateHint(x.pot,x.it,kind);
+  const h=dateHint(x.pot,x.it,kind,x.toeId);
   if(h&&h.a!==0){
     const exp=new Date(x.date);exp.setDate(exp.getDate()+h.a);
     const pm=h.spread>0?' (±'+h.spread+(h.spread===1?' dag':' dagen')+')':'';
     delen.push(`Verwacht rond <b style="color:var(--text)">${exp.getDate()+' '+MND[exp.getMonth()]}</b>${pm}`);
   }
-  const am=amountHint(x.pot,x.it,kind);
+  const am=amountHint(x.pot,x.it,kind,x.toeId);
   if(am&&Math.abs(am.a)>=0.01){
     const pm=am.spread>=0.01?' (±'+eur(am.spread)+')':'';
     delen.push(`meestal <b style="color:var(--text)">${eur(Math.abs(am.a))} ${am.a>0?'meer':'minder'}</b> dan gepland${pm}`);
@@ -2099,7 +2161,8 @@ function renderPotjes(){
   document.getElementById('potList').innerHTML=db.potjes.length?db.potjes.map((p,i)=>{
     const t=potTot(p);const on=done[i];const budget=p.fuel?(+p.maand||0):0;const spaar=!p.items.length&&!budget;
     const items=p.items.map((it,ii)=>{
-      const toeRow=itToeslagMnd(it)>0?`<div class="kv"><span class="k">${it.toeslag.naam?esc(it.toeslag.naam):'Toeslag'} terug</span><span class="v" style="color:var(--ok-tx)">+ ${eur(it.toeslag.v)} ${freqTxt(it.toeslag.fn,it.toeslag.fu)}</span></div>`:'';
+      /* Elke toeslag zijn eigen regel: bij twee vergoedingen op één kostenpost wil je zien welke wat is. */
+      const toeRow=toeslagenOf(it).filter(T=>toeMnd(T)>0).map(T=>`<div class="kv"><span class="k">${T.naam?esc(T.naam):'Toeslag'} terug</span><span class="v" style="color:var(--ok-tx)">+ ${eur(T.v)} ${freqTxt(T.fn,T.fu)}</span></div>`).join('');
       const occ=(it.due&&!it.buffer)?itemNextOcc(it):null;
       const dueRow=occ?`<div class="kv"><span class="k">Volgende betaaldatum</span><span class="v">${occ.getDate()} ${MND[occ.getMonth()].slice(0,3)} ${occ.getFullYear()}</span></div>`:(it.due&&!it.buffer?`<div class="kv"><span class="k">Status</span><span class="v" style="color:var(--ok-tx)">Betaald voor nu</span></div>`:'');
       const noteRow=it.note?`<div class="muted" style="margin-top:8px;font-style:italic;font-size:13px">${esc(it.note)}</div>`:'';
@@ -2314,7 +2377,7 @@ function receiptCard(x){
   const hintRow=(!x.received&&!x.skipped)?dateHintRow(x,'ontvangst'):'';const dd=x.dispDate||x.date;
   const bedrag=x.skipped?`<span style="text-decoration:line-through">${eur(x.amount)}</span>`:`+ ${eur(x.amount)}`;
   const actie=x.skipped?'Tik om weer op verwacht te zetten':x.received?'Tik om terug op verwacht te zetten':'Tik om ontvangen te zetten';
-  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
+  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}','${x.toeId}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}','${x.toeId}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
 }
 
 function renderAlleUitgaven(){
@@ -2350,11 +2413,29 @@ function openUitgave(pre,itemId){
 }
 /* In de ontvangst-modus koppel je aan de toeslag van een kostenpost, niet aan de kostenpost zelf.
    Daarom staat de naam van de toeslag erbij - anders kies je "Menzis zorgverzekering" en zie je
-   nergens dat je Zorgtoeslag aan het boeken bent. */
+   nergens dat je Zorgtoeslag aan het boeken bent. Heeft een kostenpost meerdere toeslagen, dan staat
+   elke toeslag als eigen keuze in de lijst; de waarde is dan "kostenpost|toeslag". */
+function selKey(itemId,toeId){return toeId?((itemId||'')+'|'+toeId):(itemId||'');}
+function selSplit(v){v=String(v||'');const i=v.indexOf('|');return i<0?{itemId:v,toeId:''}:{itemId:v.slice(0,i),toeId:v.slice(i+1)};}
+/* Kostenposten zonder toeslag blijven in de ontvangst-modus gewoon kiesbaar: dan kan de app uitleggen
+   waarom er niets te koppelen valt, in plaats van ze stilzwijgend weg te laten. */
+function kostOpties(p,ontv,huidig){
+  const opts=[];
+  ((p&&p.items)||[]).forEach(it=>{
+    const L=ontv?toeslagenOf(it):[];
+    if(!L.length){opts.push({v:it.id,l:esc(it.n)});return;}
+    L.forEach(T=>opts.push({v:selKey(it.id,T.id),l:`${esc(toeLabel(it,T))} — bij ${esc(it.n)}`}));
+  });
+  /* Wissel je tussen uitgave en ontvangst, dan is de oude keuze een kostenpost zonder toeslag-deel.
+     Dan houden we dezelfde kostenpost vast en pakken we zijn eerste toeslag. */
+  const wens=String(huidig||'');
+  const kies=opts.some(o=>o.v===wens)?wens:((wens&&opts.find(o=>selSplit(o.v).itemId===selSplit(wens).itemId))||{}).v||'';
+  return `<option value="">— geen —</option>`+opts.map(o=>`<option value="${esc(o.v)}" ${o.v===kies?'selected':''}>${o.l}</option>`).join('');
+}
 function uitgaveKostSel(selectedId){const pi=+val('u_pot');const p=db.potjes[pi];const sel=document.getElementById('u_item');
   const ontv=window._uKind==='ontvangst';
-  const naam=it=>(ontv&&it.toeslag&&(it.toeslag.naam||('Toeslag '+it.n)))?`${esc(it.toeslag.naam||('Toeslag '+it.n))} — bij ${esc(it.n)}`:esc(it.n);
-  if(sel)sel.innerHTML=`<option value="">— geen —</option>`+((p&&p.items)?p.items.map(it=>`<option value="${esc(it.id)}" ${it.id===selectedId?'selected':''}>${naam(it)}</option>`).join(''):'');const fw=document.getElementById('u_fuelWrap');if(fw)fw.style.display=(p&&p.fuel&&window._uKind!=='ontvangst')?'block':'none';uitgaveLinkToggle();}
+  if(sel)sel.innerHTML=kostOpties(p,ontv,selectedId!==undefined?selectedId:(sel.value||''));
+  const fw=document.getElementById('u_fuelWrap');if(fw)fw.style.display=(p&&p.fuel&&!ontv)?'block':'none';uitgaveLinkToggle();}
 function uKindSel(k){
   window._uKind=k;const ontv=k==='ontvangst';
   document.getElementById('uk_uit').classList.toggle('on',!ontv);document.getElementById('uk_ontv').classList.toggle('on',ontv);
@@ -2374,10 +2455,11 @@ function fuelCalc(px){const l=parseFloat(String(val(px+'_l')||'').replace(',','.
    termijn daarbuiten; in plaats van alle tussenliggende maanden op te sommen komt er een blokje van
    een half jaar rond die datum bij. Zo blijft de lijst kort en staat de termijn die je zoekt er toch
    in - zonder stilzwijgend aan de oudste beschikbare termijn te plakken, wat eerder gebeurde. */
-function openTermijnen(it,kind,rondIso){
+function openTermijnen(it,kind,rondIso,toeId){
   if(!it||it.buffer)return [];
-  const ontv=kind==='ontvangst';const T=ontv?it.toeslag:null;
-  const anker=ontv?(T&&T.date):it.due;
+  const ontv=kind==='ontvangst';const T=ontv?toeVan(it,toeId):null;
+  if(ontv&&!T)return [];
+  const anker=ontv?T.date:it.due;
   if(!anker)return [];
   const fn=ontv?(T.fn||1):(it.fn||1),fu=ontv?(T.fu||'m'):(it.fu||'m');
   const tot=ontv?T.tot:null;
@@ -2389,11 +2471,12 @@ function openTermijnen(it,kind,rondIso){
   const gezien=new Set();
   /* Een geplande termijn die al door een vastgelegde wordt gedekt hoort hier niet meer bij: die is
      immers al afgehandeld, alleen op een iets andere datum dan het huidige schema zegt. */
-  const vast=vasteTermijnen(it,kind);
+  const bron=ontv?T:it;
+  const vast=vasteTermijnen(bron,kind);
   return lijst
     .filter(x=>{const k=isoDate(x);if(gezien.has(k))return false;gezien.add(k);return true;})
     .sort((a,b)=>a-b)
-    .filter(x=>!(ontv?itemReceived(it,x):itemPaid(it,x))&&!itemSkipped(it,x,kind))
+    .filter(x=>!(ontv?toeReceived(T,x):itemPaid(it,x))&&!itemSkipped(bron,x,kind))
     .filter(x=>!vast.some(v=>zelfdeTermijn(v,x,fn,fu)));
 }
 /* Welke termijn hoort bij een betaling op deze datum: de dichtstbijzijnde openstaande. Staat de vaste
@@ -2437,18 +2520,18 @@ function uitgaveOccInfo(){
     :(Math.abs(dg)+' dag'+(Math.abs(dg)===1?'':'en')+(dg<0?' eerder':' later')+' dan gepland.');
 }
 function uitgaveLinkToggle(){
-  const pi=+val('u_pot');const p=db.potjes[pi];const itId=val('u_item')||'';
+  const pi=+val('u_pot');const p=db.potjes[pi];const keuze=selSplit(val('u_item'));const itId=keuze.itemId;
   const it=itId&&p?p.items.find(x=>x.id===itId):null;
   const wrap=document.getElementById('u_linkWrap');if(!wrap)return;
   const ontv=window._uKind==='ontvangst';const kind=ontv?'ontvangst':'uitgave';
-  const lijst=openTermijnen(it,kind,val('u_date'));
+  const lijst=openTermijnen(it,kind,val('u_date'),keuze.toeId);
   const eligible=!!it&&lijst.length>0;
   wrap.style.display=eligible?'block':'none';
   /* Kies je in ontvangst-modus een kostenpost zonder toeslag, dan valt er niets te koppelen. Dat
      zonder uitleg laten verdwijnen is verwarrend, dus zeggen we waarom. */
   const geen=document.getElementById('u_geenLink');
   if(geen){
-    const toon=!!it&&!eligible&&ontv&&!it.toeslag;
+    const toon=!!it&&!eligible&&ontv&&!toeslagenOf(it).length;
     geen.style.display=toon?'block':'none';
     if(toon)geen.textContent=`Bij "${esc(it.n)}" staat geen toeslag, dus er is geen termijn om deze ontvangst aan te koppelen.`;
   }
@@ -2478,7 +2561,7 @@ function saveUitgave(){
 function saveUitgaveDoen(){
   const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;
   const amt=moneyNum(val('u_amt'))||0;if(!amt)return;
-  const itId=val('u_item')||'';const it=itId?p.items.find(x=>x.id===itId):null;
+  const keuze=selSplit(val('u_item'));const itId=keuze.itemId;const it=itId?p.items.find(x=>x.id===itId):null;
   const date=val('u_date')||isoDate(new Date());const note=val('u_note');
   const once=!!(document.getElementById('u_once')&&document.getElementById('u_once').classList.contains('on'));
   const l=p.fuel?(parseFloat(String(val('u_l')||'').replace(',','.'))||0):0;
@@ -2490,14 +2573,16 @@ function saveUitgaveDoen(){
   const ontvK=window._uKind==='ontvangst';
   const occIso=val('u_occ')||'';
   const wantLink=!!(it&&occIso&&linkChk&&linkChk.classList.contains('on'));
+  const T=ontvK&&it?toeVan(it,keuze.toeId):null;
   if(wantLink){
-    const label=ontvK?((it.toeslag&&it.toeslag.naam)||('Toeslag '+it.n)):null;
-    const lid=markOccurrence(pi,it.id,occIso,ontvK?'ontvangst':'uitgave',amt,date,note,label,raak);
+    const label=ontvK?toeLabel(it,T):null;
+    const lid=markOccurrence(pi,it.id,occIso,ontvK?'ontvangst':'uitgave',amt,date,note,label,raak,T?T.id:'');
     if(lid){const le=p.log.find(z=>z.id===lid);if(le&&!ontvK)extra(le);
       haptic();save();closeSheet();render();toast(ontvK?'Ontvangst gekoppeld':'Uitgave toegevoegd en gekoppeld als betaald');return;}
   }
   p.log=p.log||[];
-  const entry={id:rnd(),date,amount:amt,note,item:it?it.n:'',itemId:it?it.id:'',kind:ontvK?'ontvangst':'uitgave'};if(!ontvK)extra(entry);
+  const entry={id:rnd(),date,amount:amt,note,item:it?(ontvK&&T?toeLabel(it,T):it.n):'',itemId:it?it.id:'',kind:ontvK?'ontvangst':'uitgave'};if(!ontvK)extra(entry);
+  if(T)entry.toeId=T.id;
   if(!raak)entry.geenSaldo=true;
   p.log.push(entry);
   if(raak)p.saldo=round2((+p.saldo||0)+(ontvK?amt:-amt));
@@ -2505,11 +2590,14 @@ function saveUitgaveDoen(){
 }
 function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];if(!p)return closeSheet();const x=(p.log||[])[idx];if(!x)return closeSheet();window._uitBackTab=backTab||window._ovTab||'pot';const isRec=x.kind==='ontvangst';
   window._ueKind=x.kind;window._ueIso=x.payIso||'';window._ueItemId=x.itemId||'';
+  /* Bij een ontvangst hangt de boeking aan een toeslag; die moet in de keuzelijst weer geselecteerd staan. */
+  const oit=x.itemId?p.items.find(v=>v.id===x.itemId):null;
+  const oT=isRec?toeVanLog(oit,x):null;window._ueToeId=oT?oT.id:'';
 
   const fuelHtml=(p.fuel&&!isRec)?`<div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="ue_l" inputmode="decimal" placeholder="bijv. 32,5" value="${x.l!=null?String(x.l).replace('.',','):''}" oninput="fuelCalc('ue')"></div><div><label>Prijs per liter</label>${mInput('id="ue_ppl" oninput="fuelCalc(\'ue\')"',x.ppl,'2,05')}</div></div>`:'';
   openSheet(`<h2>${isRec?'Ontvangst':'Uitgave'} bewerken</h2>${fuelHtml}<label>Bedrag</label>${mInput('id="ue_amt"',x.amount,'0,00')}<label>Potje</label><select id="ue_pot" onchange="ueKostSel()">${db.potjes.map((q,qi)=>`<option value="${qi}" ${qi===pi?'selected':''}>${esc(q.n)} · ${eur(q.saldo)}</option>`).join('')}</select><label>Kostenpost (optioneel)</label><select id="ue_item" onchange="ueLinkToggle()"></select><label>Datum</label><input id="ue_date" type="date" value="${x.date||isoDate(new Date())}" onchange="ueLinkToggle()"><label>Omschrijving</label><input id="ue_note" value="${esc(x.note||'')}"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="ue_saldoUitleg"></div></div><div class="check" id="ue_saldo" onclick="tgl(this);ueSaldoInfo()"></div></div><div class="muted" id="ue_geenLink" style="display:none;font-size:12.5px;margin-top:12px"></div><div id="ue_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="ue_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="ue_link" onclick="tgl(this);ueLinkVeld()"></div></div><div id="ue_occWrap" style="display:none"><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="ue_occ" onchange="ueOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="ue_linkInfo"></div></div></div>${(isRec||!(featOn('once')||x.once))?'':`<span class="adv" onclick="var a=document.getElementById('ue_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span><div id="ue_adv" style="display:${x.once?'block':'none'}"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check ${x.once?'on':''}" id="ue_once" onclick="tgl(this)">${x.once?'✓':''}</div></div></div>`}<div class="row" style="margin-top:14px"><button class="danger" onclick="delUitgave(${pi},${idx})">Verwijderen</button><button class="primary" style="flex:1" onclick="saveUitgaveEdit(${pi},${idx})">Opslaan</button></div>`,()=>openOverzicht(window._uitBackTab||'pot'));
   /* Alle keuzes in de stand zetten die bij deze boeking hoort. */
-  ueKostSel(x.itemId||'');
+  ueKostSel(selKey(x.itemId||'',window._ueToeId));
   const lc=document.getElementById('ue_link');if(lc&&x.payIso){lc.classList.add('on');lc.textContent='✓';}
   const sc=document.getElementById('ue_saldo');if(sc&&!x.geenSaldo){sc.classList.add('on');sc.textContent='✓';}
   ueLinkToggle(x.payIso||'');ueSaldoInfo();ueLinkVeld();
@@ -2518,18 +2606,18 @@ function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];if(!p)return clos
 function ueKostSel(selId){
   const p=db.potjes[+val('ue_pot')];const sel=document.getElementById('ue_item');if(!sel)return;
   const huidig=selId!==undefined?selId:(sel.value||'');
-  const ontv=window._ueKind==='ontvangst';
-  const naam=it=>(ontv&&it.toeslag)?`${esc(it.toeslag.naam||('Toeslag '+it.n))} — bij ${esc(it.n)}`:esc(it.n);
-  sel.innerHTML=`<option value="">— geen —</option>`+((p&&p.items)?p.items.map(it=>`<option value="${esc(it.id)}" ${it.id===huidig?'selected':''}>${naam(it)}</option>`).join(''):'');
+  sel.innerHTML=kostOpties(p,window._ueKind==='ontvangst',huidig);
   ueLinkToggle();
 }
 function ueLinkToggle(kiesIso){
-  const p=db.potjes[+val('ue_pot')];const itId=val('ue_item')||'';
+  const p=db.potjes[+val('ue_pot')];const keuze=selSplit(val('ue_item'));const itId=keuze.itemId;
   const it=itId&&p?p.items.find(v=>v.id===itId):null;
   const wrap=document.getElementById('ue_linkWrap');if(!wrap)return;
   const ontv=window._ueKind==='ontvangst';const kind=ontv?'ontvangst':'uitgave';
-  const lijst=openTermijnen(it,kind,val('ue_date'));
-  const eigen=(window._ueIso&&it&&it.id===window._ueItemId)?parseISO(window._ueIso):null;
+  const lijst=openTermijnen(it,kind,val('ue_date'),keuze.toeId);
+  /* De termijn van deze boeking zelf hoort erbij, maar alleen zolang je bij dezelfde kostenpost én
+     dezelfde toeslag blijft. */
+  const eigen=(window._ueIso&&it&&it.id===window._ueItemId&&(!ontv||keuze.toeId===window._ueToeId))?parseISO(window._ueIso):null;
   /* De termijn waar deze boeking nu aan hangt staat niet in de lijst met openstaande termijnen,
      want hij is door deze boeking zelf bezet. Toch hoort hij erbij, anders kun je hem niet houden. */
   const alles=eigen?[eigen].concat(lijst.filter(d=>isoDate(d)!==isoDate(eigen))).sort((a,b)=>a-b):lijst;
@@ -2539,7 +2627,7 @@ function ueLinkToggle(kiesIso){
   if(lbl)lbl.textContent=ontv?'Ook als ontvangen markeren?':'Ook als betaald markeren?';
   const geen=document.getElementById('ue_geenLink');
   if(geen){
-    const toon=!!it&&!eligible&&ontv&&!it.toeslag;
+    const toon=!!it&&!eligible&&ontv&&!toeslagenOf(it).length;
     geen.style.display=toon?'block':'none';
     if(toon)geen.textContent=`Bij "${esc(it.n)}" staat geen toeslag, dus er is geen termijn om deze ontvangst aan te koppelen.`;
   }
@@ -2579,20 +2667,23 @@ function saveUitgaveEdit(pi,idx){
   const ontv=x.kind==='ontvangst';
   const nieuwPi=Math.max(0,Math.min(db.potjes.length-1,+val('ue_pot')||0));const np=db.potjes[nieuwPi]||p;
   const bedrag=moneyNum(val('ue_amt'))||0;
-  const itId=val('ue_item')||'';const it=itId?np.items.find(v=>v.id===itId):null;
+  const keuze=selSplit(val('ue_item'));const itId=keuze.itemId;const it=itId?np.items.find(v=>v.id===itId):null;
+  const T=(ontv&&it)?toeVan(it,keuze.toeId):null;
   const sc=document.getElementById('ue_saldo');const raak=!!(sc&&sc.classList.contains('on'));
   const lc=document.getElementById('ue_link');const occIso=val('ue_occ')||'';
   const wilLink=!!(it&&occIso&&lc&&lc.classList.contains('on'));
   /* --- oude staat terug --- */
   if(!x.geenSaldo)p.saldo=round2((+p.saldo||0)+(ontv?-(+x.amount||0):(+x.amount||0)));
   if(x.payIso&&x.itemId){const oit=p.items.find(v=>v.id===x.itemId);
-    if(oit){const map=ontv?oit.receivedDates:oit.paidDates;if(map&&map[x.payIso]===x.id)delete map[x.payIso];}}
+    const obron=ontv?toeVanLog(oit,x):oit;
+    if(obron){const map=ontv?obron.receivedDates:obron.paidDates;if(map&&map[x.payIso]===x.id)delete map[x.payIso];}}
   if(np!==p){p.log.splice(idx,1);np.log=np.log||[];np.log.push(x);}
   /* --- nieuwe staat --- */
   x.amount=bedrag;x.itemId=it?it.id:'';x.date=val('ue_date')||x.date;x.note=val('ue_note');
-  x.item=it?((ontv&&it.toeslag)?(it.toeslag.naam||('Toeslag '+it.n)):it.n):'';
+  x.item=it?((ontv&&T)?toeLabel(it,T):it.n):'';
+  if(T)x.toeId=T.id;else delete x.toeId;
   if(raak)delete x.geenSaldo;else x.geenSaldo=true;
-  if(wilLink){x.payIso=occIso;const map=ontv?(it.receivedDates=it.receivedDates||{}):(it.paidDates=it.paidDates||{});map[occIso]=x.id;}
+  if(wilLink&&(!ontv||T)){x.payIso=occIso;const bron=ontv?T:it;const map=ontv?(bron.receivedDates=bron.receivedDates||{}):(bron.paidDates=bron.paidDates||{});map[occIso]=x.id;}
   else delete x.payIso;
   if(raak)np.saldo=round2((+np.saldo||0)+(ontv?bedrag:-bedrag));
   const oc=document.getElementById('ue_once');if(oc){if(oc.classList.contains('on'))x.once=true;else delete x.once;}
@@ -2699,7 +2790,7 @@ function openPotDetailEdit(pi,vanaf){
   renderPeItems(pi);
 }
 function potDetailKlaar(){if(_potVanaf==='potjes')closeSheet();else openPotEdit();render();}
-function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${it.toeslag?' · toeslag':''}${(it.due&&!it.buffer)?' · '+new Date(it.due).getDate()+' '+MND[new Date(it.due).getMonth()].slice(0,3)+' '+new Date(it.due).getFullYear():''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen kostenposten.</div>';}
+function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${toeslagenOf(it).length?(toeslagenOf(it).length===1?' · 1 toeslag':' · '+toeslagenOf(it).length+' toeslagen'):''}${(it.due&&!it.buffer)?' · '+new Date(it.due).getDate()+' '+MND[new Date(it.due).getMonth()].slice(0,3)+' '+new Date(it.due).getFullYear():''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen kostenposten.</div>';}
 function peFuelToggle(el){tgl(el);const b=document.getElementById('pe_fuelBudget');if(b)b.style.display=el.classList.contains('on')?'block':'none';}
 function savePotNaam(pi){const el=document.getElementById('pe_naam');if(el&&el.value.trim())db.potjes[pi].n=el.value.trim();const sb=document.getElementById('pe_saldo');if(sb){const v=moneyNum(sb.value);db.potjes[pi].saldo=v==null?0:v;}const nt=document.getElementById('pe_note');if(nt)db.potjes[pi].note=nt.value.trim();const ft=document.getElementById('pe_fuel');if(ft)db.potjes[pi].fuel=ft.classList.contains('on');const mb=document.getElementById('pe_maand');if(mb)db.potjes[pi].maand=moneyNum(mb.value)||0;save();}
 function delPot(pi){
@@ -2713,8 +2804,8 @@ function delPot(pi){
 function openItemEdit(pi,ii){
   /* Het potje kan intussen weg zijn (verwijderd terwijl dit scherm nog openstond). Zelfde beveiliging
      als openPotDetailEdit en openUitgave die al hadden. */
-  const p=db.potjes[pi];if(!p)return closeSheet();const it=ii>=0?p.items[ii]:{n:'',v:'',fn:1,fu:'m',buffer:false,toeslag:null,due:null,ov:null};
-  const buf=!!it.buffer;const T=it.toeslag||{};const hasToe=!!it.toeslag;
+  const p=db.potjes[pi];if(!p)return closeSheet();const it=ii>=0?p.items[ii]:{n:'',v:'',fn:1,fu:'m',buffer:false,toeslagen:[],due:null,ov:null};
+  const buf=!!it.buffer;const toe=toeslagenOf(it);
   openSheet(`<h2>${ii>=0?'Kostenpost bewerken':'Nieuwe kostenpost'}</h2>
     <label>Naam</label><input id="ie_naam" value="${esc(it.n||'')}" placeholder="bijv. Zorgverzekering">
     <label style="margin-top:14px">Notitie (optioneel)</label><textarea id="ie_note" placeholder="Korte notitie...">${esc(it.note||'')}</textarea>
@@ -2722,11 +2813,11 @@ function openItemEdit(pi,ii){
     <div id="ie_vast" style="display:${buf?'none':'block'}">
       <div class="grid2" style="margin-top:4px"><div><label>Bedrag</label>${mInput('id="ie_v"',it.v,'47,50')}</div><div><label>Hoe vaak</label>${freqControl('f',it.fn,it.fu)}</div></div>
       <label>Geplande datum (optioneel)</label><input id="ie_due" type="date" value="${it.due||''}">
-      <div class="row between" style="margin-top:16px;display:${(featOn('toeslag')||hasToe)?'flex':'none'}"><div><b>Toeslag / vergoeding</b><div class="muted" style="font-size:12.5px">Bijv. zorgtoeslag — wordt verrekend</div></div><div class="check ${hasToe?'on':''}" id="ie_toe" onclick="ieToeToggle(this)">${hasToe?'✓':''}</div></div>
-      <div id="ie_toewrap" style="display:${hasToe?'block':'none'}">
-        <div class="grid2" style="margin-top:4px"><div><label>Naam</label><input id="ie_tn" value="${esc(T.naam||'')}" placeholder="Zorgtoeslag"></div><div><label>Bedrag</label>${mInput('id="ie_tv"',T.v,'129')}</div></div>
-        <label>Hoe vaak</label>${freqControl('t',T.fn,T.fu)}
-        <div class="grid2" style="margin-top:4px"><div><label>Ontvangstdatum</label><input id="ie_td" type="date" value="${T.date||''}"></div><div><label>Loopt tot</label><input id="ie_tt" type="date" value="${T.tot||''}"></div></div>
+      <div style="display:${(featOn('toeslag')||toe.length)?'block':'none'}">
+        <label style="margin-top:16px">Toeslagen &amp; vergoedingen</label>
+        <div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Bijv. zorgtoeslag of een vergoeding van je werk. Elk bedrag wordt verrekend met deze kostenpost; er mogen er meerdere zijn.</div>
+        <div id="ie_toeList"></div>
+        <button class="ghost" style="width:100%;margin-top:8px" onclick="ieToeAdd(${pi},${ii})">Toeslag toevoegen</button>
       </div>
       <span class="adv" onclick="var a=document.getElementById('ie_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span>
       <div id="ie_adv" style="display:${(it.ov!=null&&it.ov!=='')?'block':'none'}"><label>Maandbedrag zelf bepalen</label><div class="muted" style="font-size:12.5px;margin:-2px 0 6px">Alleen invullen als je een ander bedrag opzij zet dan berekend.</div>${mInput('id="ie_ov"',it.ov,'leeg = automatisch')}</div>
@@ -2736,24 +2827,86 @@ function openItemEdit(pi,ii){
       <div class="muted" style="font-size:12.5px;margin-top:6px">Uitgaven log je met de ＋-knop; de app berekent daaruit een aanbevolen maandbedrag.</div>
     </div>
     <div class="row" style="margin-top:20px">${ii>=0?`<button class="danger" onclick="delItemEdit(${pi},${ii})">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveItemEdit(${pi},${ii})">Opslaan</button></div>`,()=>openPotDetailEdit(pi));
+  renderIeToeslagen(pi,ii);
+}
+/* De toeslagen van deze kostenpost, als aantikbare regels - net als de kostenposten in een potje.
+   De details staan in een eigen scherm, zodat dit formulier overzichtelijk blijft bij meerdere. */
+function renderIeToeslagen(pi,ii){
+  const c=document.getElementById('ie_toeList');if(!c)return;
+  const it=ii>=0?(db.potjes[pi]||{items:[]}).items[ii]:null;
+  const L=toeslagenOf(it);
+  if(!L.length){c.innerHTML='<div class="muted" style="padding:2px 0 4px;font-size:12.5px">Nog geen toeslag.</div>';return;}
+  c.innerHTML=L.map((T,ti)=>{
+    const d=T.date?new Date(T.date):null;
+    const wanneer=d&&!isNaN(d)?' · vanaf '+d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear():'';
+    const gestopt=(T.tot&&new Date(T.tot)<new Date())?' · gestopt':'';
+    return `<div class="mrow" onclick="ieToeOpen(${pi},${ii},${ti})"><div style="flex:1"><b>${esc(toeLabel(it,T))}</b><div class="muted">+ ${eur(T.v)} ${freqTxt(T.fn,T.fu)}${wanneer}${gestopt}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`;
+  }).join('');
+}
+/* Een toeslag hangt aan een opgeslagen kostenpost. Staat die er nog niet (of zijn er wijzigingen die
+   nog in het formulier staan), dan leggen we die eerst vast - zelfde volgorde als bij een nieuw potje
+   met kostenposten. */
+function ieToeAdd(pi,ii){const k=ieCommit(pi,ii);if(k<0)return;openToeEdit(pi,k,-1);}
+function ieToeOpen(pi,ii,ti){const k=ieCommit(pi,ii);if(k<0)return;openToeEdit(pi,k,ti);}
+function openToeEdit(pi,ii,ti){
+  const p=db.potjes[pi];const it=p&&p.items[ii];if(!it)return closeSheet();
+  const T=ti>=0?toeslagenOf(it)[ti]:null;
+  if(ti>=0&&!T)return openItemEdit(pi,ii);
+  const D=T||{naam:'',v:'',fn:1,fu:'m',date:'',tot:''};
+  openSheet(`<h2>${ti>=0?'Toeslag bewerken':'Nieuwe toeslag'}</h2>
+    <div class="muted" style="margin-bottom:12px">Bij ${esc(it.n)}</div>
+    <label>Naam</label><input id="te_n" value="${esc(D.naam||'')}" placeholder="bijv. Zorgtoeslag">
+    <div class="grid2" style="margin-top:14px"><div><label>Bedrag</label>${mInput('id="te_v"',D.v,'129')}</div><div><label>Hoe vaak</label>${freqControl('t',D.fn,D.fu)}</div></div>
+    <div class="grid2" style="margin-top:4px"><div><label>Ontvangstdatum</label><input id="te_d" type="date" value="${D.date||''}"></div><div><label>Loopt tot (optioneel)</label><input id="te_t" type="date" value="${D.tot||''}"></div></div>
+    <div class="muted" style="font-size:12.5px;margin-top:8px">De ontvangstdatum bepaalt het schema op de Geldstroom-pagina; die staat los van de afschrijving van de kostenpost. Vul "loopt tot" in als de toeslag stopt — daarna telt hij niet meer mee.</div>
+    <div class="row" style="margin-top:20px">${ti>=0?`<button class="danger" onclick="delToeEdit(${pi},${ii},${ti})">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveToeEdit(${pi},${ii},${ti})">Opslaan</button></div>`,()=>openItemEdit(pi,ii));
+}
+function saveToeEdit(pi,ii,ti){
+  const p=db.potjes[pi];const it=p&&p.items[ii];if(!it)return;
+  const fr=readFreq(document.getElementById('sheet'),'t');
+  const oud=ti>=0?toeslagenOf(it)[ti]:null;
+  const T=oud||{id:rnd(),receivedDates:{},recSkipDates:{}};
+  T.naam=val('te_n').trim();T.v=numV('te_v')||0;T.fn=fr.fn;T.fu=fr.fu;
+  T.date=val('te_d')||null;T.tot=val('te_t')||null;
+  if(!oud){it.toeslagen=toeslagenOf(it);it.toeslagen.push(T);}
+  haptic();save();openItemEdit(pi,ii);render();toast('Opgeslagen');
+}
+function delToeEdit(pi,ii,ti){
+  const p=db.potjes[pi];const it=p&&p.items[ii];const T=it&&toeslagenOf(it)[ti];if(!T)return;
+  const geboekt=(p.log||[]).some(x=>x&&x.kind==='ontvangst'&&x.itemId===it.id&&x.toeId===T.id);
+  confirmSheet('Toeslag verwijderen',
+    `"${toeLabel(it,T)}" verdwijnt uit deze kostenpost en telt niet meer mee in je maandbedrag.`+(geboekt?' De ontvangsten die je al hebt geboekt blijven staan bij je uitgaven & ontvangsten.':''),
+    'Verwijderen',()=>{
+      it.toeslagen.splice(ti,1);save();openItemEdit(pi,ii);render();toast('Verwijderd');
+    });
 }
 function ieBufToggle(el){el.classList.toggle('on');el.textContent=el.classList.contains('on')?'✓':'';const on=el.classList.contains('on');document.getElementById('ie_vast').style.display=on?'none':'block';document.getElementById('ie_bufw').style.display=on?'block':'none';}
-function ieToeToggle(el){el.classList.toggle('on');el.textContent=el.classList.contains('on')?'✓':'';document.getElementById('ie_toewrap').style.display=el.classList.contains('on')?'block':'none';}
 function numV(id){return moneyNum(val(id));}
-function saveItemEdit(pi,ii){
-  const p=db.potjes[pi];const n=val('ie_naam').trim();if(!n){toast('Vul een naam in');return;}
+/* Legt vast wat er nu in het kostenpost-formulier staat en geeft de plek in de lijst terug (-1 als er
+   nog geen naam staat). Apart van saveItemEdit, omdat het toeslag-scherm de kostenpost ook eerst moet
+   kunnen vastleggen: een toeslag heeft iets nodig om aan te hangen.
+   Wat niet in dit formulier staat blijft staan: de afgevinkte en overgeslagen termijnen en de
+   toeslagen met hun eigen administratie. */
+function ieCommit(pi,ii){
+  const p=db.potjes[pi];if(!p)return -1;
+  const n=val('ie_naam').trim();if(!n){toast('Vul een naam in');return -1;}
   const buf=document.getElementById('ie_buf').classList.contains('on');
-  const old=ii>=0?p.items[ii]:{};
+  const old=ii>=0?(p.items[ii]||{}):{};
+  const basis={id:old.id||rnd(),n,note:val('ie_note').trim(),paidDates:old.paidDates||{},skipDates:old.skipDates||{},toeslagen:toeslagenOf(old)};
   let item;
-  const noteVal=val('ie_note').trim();
-  if(buf){item={id:old.id||rnd(),n,buffer:true,v:numV('ie_bv')||0,fn:1,fu:'m',note:noteVal,paidDates:old.paidDates||{},receivedDates:old.receivedDates||{}};}
+  if(buf)item=Object.assign(basis,{buffer:true,v:numV('ie_bv')||0,fn:1,fu:'m'});
   else{
-    const scope=document.getElementById('ie_vast');const fr=readFreq(scope,'f');
-    item={id:old.id||rnd(),n,v:numV('ie_v')||0,fn:fr.fn,fu:fr.fu,due:val('ie_due')||null,ov:numV('ie_ov'),toeslag:null,note:noteVal,paidDates:old.paidDates||{},receivedDates:old.receivedDates||{}};
-    if(document.getElementById('ie_toe').classList.contains('on')){const tf=readFreq(document.getElementById('ie_toewrap'),'t');item.toeslag={naam:val('ie_tn').trim(),v:numV('ie_tv')||0,fn:tf.fn,fu:tf.fu,date:val('ie_td')||null,tot:val('ie_tt')||null};}
+    const fr=readFreq(document.getElementById('ie_vast'),'f');
+    item=Object.assign(basis,{v:numV('ie_v')||0,fn:fr.fn,fu:fr.fu,due:val('ie_due')||null,ov:numV('ie_ov')});
   }
-  if(ii>=0)p.items[ii]=item;else p.items.push(item);
-  haptic();save();openPotDetailEdit(pi);render();toast('Opgeslagen');
+  let k;
+  if(ii>=0){p.items[ii]=item;k=ii;}else{p.items.push(item);k=p.items.length-1;}
+  save();
+  return k;
+}
+function saveItemEdit(pi,ii){
+  const k=ieCommit(pi,ii);if(k<0)return;
+  haptic();openPotDetailEdit(pi);render();toast('Opgeslagen');
 }
 function delItemEdit(pi,ii){
   const it=db.potjes[pi]&&db.potjes[pi].items[ii];if(!it)return;

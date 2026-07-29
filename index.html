@@ -2034,7 +2034,8 @@ function openMarkPaidSheet(pi,itemId,iso){
   openSheet(`<h2>Betaling markeren</h2><div class="muted" style="margin-bottom:10px">${esc(it.n)}</div>
     <label>Datum</label><input type="date" id="mp_date" value="${iso}" onchange="markSaldoStand('mp')">
     <label>Bedrag</label>${mInput('id="mp_amt"',it.v,'0,00')}
-    <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mp_saldoUitleg"></div></div><div class="check" id="mp_saldo" onclick="tgl(this);markSaldoInfo('mp')"></div></div>
+    <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mp_saldoUitleg"></div></div><div class="check" id="mp_saldo" onclick="tgl(this);markSaldoInfo('mp')"></div></div>
+    <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven">
     <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Bevestigen — boekt af en logt uitgave</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','uitgave')">Deze termijn komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Wordt deze afschrijving een keer overgeslagen? Dan verdwijnt hij uit je openstaande lijst zonder dat er iets van je saldo af gaat. Je kunt dat altijd terugdraaien.</div>`);
@@ -2052,9 +2053,7 @@ function markSaldoStand(pre){
 function markSaldoInfo(pre){
   const c=document.getElementById(pre+'_saldo'),i=document.getElementById(pre+'_saldoUitleg');if(!c||!i)return;
   const aan=c.classList.contains('on'),oud=!saldoStandaard(val(pre+'_date'));
-  i.textContent=aan
-    ?(oud?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'Je saldo verandert met dit bedrag.')
-    :'Alleen vastleggen voor je overzicht; je saldo blijft zoals het is.';
+  i.textContent=(aan&&oud)?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'';
 }
 function confirmMarkPaid(pi,itemId,iso){
   const amt=moneyNum(val('mp_amt'));const date=val('mp_date')||iso;const note=val('mp_note')||'';
@@ -2071,7 +2070,8 @@ function openMarkReceivedSheet(pi,itemId,iso,toeId){
   openSheet(`<h2>Ontvangst markeren</h2><div class="muted" style="margin-bottom:10px">${esc(toeLabel(it,T))} — bij ${esc(it.n)}</div>
     <label>Datum</label><input type="date" id="mr_date" value="${iso}" onchange="markSaldoStand('mr')">
     <label>Bedrag</label>${mInput('id="mr_amt"',T.v,'0,00')}
-    <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mr_saldoUitleg"></div></div><div class="check" id="mr_saldo" onclick="tgl(this);markSaldoInfo('mr')"></div></div>
+    <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mr_saldoUitleg"></div></div><div class="check" id="mr_saldo" onclick="tgl(this);markSaldoInfo('mr')"></div></div>
+    <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel">
     <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}','${toeId}')">Bevestigen — boekt bij en logt ontvangst</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst','${toeId}')">Deze termijn komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt de termijn uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
@@ -2494,7 +2494,8 @@ function openUitgave(pre,itemId){
     <div class="muted" id="u_geenLink" style="display:none;font-size:12.5px;margin-top:12px"></div><div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this);uitgaveLinkVeld()"></div></div><div id="u_occWrap" style="display:none"><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div></div>
     <div id="u_fuelWrap" style="display:none"><div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="u_l" inputmode="decimal" placeholder="bijv. 32,5" oninput="fuelCalc('u')"></div><div><label>Prijs per liter</label>${mInput('id="u_ppl" oninput="fuelCalc(\'u\')"','','2,05')}</div></div><div class="muted" style="font-size:12px;margin-top:4px">Bedrag wordt automatisch berekend (liters × prijs). Alleen een bedrag invullen mag ook.</div></div>
     <label>Bedrag</label>${mInput('id="u_amt"',selIt?selIt.v:'','bijv. 405')}
-    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()"><div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="u_saldoUitleg"></div></div><div class="check on" id="u_saldo" onclick="tgl(this);uitgaveSaldoInfo()">✓</div></div>
+    <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="u_saldoUitleg"></div></div><div class="check on" id="u_saldo" onclick="tgl(this);uitgaveSaldoInfo()">✓</div></div>
+    <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()">
     <label>Omschrijving (optioneel)</label><input id="u_note" placeholder="bijv. keerring vervangen">
     ${featOn('once')?`<span class="adv" onclick="var a=document.getElementById('u_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span>
     <div id="u_adv" style="display:none"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check" id="u_once" onclick="tgl(this)"></div></div></div>`:''}
@@ -2590,12 +2591,11 @@ function uitgaveSaldoStand(){
   c.classList.toggle('on',aan);c.textContent=aan?'✓':'';
   uitgaveSaldoInfo();
 }
+/* Zelfde regel als in het bewerk-scherm: alleen de waarschuwing die er echt toe doet. */
 function uitgaveSaldoInfo(){
   const c=document.getElementById('u_saldo'),i=document.getElementById('u_saldoUitleg');if(!c||!i)return;
   const aan=c.classList.contains('on'),oud=!saldoStandaard(val('u_date'));
-  i.textContent=aan
-    ?(oud?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'Je saldo verandert met dit bedrag.')
-    :'Alleen vastleggen voor je overzicht; je saldo blijft zoals het is.';
+  i.textContent=(aan&&oud)?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'';
 }
 /* De termijn-keuze hoort er pas te staan als je ook echt wilt koppelen. */
 function uitgaveLinkVeld(){
@@ -2864,7 +2864,12 @@ function vrijeNaam(namen,basis){
   for(let n=2;n<200;n++){const kandidaat=basis+' '+n;if(!bestaandeNaam(namen,kandidaat))return kandidaat;}
   return basis;
 }
-function newPot(){db.potjes.push({n:vrijeNaam(db.potjes.map(p=>p.n),'Nieuw potje'),saldo:0,log:[],items:[]});save();openPotDetailEdit(db.potjes.length-1,'beheer');}
+function newPot(){
+  const p={n:vrijeNaam(db.potjes.map(q=>q.n),'Nieuw potje'),saldo:0,log:[],items:[]};
+  db.potjes.push(p);save();
+  _nieuwPot=p; /* nog niet bevestigd: zie potWegAlsLeeg */
+  openPotDetailEdit(db.potjes.length-1,'beheer');
+}
 function startPotDrag(e,handle){
   e.preventDefault();e.stopPropagation();
   const row=handle.closest('.mrow');const cont=row.parentNode;row.classList.add('dragging');haptic(8);
@@ -2898,19 +2903,46 @@ function openPotDetailEdit(pi,vanaf){
     <div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Geen kostenposten? Dan is dit een spaarpotje met alleen een saldo.</div>
     <div id="peItems"></div>
     <button class="ghost" style="width:100%;margin-top:10px" onclick="savePotNaam(${pi});openItemEdit(${pi},-1)">Kostenpost toevoegen</button>
-    <div class="row" style="margin-top:18px"><button class="danger" onclick="delPot(${pi})">Verwijderen</button><button class="primary" style="flex:1" onclick="savePotNaam(${pi});potDetailKlaar(${pi})">Klaar</button></div>`,uitPotjes?null:openPotEdit);
+    <div class="row" style="margin-top:18px"><button class="danger" onclick="delPot(${pi})">Verwijderen</button><button class="primary" style="flex:1" onclick="potKlaar(${pi})">Klaar</button></div>`,uitPotjes?null:()=>{potWegAlsLeeg();openPotEdit();});
   renderPeItems(pi);
 }
 /* Bij "Klaar" - het moment dat je dit potje echt afsluit - kijken of de naam al bij een ander potje
    staat. Twee potjes "Boodschappen" mag, maar dan wel bewust: je ziet ze in elke keuzelijst naast
-   elkaar zonder verschil. */
-function potDetailKlaar(pi,door){
-  const p=(pi!=null)?db.potjes[pi]:null;
-  if(p&&!door){
-    const al=bestaandeNaam(db.potjes.map(q=>q.n),p.n,pi);
-    if(al){vraagDubbel('een potje',al,()=>potDetailKlaar(pi,true));return;}
+   elkaar zonder verschil.
+   De naam uit het formulier wordt pas weggeschreven als die vraag beantwoord is. Deed de controle dat
+   na het opslaan, dan stond je nieuwe naam er bij "Annuleren" alsnog in. */
+function potKlaar(pi,door){
+  const naam=(val('pe_naam')||'').trim();
+  if(naam&&!door){
+    const al=bestaandeNaam(db.potjes.map(q=>q.n),naam,pi);
+    if(al){vraagDubbel('een potje',al,()=>potKlaar(pi,true));return;}
   }
-  if(_potVanaf==='potjes')closeSheet();else openPotEdit();render();
+  savePotNaam(pi);
+  _nieuwPot=null; /* vanaf nu is het een gewoon potje */
+  potDetailKlaar();
+}
+function potDetailKlaar(){
+  if(_potVanaf==='potjes')closeSheet();else openPotEdit();
+  render();
+}
+/* Een nieuw potje bestaat pas echt als je op Klaar tikt. Tot die tijd staat het al wel in de lijst,
+   want je moet er meteen kostenposten in kunnen zetten en die hebben iets nodig om aan te hangen.
+   Loop je weg zonder er iets van te maken, dan hoort het dus weer weg - anders staat er een leeg
+   "Nieuw potje" in je overzicht waar je nooit om gevraagd hebt. We bewaren het potje zelf en niet zijn
+   plek in de lijst: een index kan intussen naar een ander potje wijzen. */
+let _nieuwPot=null;
+function potWegAlsLeeg(){
+  const p=_nieuwPot;_nieuwPot=null;
+  if(!p)return false;
+  const pi=db.potjes.indexOf(p);
+  if(pi<0)return false; /* al verwijderd */
+  const leeg=!(p.items||[]).length&&!(p.log||[]).length&&!(+p.saldo||0)&&!p.note&&!p.fuel;
+  if(!leeg)return false;
+  db.potjes.splice(pi,1);
+  /* db.overboek is op index gesleuteld, dus latere potjes schuiven een plek op — net als bij delPot. */
+  Object.keys(db.overboek||{}).forEach(k=>{const old=db.overboek[k]||{};const nw={};Object.keys(old).forEach(oi=>{const n=+oi;if(!old[oi])return;if(n<pi)nw[n]=true;else if(n>pi)nw[n-1]=true;});db.overboek[k]=nw;});
+  save();
+  return true;
 }
 function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${toeslagenOf(it).length?(toeslagenOf(it).length===1?' · 1 toeslag':' · '+toeslagenOf(it).length+' toeslagen'):''}${(it.due&&!it.buffer)?' · '+termijnDatumTekst(new Date(it.due),itemSpan(it),true):''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen kostenposten.</div>';}
 function peFuelToggle(el){tgl(el);const b=document.getElementById('pe_fuelBudget');if(b)b.style.display=el.classList.contains('on')?'block':'none';}
@@ -4203,7 +4235,11 @@ function sheetBack(){
 function sheetOpen(){return document.getElementById('overlay').classList.contains('show');}
 function closeSheet(){const overlay=document.getElementById('overlay');if(!overlay.classList.contains('show'))return;
   if(sheetDirty()){vraagWeggooien(()=>{markSheetSaved();closeSheet();});return;}
-  markSheetSaved();const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
+  markSheetSaved();
+  /* Sluit je het venster op een andere manier dan met de Terug-pil - veeg omlaag, hardware-terugknop,
+     tik naast het venster - dan hoort een nog niet bevestigd potje net zo goed op te ruimen. */
+  if(potWegAlsLeeg())render();
+  const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
 function attachSheetDrag(){const sheet=document.getElementById('sheet');const grip=sheet.querySelector('.griparea');if(!grip)return;let startY=0,curY=0,dragging=false;const start=y=>{dragging=true;startY=y;curY=0;sheet.style.transition='none';};const move=y=>{if(!dragging)return;curY=Math.max(0,y-startY);sheet.style.transform='translateY('+curY+'px)';};const end=()=>{if(!dragging)return;dragging=false;sheet.style.transition='';if(curY>110)closeSheet();else sheet.style.transform='';curY=0;};grip.addEventListener('touchstart',e=>start(e.touches[0].clientY),{passive:true});grip.addEventListener('touchmove',e=>move(e.touches[0].clientY),{passive:true});grip.addEventListener('touchend',end);grip.addEventListener('mousedown',e=>{start(e.clientY);const mm=ev=>move(ev.clientY),mu=()=>{end();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);});}
 let _undo=null,_undoT=null;
 function showUndo(msg,fn){_undo=fn;document.getElementById('undomsg').textContent=msg;document.getElementById('undobar').classList.add('show');clearTimeout(_undoT);_undoT=setTimeout(()=>document.getElementById('undobar').classList.remove('show'),5000);}

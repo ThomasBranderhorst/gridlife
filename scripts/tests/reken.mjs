@@ -571,6 +571,42 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   const r=run(d,a=>{const p=a.db.potjes[0];const h=a.dateHint(p,p.items[0],'uitgave');return h&&h.a;});
   meld('hint: binnen het venster telt niet mee, gemiddelde over de echte afwijkingen', !r.fout&&r.extra===1, JSON.stringify(r.extra||r.fout));
 }
+// 41. een nieuw potje waar je niets van maakt hoort weer weg; met inhoud blijft het staan
+{
+  const d=basis({potjes:[{n:'Vaste lasten',saldo:100,log:[],items:[]}]});
+  const r=run(d,a=>{
+    const uit={};
+    a.newPot();                                    // staat er nu bij, nog niet bevestigd
+    uit.tijdens=a.db.potjes.length;
+    uit.weg=a.potWegAlsLeeg();                     // weglopen zonder iets in te vullen
+    uit.na=a.db.potjes.length;
+    a.newPot();
+    a.db.potjes[a.db.potjes.length-1].items.push({id:'x',n:'Iets',v:10,fn:1,fu:'m',paidDates:{},toeslagen:[]});
+    uit.metInhoudWeg=a.potWegAlsLeeg();           // nu is er echt werk gedaan
+    uit.metInhoudAantal=a.db.potjes.length;
+    /* Twee keer opruimen mag niet per ongeluk een ánder potje pakken. */
+    uit.nogmaals=a.potWegAlsLeeg();
+    uit.eindAantal=a.db.potjes.length;
+    return uit;
+  });
+  const e=r.extra||{};
+  meld('nieuw potje zonder inhoud verdwijnt weer, met inhoud blijft het',
+    !r.fout&&e.tijdens===2&&e.weg===true&&e.na===1&&e.metInhoudWeg===false&&e.metInhoudAantal===2&&e.nogmaals===false&&e.eindAantal===2,
+    JSON.stringify(r.extra||r.fout));
+}
+// 42. een saldo of notitie is ook "inhoud": dat gooien we niet weg
+{
+  const d=basis({potjes:[]});
+  const r=run(d,a=>{
+    a.newPot();a.db.potjes[0].saldo=50;
+    const wegMetSaldo=a.potWegAlsLeeg();
+    a.newPot();a.db.potjes[a.db.potjes.length-1].note='let op';
+    const wegMetNotitie=a.potWegAlsLeeg();
+    return {wegMetSaldo,wegMetNotitie,aantal:a.db.potjes.length};
+  });
+  const e=r.extra||{};
+  meld('potje met saldo of notitie blijft staan', !r.fout&&e.wegMetSaldo===false&&e.wegMetNotitie===false&&e.aantal===2, JSON.stringify(r.extra||r.fout));
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

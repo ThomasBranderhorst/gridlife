@@ -645,7 +645,21 @@ function fmtPauze(min){min=+min||0;if(!min)return '';const h=Math.floor(min/60),
 function monthKey(d){return d.getFullYear()+'-'+pad(d.getMonth()+1);}
 function isoDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function addMonths(d,k){const x=new Date(d);x.setMonth(x.getMonth()+k);return x;}
-function advance(d,u,n){const x=new Date(d);n=Math.max(1,Math.min(9999,Math.round(+n)||1));if(u==='d')x.setDate(x.getDate()+n);else if(u==='w')x.setDate(x.getDate()+7*n);else if(u==='m')x.setMonth(x.getMonth()+n);else x.setFullYear(x.getFullYear()+n);return x;}
+/* Termijn nummer k, geteld vanaf de startdatum. Twee dingen zijn hier belangrijk.
+   Ten eerste indexeren we vanaf het anker in plaats van steeds een stap op de vorige te zetten.
+   Ten tweede klemmen we op de laatste dag van de doelmaand. Zonder dat rolt JS 29 februari door naar
+   1 maart, en omdat de volgende stap dan van die 1e uitgaat bleef een kostenpost van de 29e daarna
+   voorgoed op de 1e staan; vanaf de 31e liep hij zelfs op naar de 3e. Nu pakt februari gewoon zijn
+   laatste dag en staat maart weer op de 29e of 31e, zoals je hem hebt ingesteld. k mag negatief zijn,
+   dan reken je terug in de tijd. */
+function occStap(anker,fu,fn,k){
+  const y=anker.getFullYear(),m=anker.getMonth(),dag=anker.getDate();
+  fn=Math.max(1,Math.min(9999,Math.round(+fn)||1));
+  if(fu==='d')return new Date(y,m,dag+fn*k);
+  if(fu==='w')return new Date(y,m,dag+7*fn*k);
+  if(fu==='m'){const mm=m+fn*k;return new Date(y,mm,Math.min(dag,new Date(y,mm+1,0).getDate()));}
+  const yy=y+fn*k;return new Date(yy,m,Math.min(dag,new Date(yy,m+1,0).getDate()));
+}
 /* Maand- en dagnamen met een vangnet. Een onleesbare datum geeft getMonth() -> NaN, en MND[NaN] was
    undefined: de eerstvolgende .slice() gooide dan een harde fout waardoor een heel scherm leeg bleef.
    Eén kapotte dienst kon zo de hele Start-pagina slopen. Nu wordt het gewoon een lege naam. */
@@ -1569,7 +1583,26 @@ function currentPeriodKey(){
   if(stored)return 'p'+stored;
   return 'm'+monthKey(t);
 }
-function occInRange(anchorISO,fn,fu,from,to,tot){const out=[];if(!anchorISO)return out;let d=new Date(anchorISO);d.setHours(0,0,0,0);if(isNaN(d))return out;fn=fn||1;fu=fu||'m';let g=0;while(d<from&&g<2000){d=advance(d,fu,fn);g++;}const tt=tot?new Date(tot):null;g=0;while(d<=to&&g<400){if(!tt||d<=tt)out.push(new Date(d));d=advance(d,fu,fn);g++;}return out;}
+/* De termijnen die voor de startdatum zouden hebben gelegen, terug tot from. occInRange rekent alleen
+   vooruit vanaf die datum, dus zonder dit bestaat er geen maart-termijn als je kostenpost pas in
+   augustus begint - en kun je een betaling van maart nergens aan koppelen. Oplopend gesorteerd. */
+function occTerug(anchorISO,fn,fu,from){
+  const out=[];if(!anchorISO)return out;
+  const a=new Date(anchorISO);a.setHours(0,0,0,0);if(isNaN(a))return out;
+  fn=fn||1;fu=fu||'m';
+  for(let k=1;k<=400;k++){const d=occStap(a,fu,fn,-k);if(d<from)break;out.push(d);}
+  return out.reverse();
+}
+function occInRange(anchorISO,fn,fu,from,to,tot){
+  const out=[];if(!anchorISO)return out;
+  const a=new Date(anchorISO);a.setHours(0,0,0,0);if(isNaN(a))return out;
+  fn=fn||1;fu=fu||'m';const tt=tot?new Date(tot):null;
+  let k=0,g=0;
+  while(g<2000&&occStap(a,fu,fn,k)<from){k++;g++;}
+  g=0;
+  while(g<400){const d=occStap(a,fu,fn,k);if(d>to)break;if(!tt||d<=tt)out.push(d);k++;g++;}
+  return out;
+}
 function itemPaid(it,d){return !!(it.paidDates&&it.paidDates[isoDate(d)]);}
 function itemReceived(it,d){return !!(it.receivedDates&&it.receivedDates[isoDate(d)]);}
 /* Overgeslagen termijn: deze maand komt de afschrijving of toeslag gewoon even niet. Geen betaling,
@@ -1586,7 +1619,17 @@ function paymentRows(from,to){
   const out=[];
   db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
     if(!it.due||it.buffer)return;
-    occInRange(it.due,it.fn,it.fu,from,to).forEach(date=>{
+    /* Termijnen van voor de startdatum zitten niet in het schema. Heb je er zelf een vastgelegd -
+       afgevinkt of overgeslagen - dan hoort hij wel in het overzicht, anders verdwijnt een betaling
+       die je met terugwerkende kracht hebt geboekt meteen weer uit beeld. */
+    const lijst=occInRange(it.due,it.fn,it.fu,from,to);
+    const gezien=new Set(lijst.map(isoDate));
+    Object.keys(it.paidDates||{}).concat(Object.keys(it.skipDates||{})).forEach(iso=>{
+      if(gezien.has(iso))return;const d=parseISO(iso);if(!d||d<from||d>to)return;
+      gezien.add(iso);lijst.push(d);
+    });
+    lijst.sort((a,b)=>a-b);
+    lijst.forEach(date=>{
       const iso=isoDate(date);const paid=itemPaid(it,date);let amt=paymentAmount(it);let dispDate=date;
       // Betaalde occurrence met een gekoppelde uitgave: toon het werkelijk gelogde bedrag + de echte betaaldatum.
       if(paid){const ref=it.paidDates&&it.paidDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){const a=round2(log.amount);amt={bruto:a,toeslag:amt.toeslag,net:a};if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
@@ -1600,7 +1643,14 @@ function receiptRows(from,to){
   const out=[];
   db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
     const T=it.toeslag;if(!T||!T.date||!T.v)return;
-    occInRange(T.date,T.fn,T.fu,from,to,T.tot).forEach(date=>{
+    const lijst=occInRange(T.date,T.fn,T.fu,from,to,T.tot);
+    const gezien=new Set(lijst.map(isoDate));
+    Object.keys(it.receivedDates||{}).concat(Object.keys(it.recSkipDates||{})).forEach(iso=>{
+      if(gezien.has(iso))return;const d=parseISO(iso);if(!d||d<from||d>to)return;
+      gezien.add(iso);lijst.push(d);
+    });
+    lijst.sort((a,b)=>a-b);
+    lijst.forEach(date=>{
       const iso=isoDate(date);const received=itemReceived(it,date);let amount=+T.v||0;let dispDate=date;
       if(received){const ref=it.receivedDates&&it.receivedDates[iso];if(typeof ref==='string'){const log=(p.log||[]).find(x=>x.id===ref);if(log){amount=round2(log.amount);if(log.date){const ld=new Date(log.date);if(!isNaN(ld))dispDate=ld;}}}}
       const skipped=itemSkipped(it,date,'ontvangst');
@@ -2131,7 +2181,7 @@ function openUitgave(pre,itemId){
     <div class="muted" style="margin-bottom:8px" id="u_saldoInfo">Het saldo van het gekozen potje daalt met dit bedrag.</div>
     <label id="u_potLbl">Uit welk potje?</label><select id="u_pot" onchange="uitgaveKostSel()">${db.potjes.map((p,i)=>`<option value="${i}" ${i===pi?'selected':''}>${esc(p.n)} · ${eur(p.saldo)}</option>`).join('')}</select>
     <label>Kostenpost (optioneel)</label><select id="u_item" onchange="uitgaveLinkToggle()"></select>
-    <div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this)"></div></div><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div>
+    <div id="u_linkWrap" style="display:none"><div class="row between" style="margin-top:14px;align-items:center"><div><b id="u_linkLbl">Ook als betaald markeren?</b><div class="muted" style="font-size:12.5px">Koppelt dit bedrag aan een termijn van deze kostenpost</div></div><div class="check" id="u_link" onclick="tgl(this);uitgaveLinkVeld()"></div></div><div id="u_occWrap" style="display:none"><label style="margin-top:10px">Welke termijn dekt dit af?</label><select id="u_occ" onchange="uitgaveOccInfo()"></select><div class="muted" style="font-size:12px;margin-top:4px" id="u_linkInfo"></div></div></div>
     <div id="u_fuelWrap" style="display:none"><div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="u_l" inputmode="decimal" placeholder="bijv. 32,5" oninput="fuelCalc('u')"></div><div><label>Prijs per liter</label>${mInput('id="u_ppl" oninput="fuelCalc(\'u\')"','','2,05')}</div></div><div class="muted" style="font-size:12px;margin-top:4px">Bedrag wordt automatisch berekend (liters × prijs). Alleen een bedrag invullen mag ook.</div></div>
     <label>Bedrag</label>${mInput('id="u_amt"',selIt?selIt.v:'','bijv. 405')}
     <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()">
@@ -2163,7 +2213,12 @@ function openTermijnen(it,kind){
   if(!anker)return [];
   const fn=ontv?(T.fn||1):(it.fn||1),fu=ontv?(T.fu||'m'):(it.fu||'m');
   const nu=vandaag();
-  return occInRange(anker,fn,fu,addMonths(nu,-12),addMonths(nu,3),ontv?T.tot:null)
+  const van=addMonths(nu,-12);
+  /* Vooruit vanaf de startdatum, en daarnaast de termijnen die daarvoor zouden hebben gelegen. Zo kun
+     je ook een betaling van voor je de kostenpost aanmaakte netjes op zijn plek zetten. */
+  const vooruit=occInRange(anker,fn,fu,van,addMonths(nu,3),ontv?T.tot:null);
+  const terug=occTerug(anker,fn,fu,van);
+  return terug.concat(vooruit)
     .filter(d=>!(ontv?itemReceived(it,d):itemPaid(it,d))&&!itemSkipped(it,d,kind));
 }
 /* Welke termijn hoort bij een betaling op deze datum: de dichtstbijzijnde openstaande. Staat de vaste
@@ -2177,6 +2232,11 @@ function dichtstbijTermijn(lijst,dateIso){
   return best;
 }
 /* Regel onder de keuzelijst: hoeveel scheelt je betaaldatum met de termijn die je afdekt. */
+/* De termijn-keuze hoort er pas te staan als je ook echt wilt koppelen. */
+function uitgaveLinkVeld(){
+  const c=document.getElementById('u_link'),w=document.getElementById('u_occWrap');
+  if(w)w.style.display=(c&&c.classList.contains('on'))?'block':'none';
+}
 function uitgaveOccInfo(){
   const info=document.getElementById('u_linkInfo');if(!info)return;
   const sel=document.getElementById('u_occ');
@@ -2202,7 +2262,7 @@ function uitgaveLinkToggle(){
   const auto=dichtstbijTermijn(lijst,val('u_date'));const kies=auto?isoDate(auto):'';
   const sel=document.getElementById('u_occ');
   if(sel)sel.innerHTML=lijst.map(d=>`<option value="${isoDate(d)}" ${isoDate(d)===kies?'selected':''}>${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</option>`).join('');
-  uitgaveOccInfo();
+  uitgaveOccInfo();uitgaveLinkVeld();
 }
 function saveUitgave(){
   const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;

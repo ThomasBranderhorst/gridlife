@@ -467,6 +467,110 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   const e=r.extra||{};
   meld('buffer-kostenpost: geen toeslagen, maandbedrag blijft gewoon werken', !r.fout&&e.toe===0&&e.mnd===25, JSON.stringify(r.extra||r.fout));
 }
+// 33. datum-venster: alles binnen het bereik is op tijd, daarbuiten telt de afstand tot de rand
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:100,fn:1,fu:'m',due:'2026-06-04',dueTot:'2026-06-08',paidDates:{}},
+  ]}]});
+  const r=run(d,a=>{
+    const it=a.db.potjes[0].items[0];const span=a.itemSpan(it);
+    const afw=iso=>a.afwijkingDagen(iso,'2026-06-04',span);
+    return {span,binnen:[afw('2026-06-04'),afw('2026-06-06'),afw('2026-06-08')],
+            eerder:afw('2026-06-03'),later:afw('2026-06-10'),
+            tekst:a.termijnDatumTekst(new Date(2026,5,4),span,true)};
+  });
+  const e=r.extra||{};
+  meld('venster 4-8 juni: alles binnen het bereik wijkt niet af', !r.fout&&e.span===4&&String(e.binnen)==='0,0,0', JSON.stringify(r.extra||r.fout));
+  meld('venster: 3 juni is 1 dag eerder, 10 juni is 2 dagen later', !r.fout&&e.eerder===-1&&e.later===2, JSON.stringify(r.extra||r.fout));
+  meld('venster wordt getoond als bereik', !r.fout&&e.tekst==='4 – 8 jun 2026', JSON.stringify(r.extra||r.fout));
+}
+// 34. zonder venster blijft de afwijking gewoon het verschil in dagen (zoals het altijd was)
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Zorg',v:100,fn:1,fu:'m',due:'2026-06-10',paidDates:{}}]}]});
+  const r=run(d,a=>{const span=a.itemSpan(a.db.potjes[0].items[0]);
+    return {span,op:a.afwijkingDagen('2026-06-10','2026-06-10',span),vroeg:a.afwijkingDagen('2026-06-09','2026-06-10',span),laat:a.afwijkingDagen('2026-06-11','2026-06-10',span),
+            tekst:a.termijnDatumTekst(new Date(2026,5,10),span,true)};});
+  const e=r.extra||{};
+  meld('vaste datum: 9 en 11 juni wijken 1 dag af', !r.fout&&e.span===0&&e.op===0&&e.vroeg===-1&&e.laat===1&&e.tekst==='10 jun 2026', JSON.stringify(r.extra||r.fout));
+}
+// 35. te laat pas ná de laatste dag van het venster
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Venster',v:100,fn:1,fu:'m',due:'2026-07-04',dueTot:'2026-07-08',paidDates:{}},
+    {id:'b',n:'Vast',v:100,fn:1,fu:'m',due:'2026-07-04',paidDates:{}},
+  ]}]});
+  /* Vandaag is in de tests 29 juli 2026, dus beide juli-termijnen liggen achter ons. Het venster van
+     augustus (4-8 aug) ligt vooruit en mag niet te laat zijn. */
+  const r=run(d,a=>a.paymentRows(new Date(2026,6,1),new Date(2026,7,31)).map(x=>x.it.n+' '+x.iso+' '+(x.telaat?'telaat':'op tijd')));
+  meld('te laat kijkt naar het einde van het venster, niet naar het begin',
+    !r.fout&&JSON.stringify(r.extra)==='["Vast 2026-07-04:telaat","Venster 2026-07-04:telaat","Vast 2026-08-04:op tijd","Venster 2026-08-04:op tijd"]'.replace(/:/g,' '), JSON.stringify(r.extra||r.fout));
+}
+// 35b. een venster dat nu loopt: begonnen maar nog niet afgelopen = niet te laat
+{
+  /* De tests draaien op 29 juli 2026. Venster 27-31 juli is dus bezig; een vaste datum van 27 juli
+     is al voorbij. Precies het geval waar het om gaat: geen valse "Te laat" tijdens het venster. */
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Loopt nu',v:100,fn:1,fu:'j',due:'2026-07-27',dueTot:'2026-07-31',paidDates:{}},
+    {id:'b',n:'Vast',v:100,fn:1,fu:'j',due:'2026-07-27',paidDates:{}},
+  ]}]});
+  const r=run(d,a=>a.paymentRows(new Date(2026,6,1),new Date(2026,6,31)).map(x=>x.it.n+' '+(x.telaat?'telaat':'op tijd')));
+  meld('venster dat vandaag nog loopt is niet te laat, een verstreken vaste datum wel',
+    !r.fout&&JSON.stringify(r.extra)==='["Loopt nu op tijd","Vast telaat"]', JSON.stringify(r.extra||r.fout));
+}
+// 36. het venster schuift mee met elke herhaling
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Zorg',v:100,fn:1,fu:'m',due:'2026-06-04',dueTot:'2026-06-08',paidDates:{}}]}]});
+  const r=run(d,a=>{const span=a.itemSpan(a.db.potjes[0].items[0]);
+    return a.paymentRows(new Date(2026,5,1),new Date(2026,7,31)).map(x=>a.termijnDatumTekst(x.date,span,true));});
+  meld('venster herhaalt mee: juni, juli en augustus 4-8', !r.fout&&JSON.stringify(r.extra)==='["4 – 8 jun 2026","4 – 8 jul 2026","4 – 8 aug 2026"]', JSON.stringify(r.extra||r.fout));
+}
+// 37. een toeslag kan ook een venster hebben
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
+    {id:'a',n:'Zorg',v:200,fn:1,fu:'m',due:'2026-07-29',paidDates:{},toeslagen:[
+      {id:'t1',naam:'Zorgtoeslag',v:47,fn:1,fu:'m',date:'2026-08-04',dateTot:'2026-08-08',receivedDates:{},recSkipDates:{}},
+    ]},
+  ]}]});
+  const r=run(d,a=>{const rows=a.receiptRows(new Date(2026,7,1),new Date(2026,7,31));
+    return {span:rows[0]&&rows[0].span,tekst:rows[0]&&a.termijnDatumTekst(rows[0].date,rows[0].span,true),telaat:rows[0]&&rows[0].telaat};});
+  const e=r.extra||{};
+  meld('toeslag met venster: bereik klopt en is niet te laat', !r.fout&&e.span===4&&e.tekst==='4 – 8 aug 2026'&&e.telaat===false, JSON.stringify(r.extra||r.fout));
+}
+// 38. een betaling binnen het venster kiest die termijn, niet de maand erna
+{
+  const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[{id:'a',n:'Zorg',v:100,fn:1,fu:'m',due:'2026-06-04',dueTot:'2026-06-08',paidDates:{}}]}]});
+  const r=run(d,a=>{
+    const it=a.db.potjes[0].items[0];const span=a.itemSpan(it);
+    const lijst=a.openTermijnen(it,'uitgave','2026-06-08');
+    const gekozen=a.dichtstbijTermijn(lijst,'2026-06-08',span);
+    return gekozen?a.isoDate(gekozen):null;});
+  meld('betaling op de laatste dag van het venster hoort bij die termijn', !r.fout&&r.extra==='2026-06-04', JSON.stringify(r.extra||r.fout));
+}
+// 39. namen vergelijken: hoofdletters en spaties tellen niet mee, accenten wel
+{
+  const r=run(basis(),a=>({
+    sleutel:a.naamSleutel('  Jumbo   BV '),
+    zelfde:!!a.bestaandeNaam(['Jumbo'],' jumbo '),
+    accent:!!a.bestaandeNaam(['Café'],'Cafe'),
+    leeg:!!a.bestaandeNaam(['Jumbo'],'   '),
+    zichzelf:!!a.bestaandeNaam(['Jumbo','Lidl'],'Jumbo',0),
+    vrij:a.vrijeNaam(['Nieuw potje','Nieuw potje 2'],'Nieuw potje'),
+  }));
+  const e=r.extra||{};
+  meld('naamvergelijking: hoofdletters/spaties negeren, accenten behouden',
+    !r.fout&&e.sleutel==='jumbo bv'&&e.zelfde===true&&e.accent===false&&e.leeg===false&&e.zichzelf===false&&e.vrij==='Nieuw potje 3', JSON.stringify(r.extra||r.fout));
+}
+// 40. afwijking-hint telt alleen wat buiten het venster viel
+{
+  const mk=(id,payIso,date)=>({id,date,amount:100,kind:'uitgave',itemId:'a',payIso});
+  const d=basis({potjes:[{n:'P',saldo:0,log:[
+    mk('l1','2026-05-04','2026-05-06'),   // binnen 4-8 mei -> geen afwijking
+    mk('l2','2026-06-04','2026-06-10'),   // 2 dagen na het venster
+    mk('l3','2026-07-04','2026-07-10'),   // 2 dagen na het venster
+  ],items:[{id:'a',n:'Zorg',v:100,fn:1,fu:'m',due:'2026-05-04',dueTot:'2026-05-08',paidDates:{}}]}]});
+  const r=run(d,a=>{const p=a.db.potjes[0];const h=a.dateHint(p,p.items[0],'uitgave');return h&&h.a;});
+  meld('hint: binnen het venster telt niet mee, gemiddelde over de echte afwijkingen', !r.fout&&r.extra===1, JSON.stringify(r.extra||r.fout));
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

@@ -1619,13 +1619,14 @@ function paymentRows(from,to){
   const out=[];
   db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
     if(!it.due||it.buffer)return;
-    /* Termijnen van voor de startdatum zitten niet in het schema. Heb je er zelf een vastgelegd -
+    /* Termijnen van voor de startdatum zitten niet in het schema, en een termijn van jaren terug valt
+       buiten het venster van dit overzicht. Heb je er zelf een vastgelegd -
        afgevinkt of overgeslagen - dan hoort hij wel in het overzicht, anders verdwijnt een betaling
        die je met terugwerkende kracht hebt geboekt meteen weer uit beeld. */
     const lijst=occInRange(it.due,it.fn,it.fu,from,to);
     const gezien=new Set(lijst.map(isoDate));
     Object.keys(it.paidDates||{}).concat(Object.keys(it.skipDates||{})).forEach(iso=>{
-      if(gezien.has(iso))return;const d=parseISO(iso);if(!d||d<from||d>to)return;
+      if(gezien.has(iso))return;const d=parseISO(iso);if(!d)return;
       gezien.add(iso);lijst.push(d);
     });
     lijst.sort((a,b)=>a-b);
@@ -1646,7 +1647,7 @@ function receiptRows(from,to){
     const lijst=occInRange(T.date,T.fn,T.fu,from,to,T.tot);
     const gezien=new Set(lijst.map(isoDate));
     Object.keys(it.receivedDates||{}).concat(Object.keys(it.recSkipDates||{})).forEach(iso=>{
-      if(gezien.has(iso))return;const d=parseISO(iso);if(!d||d<from||d>to)return;
+      if(gezien.has(iso))return;const d=parseISO(iso);if(!d)return;
       gezien.add(iso);lijst.push(d);
     });
     lijst.sort((a,b)=>a-b);
@@ -2206,20 +2207,28 @@ function tgl(el){el.classList.toggle('on');el.textContent=el.classList.contains(
 function fuelCalc(px){const l=parseFloat(String(val(px+'_l')||'').replace(',','.'));const ppl=moneyNum(val(px+'_ppl'));if(l>0&&ppl>0){const el=document.getElementById(px+'_amt');if(el)el.value=moneyVal(round2(l*ppl));}}
 /* Openstaande termijnen van een kostenpost: een jaar terug (om je historie bij te werken) en een
    kwartaal vooruit. Al afgevinkte en overgeslagen termijnen vallen af, want die zijn al afgehandeld. */
-function openTermijnen(it,kind){
+/* De termijnen waaruit je kunt kiezen bij het koppelen van een betaling of ontvangst.
+   Standaard een jaar terug tot een kwartaal vooruit. Boek je iets van jaren geleden, dan ligt die
+   termijn daarbuiten; in plaats van alle tussenliggende maanden op te sommen komt er een blokje van
+   een half jaar rond die datum bij. Zo blijft de lijst kort en staat de termijn die je zoekt er toch
+   in - zonder stilzwijgend aan de oudste beschikbare termijn te plakken, wat eerder gebeurde. */
+function openTermijnen(it,kind,rondIso){
   if(!it||it.buffer)return [];
   const ontv=kind==='ontvangst';const T=ontv?it.toeslag:null;
   const anker=ontv?(T&&T.date):it.due;
   if(!anker)return [];
   const fn=ontv?(T.fn||1):(it.fn||1),fu=ontv?(T.fu||'m'):(it.fu||'m');
-  const nu=vandaag();
-  const van=addMonths(nu,-12);
-  /* Vooruit vanaf de startdatum, en daarnaast de termijnen die daarvoor zouden hebben gelegen. Zo kun
-     je ook een betaling van voor je de kostenpost aanmaakte netjes op zijn plek zetten. */
-  const vooruit=occInRange(anker,fn,fu,van,addMonths(nu,3),ontv?T.tot:null);
-  const terug=occTerug(anker,fn,fu,van);
-  return terug.concat(vooruit)
-    .filter(d=>!(ontv?itemReceived(it,d):itemPaid(it,d))&&!itemSkipped(it,d,kind));
+  const tot=ontv?T.tot:null;
+  const nu=vandaag(),van=addMonths(nu,-12),naar=addMonths(nu,3);
+  const blok=(a,b)=>occTerug(anker,fn,fu,a).concat(occInRange(anker,fn,fu,a,b,tot)).filter(d=>d>=a&&d<=b);
+  let lijst=blok(van,naar);
+  const d=parseISO(rondIso);
+  if(d&&(d<van||d>naar))lijst=blok(addMonths(d,-3),addMonths(d,3)).concat(lijst);
+  const gezien=new Set();
+  return lijst
+    .filter(x=>{const k=isoDate(x);if(gezien.has(k))return false;gezien.add(k);return true;})
+    .sort((a,b)=>a-b)
+    .filter(x=>!(ontv?itemReceived(it,x):itemPaid(it,x))&&!itemSkipped(it,x,kind));
 }
 /* Welke termijn hoort bij een betaling op deze datum: de dichtstbijzijnde openstaande. Staat de vaste
    datum op de 10e en schreef de bank op de 5e af, dan is dat gewoon die termijn - vijf dagen eerder.
@@ -2251,7 +2260,7 @@ function uitgaveLinkToggle(){
   const it=itId&&p?p.items.find(x=>x.id===itId):null;
   const wrap=document.getElementById('u_linkWrap');if(!wrap)return;
   const ontv=window._uKind==='ontvangst';const kind=ontv?'ontvangst':'uitgave';
-  const lijst=openTermijnen(it,kind);
+  const lijst=openTermijnen(it,kind,val('u_date'));
   const eligible=!!it&&lijst.length>0;
   wrap.style.display=eligible?'block':'none';
   const lbl=document.getElementById('u_linkLbl');

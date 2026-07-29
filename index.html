@@ -3829,22 +3829,30 @@ function sheetBewaakbaar(){
   const s=document.getElementById('sheet');
   return !!s&&sheetVelden().length>0&&!!s.querySelector('.primary');
 }
-function markSheetSaved(){window._sheetSnap=null;}
+function markSheetSaved(){snapStop();window._sheetSnap=null;}
+/* De momentopname wordt pas gemaakt als de opener helemaal klaar is, niet halverwege. Veel schermen
+   vullen na openSheet nog velden bij: het uitgave-scherm laadt zijn kostenpost-lijst en termijnen pas
+   daarna, en zet het saldo-vinkje naar de datum. Namen we de stand meteen op, dan was zo'n scherm al
+   "gewijzigd" voordat je het had aangeraakt en vroeg het bij het sluiten of je je wijziging wilde
+   weggooien terwijl je niets had gedaan. Eén tik later is de startstand compleet. */
+let _snapT=null;
+function snapStop(){if(_snapT){clearTimeout(_snapT);_snapT=null;}}
+function snapSoon(){snapStop();window._sheetSnap=null;_snapT=setTimeout(()=>{_snapT=null;window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;},0);}
 /* Alleen bewaakte sheets hebben een momentopname (een string); bij alle andere staat er niets. */
 function sheetDirty(){return typeof window._sheetSnap==='string'&&sheetSnapshot()!==window._sheetSnap;}
 function vraagWeggooien(daarna){
   confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
 }
 function openSheet(html,backFn){window._sheetBack=backFn||null;
-const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();window._sheetSnap=sheetBewaakbaar()?sheetSnapshot():null;}
+const sheet=document.getElementById('sheet');sheet.style.transition='';sheet.style.transform='';const overlay=document.getElementById('overlay');overlay.style.opacity='';sheet.innerHTML='<div class="griparea"><div class="grip"></div></div><div class="sbody">'+(backFn?'<button class="backpill" onclick="sheetBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>':'')+html+'</div>';overlay.classList.add('show');document.body.classList.add('noscroll');sheet.scrollTop=0;attachSheetDrag();snapSoon();}
 function sheetBack(){
-  if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;sheetBack();});return;}
+  if(sheetDirty()){vraagWeggooien(()=>{markSheetSaved();sheetBack();});return;}
   const b=window._sheetBack;if(b)b();else closeSheet();
 }
 function sheetOpen(){return document.getElementById('overlay').classList.contains('show');}
 function closeSheet(){const overlay=document.getElementById('overlay');if(!overlay.classList.contains('show'))return;
-  if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;closeSheet();});return;}
-  window._sheetSnap=null;const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
+  if(sheetDirty()){vraagWeggooien(()=>{markSheetSaved();closeSheet();});return;}
+  markSheetSaved();const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
 function attachSheetDrag(){const sheet=document.getElementById('sheet');const grip=sheet.querySelector('.griparea');if(!grip)return;let startY=0,curY=0,dragging=false;const start=y=>{dragging=true;startY=y;curY=0;sheet.style.transition='none';};const move=y=>{if(!dragging)return;curY=Math.max(0,y-startY);sheet.style.transform='translateY('+curY+'px)';};const end=()=>{if(!dragging)return;dragging=false;sheet.style.transition='';if(curY>110)closeSheet();else sheet.style.transform='';curY=0;};grip.addEventListener('touchstart',e=>start(e.touches[0].clientY),{passive:true});grip.addEventListener('touchmove',e=>move(e.touches[0].clientY),{passive:true});grip.addEventListener('touchend',end);grip.addEventListener('mousedown',e=>{start(e.clientY);const mm=ev=>move(ev.clientY),mu=()=>{end();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);});}
 let _undo=null,_undoT=null;
 function showUndo(msg,fn){_undo=fn;document.getElementById('undomsg').textContent=msg;document.getElementById('undobar').classList.add('show');clearTimeout(_undoT);_undoT=setTimeout(()=>document.getElementById('undobar').classList.remove('show'),5000);}

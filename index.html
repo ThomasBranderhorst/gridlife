@@ -383,7 +383,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeSheet()"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 <div class="confirmOverlay" id="confirmOverlay"><div class="confirmCard" id="confirmCard"></div></div>
-<div class="undobar" id="undobar"><span id="undomsg"></span><button id="undoBtn" onclick="doUndo()">Herstel</button></div>
+<div class="undobar" id="undobar"><span id="undomsg"></span><button onclick="doUndo()">Herstel</button></div>
 <div class="onb" id="onb"><div class="inner" id="onbInner"></div></div>
 <div class="lock" id="lock"><div style="font-size:15px;color:var(--muted)">Voer je pincode in</div><div class="pindots" id="pindots"></div><div class="pinpad" id="pinpad"></div><button class="biobtn" id="bioBtn" style="display:none" onclick="tryBio()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 11v3M8.5 9.5A4.5 4.5 0 0117 11v3.5M5.5 8A7.5 7.5 0 0119.5 11v3M12 17.5v.5M15.5 15.5c0 2-1 4-2 5.5M8.5 14.5c0 2.5.5 4.5 1.5 6"/></svg>Vingerafdruk</button></div>
 
@@ -1046,32 +1046,21 @@ const GUIDE=[
 /* Alleen vragen tonen die bij jouw instellingen horen. */
 function guideItems(){return GUIDE.filter(g=>(!g.mod||moduleOn(g.mod))&&(!g.feat||featOn(g.feat)));}
 function openGuide(fromOnboarding){
-  /* De vraag waar je vandaan kwam staat meteen weer open, zodat je niet opnieuw hoeft te zoeken. */
-  window._gOpen=(window._gLaatst!=null)?{[window._gLaatst]:true}:{};window._gFilter='';
+  window._gOpen={};window._gFilter='';
   openSheet(`<h2>Uitleg</h2><div class="muted" style="margin-bottom:10px">Elke vraag klapt open naar een voorbeeld uit de app met korte uitleg.${fromOnboarding?' Je vindt dit later terug via Meer → Uitleg.':''}</div>
     <input id="gZoek" placeholder="Zoek een vraag, bijv. loon of back-up" oninput="gFilter(this.value)" autocomplete="off">
     <div id="guideList" style="margin-top:6px"></div>`);
   renderGuide();
-  if(window._gLaatst!=null)setTimeout(()=>{
-    const el=document.querySelector(`#guideList .gq[data-gi="${window._gLaatst}"]`);
-    if(el)el.scrollIntoView({block:'center'});
-  },60);
 }
 function gFilter(v){window._gFilter=(v||'').toLowerCase().trim();renderGuide();}
 function toggleGq(i){window._gOpen[i]=!window._gOpen[i];renderGuide();}
-/* Sluit de uitleg en voert daarna de actie uit. De vertraging wacht de sluitanimatie af; zonder dat
-   opent het volgende scherm terwijl dit nog dichtschuift en zie je het niet.
-   De balk onderin houdt de weg terug open zonder de terugknop te kapen: die hoort gewoon te doen wat
-   hij altijd doet. Welke vraag je las blijft onthouden, dus open je de uitleg opnieuw dan staat hij
-   al open. */
+/* Sluit de uitleg en brengt je naar het scherm waar de vraag over ging. De vertraging wacht de
+   sluitanimatie af; zonder dat opent het volgende scherm terwijl dit nog dichtschuift.
+   Daarna is de uitleg klaar: je zit gewoon in de app en de terugknop doet wat hij altijd doet. */
 function gidsGa(i){
   const g=GUIDE[i];if(!g||!g.a)return;
-  window._gLaatst=i;
   closeSheet();
-  setTimeout(()=>{
-    try{(new Function(g.a.fn))();}catch(e){}
-    setTimeout(()=>showUndo('Je kwam hier via de uitleg',()=>openGuide(),'Terug naar uitleg'),350);
-  },260);
+  setTimeout(()=>{try{(new Function(g.a.fn))();}catch(e){}},260);
 }
 function renderGuide(){
   const c=document.getElementById('guideList');if(!c)return;
@@ -3844,16 +3833,9 @@ function closeSheet(){const overlay=document.getElementById('overlay');if(!overl
   if(sheetDirty()){vraagWeggooien(()=>{window._sheetSnap=null;closeSheet();});return;}
   window._sheetSnap=null;const sheet=document.getElementById('sheet');window._sheetBack=null;sheet.style.transition='transform .26s cubic-bezier(.3,0,.5,1)';sheet.style.transform='translateY(100%)';overlay.style.transition='opacity .24s ease';overlay.style.opacity='0';setTimeout(()=>{overlay.classList.remove('show');overlay.style.opacity='';overlay.style.transition='';sheet.style.transition='';sheet.style.transform='';document.body.classList.remove('noscroll');},245);}
 function attachSheetDrag(){const sheet=document.getElementById('sheet');const grip=sheet.querySelector('.griparea');if(!grip)return;let startY=0,curY=0,dragging=false;const start=y=>{dragging=true;startY=y;curY=0;sheet.style.transition='none';};const move=y=>{if(!dragging)return;curY=Math.max(0,y-startY);sheet.style.transform='translateY('+curY+'px)';};const end=()=>{if(!dragging)return;dragging=false;sheet.style.transition='';if(curY>110)closeSheet();else sheet.style.transform='';curY=0;};grip.addEventListener('touchstart',e=>start(e.touches[0].clientY),{passive:true});grip.addEventListener('touchmove',e=>move(e.touches[0].clientY),{passive:true});grip.addEventListener('touchend',end);grip.addEventListener('mousedown',e=>{start(e.clientY);const mm=ev=>move(ev.clientY),mu=()=>{end();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);});}
-let _undo=null,_undoT=null,_undoKlaar='Hersteld';
-/* label en klaarTekst zijn optioneel; zonder die twee blijft dit de vertrouwde herstel-balk. */
-function showUndo(msg,fn,label,klaarTxt){
-  _undo=fn;_undoKlaar=klaarTxt===undefined?'Hersteld':klaarTxt;
-  document.getElementById('undomsg').textContent=msg;
-  document.getElementById('undoBtn').textContent=label||'Herstel';
-  document.getElementById('undobar').classList.add('show');
-  clearTimeout(_undoT);_undoT=setTimeout(()=>document.getElementById('undobar').classList.remove('show'),5000);
-}
-function doUndo(){const fn=_undo;_undo=null;document.getElementById('undobar').classList.remove('show');if(fn)fn();if(_undoKlaar)toast(_undoKlaar);}
+let _undo=null,_undoT=null;
+function showUndo(msg,fn){_undo=fn;document.getElementById('undomsg').textContent=msg;document.getElementById('undobar').classList.add('show');clearTimeout(_undoT);_undoT=setTimeout(()=>document.getElementById('undobar').classList.remove('show'),5000);}
+function doUndo(){if(_undo)_undo();_undo=null;document.getElementById('undobar').classList.remove('show');toast('Hersteld');}
 
 /* ===== THEMA / NATIVE ===== */
 function applyAccent(){}

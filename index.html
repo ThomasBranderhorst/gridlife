@@ -970,7 +970,7 @@ const GUIDE=[
  t:gt(`Een toeslag hangt aan de kostenpost waar hij bij hoort, en is dus geen aparte regel in de lijst. Zet het scherm op <b>Ontvangst</b> en kies de kostenpost: de naam van de toeslag staat er dan bij, en de app koppelt aan de datums van de <b>toeslag</b> — niet aan die van de afschrijving.<br><br>Staat er bij een kostenpost geen toeslag, dan valt er niets te koppelen en zegt de app dat erbij. Je kunt het bedrag dan nog steeds als losse ontvangst boeken.`)},
 {s:'Geldstroom',mod:'potjes',feat:'hints',q:'Waarom staat er bij de ene post "Verwacht rond ..." en bij de andere niet?',
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Internet</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right"><div style="font-weight:800">${eur(52.5)}</div>${GBADGE('b-wait','Open')}</div></div><div class="muted" style="margin-top:4px">Verwacht rond <b style="color:var(--text)">31 juli</b> (±1 dag) · meestal <b style="color:var(--text)">${eur(1.4)} meer</b> dan gepland</div></div>`),
- t:gt(`De geplande datum en het geplande bedrag zijn zelden precies de échte. De app kijkt naar de laatste keren dat je deze post afvinkte en rekent uit hoeveel dagen én hoeveel euro dat gemiddeld scheelt. Wijkt alleen het bedrag af, dan zie je alleen dat deel.<br><br>Hij heeft daar <b>minstens twee afgevinkte betalingen</b> voor nodig; tot die tijd staat er wat er nog aan ontbreekt. Belangrijk: alleen betalingen die je <b>op de Geldstroom-pagina hebt afgevinkt</b> tellen mee. Boek je iets als losse uitgave, dan weet de app niet welke termijn dat afdekt en telt het dus niet mee voor de voorspelling.`)},
+ t:gt(`De geplande datum en het geplande bedrag zijn zelden precies de échte. De app kijkt naar de laatste keren dat je deze post afvinkte en rekent uit hoeveel dagen én hoeveel euro dat gemiddeld scheelt. Wijkt alleen het bedrag af, dan zie je alleen dat deel.<br><br>Hij heeft daar <b>minstens twee afgevinkte betalingen</b> voor nodig; tot die tijd staat er wat er nog aan ontbreekt.<br><br>Pas je later de datum van de kostenpost aan, dan blijven al afgevinkte termijnen op hun oorspronkelijke datum staan. Dat is met opzet: die datum is waar de app het verschil mee uitrekent, en zou hij meeschuiven dan verdween precies de afwijking die je wilde meten. Nieuwe betalingen volgen gewoon je nieuwe datum, dus het gemiddelde schuift er vanzelf naartoe. Belangrijk: alleen betalingen die je <b>op de Geldstroom-pagina hebt afgevinkt</b> tellen mee. Boek je iets als losse uitgave, dan weet de app niet welke termijn dat afdekt en telt het dus niet mee voor de voorspelling.`)},
 {s:'Geldstroom',mod:'loon',feat:'loonlog',q:'Hoe vink ik mijn loon af?',
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Netto loon</b><div class="muted">za 25 juli 2026</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:var(--muted)">nog invullen</div>${GBADGE('b-wait','Verwacht')}</div></div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check"></div><span class="muted">Tik om ontvangen te zetten</span></div></div>`),
  t:gt(`Op je loondag verschijnt <b>Netto loon</b> tussen je andere regels op de Geldstroom-pagina. Vink 'm af en vul in wat er echt is binnengekomen. Dat bedrag telt meteen mee in je gemiddelde inkomen en in "hou ik over" — je hoeft het niet nog een keer ergens in te vullen.`)},
@@ -1631,6 +1631,36 @@ function monthStart(d){const x=new Date(d);x.setDate(1);x.setHours(0,0,0,0);retu
 function monthEnd(d){const x=new Date(d.getFullYear(),d.getMonth()+1,0);x.setHours(23,59,59,0);return x;}
 function itemNextOcc(it){if(!it.due||it.buffer)return null;const now=new Date();now.setHours(0,0,0,0);const from=monthStart(now);const occ=occInRange(it.due,it.fn,it.fu,from,addMonths(now,36));return occ.find(x=>!itemPaid(it,x))||null;}
 function paymentAmount(it){const perM=monthsPer(it.fu,it.fn);const toeslag=itToeslagMnd(it)*perM;const bruto=+it.v||0;return{bruto,toeslag,net:bruto};}
+/* Verander je de datum van een kostenpost of toeslag, dan verschuift het hele schema mee - ook over
+   termijnen die je al hebt afgevinkt. Zonder deze regel zie je die maand dan twee keer: je eigen
+   afgevinkte termijn en een verse uit het nieuwe schema, die meteen als te laat wordt aangemerkt.
+   Ligt een vastgelegde termijn binnen een halve periode van een geplande, dan is het dezelfde termijn
+   en wint wat jij hebt vastgelegd.
+   De vastgelegde datum zelf blijft staan, met opzet: daar hangt je historie aan. Het gemiddelde
+   verschil met de planning ("meestal 2 dagen eerder") klopt alleen als bewaard blijft welke datum er
+   toen gepland stond. Zou je die meeschuiven met een latere wijziging, dan verdwijnt precies de
+   afwijking die je wilde meten. */
+function halveTermijn(fn,fu){
+  const dag=86400000;
+  const per=fu==='d'?dag:fu==='w'?7*dag:fu==='j'?365.25*dag:30.44*dag;
+  return per*Math.max(1,+fn||1)/2;
+}
+/* Gaan deze twee datums over dezelfde termijn? Bij een maandelijkse post is er per definitie een
+   termijn per maand, dus dan telt de maand zelf - anders zou een verschuiving van de 22e naar de 5e
+   een tweede juli-regel opleveren terwijl juli allang betaald is. Bij een jaarlijkse post geldt
+   hetzelfde voor het jaar. Voor de rest is een halve periode de grens. */
+function zelfdeTermijn(a,b,fn,fu){
+  const n=Math.max(1,+fn||1);
+  if(fu==='m'&&n===1)return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth();
+  if(fu==='j'&&n===1)return a.getFullYear()===b.getFullYear();
+  return Math.abs(a-b)<halveTermijn(fn,fu);
+}
+/* De termijnen die je zelf hebt vastgelegd: afgevinkt of overgeslagen. */
+function vasteTermijnen(it,kind){
+  const a=kind==='ontvangst'?it.receivedDates:it.paidDates;
+  const b=kind==='ontvangst'?it.recSkipDates:it.skipDates;
+  return Object.keys(a||{}).concat(Object.keys(b||{})).map(iso=>parseISO(iso)).filter(Boolean);
+}
 function paymentRows(from,to){
   const out=[];
   db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
@@ -1639,12 +1669,10 @@ function paymentRows(from,to){
        buiten het venster van dit overzicht. Heb je er zelf een vastgelegd -
        afgevinkt of overgeslagen - dan hoort hij wel in het overzicht, anders verdwijnt een betaling
        die je met terugwerkende kracht hebt geboekt meteen weer uit beeld. */
-    const lijst=occInRange(it.due,it.fn,it.fu,from,to);
+    const vast=vasteTermijnen(it,'uitgave');
+    const lijst=occInRange(it.due,it.fn,it.fu,from,to).filter(d=>!vast.some(v=>zelfdeTermijn(v,d,it.fn,it.fu)));
     const gezien=new Set(lijst.map(isoDate));
-    Object.keys(it.paidDates||{}).concat(Object.keys(it.skipDates||{})).forEach(iso=>{
-      if(gezien.has(iso))return;const d=parseISO(iso);if(!d)return;
-      gezien.add(iso);lijst.push(d);
-    });
+    vast.forEach(d=>{const iso=isoDate(d);if(gezien.has(iso))return;gezien.add(iso);lijst.push(d);});
     lijst.sort((a,b)=>a-b);
     lijst.forEach(date=>{
       const iso=isoDate(date);const paid=itemPaid(it,date);let amt=paymentAmount(it);let dispDate=date;
@@ -1660,12 +1688,10 @@ function receiptRows(from,to){
   const out=[];
   db.potjes.forEach((p,pi)=>(p.items||[]).forEach(it=>{
     const T=it.toeslag;if(!T||!T.date||!T.v)return;
-    const lijst=occInRange(T.date,T.fn,T.fu,from,to,T.tot);
+    const vast=vasteTermijnen(it,'ontvangst');
+    const lijst=occInRange(T.date,T.fn,T.fu,from,to,T.tot).filter(d=>!vast.some(v=>zelfdeTermijn(v,d,T.fn,T.fu)));
     const gezien=new Set(lijst.map(isoDate));
-    Object.keys(it.receivedDates||{}).concat(Object.keys(it.recSkipDates||{})).forEach(iso=>{
-      if(gezien.has(iso))return;const d=parseISO(iso);if(!d)return;
-      gezien.add(iso);lijst.push(d);
-    });
+    vast.forEach(d=>{const iso=isoDate(d);if(gezien.has(iso))return;gezien.add(iso);lijst.push(d);});
     lijst.sort((a,b)=>a-b);
     lijst.forEach(date=>{
       const iso=isoDate(date);const received=itemReceived(it,date);let amount=+T.v||0;let dispDate=date;
@@ -2288,10 +2314,14 @@ function openTermijnen(it,kind,rondIso){
   const d=parseISO(rondIso);
   if(d&&(d<van||d>naar))lijst=blok(addMonths(d,-3),addMonths(d,3)).concat(lijst);
   const gezien=new Set();
+  /* Een geplande termijn die al door een vastgelegde wordt gedekt hoort hier niet meer bij: die is
+     immers al afgehandeld, alleen op een iets andere datum dan het huidige schema zegt. */
+  const vast=vasteTermijnen(it,kind);
   return lijst
     .filter(x=>{const k=isoDate(x);if(gezien.has(k))return false;gezien.add(k);return true;})
     .sort((a,b)=>a-b)
-    .filter(x=>!(ontv?itemReceived(it,x):itemPaid(it,x))&&!itemSkipped(it,x,kind));
+    .filter(x=>!(ontv?itemReceived(it,x):itemPaid(it,x))&&!itemSkipped(it,x,kind))
+    .filter(x=>!vast.some(v=>zelfdeTermijn(v,x,fn,fu)));
 }
 /* Welke termijn hoort bij een betaling op deze datum: de dichtstbijzijnde openstaande. Staat de vaste
    datum op de 10e en schreef de bank op de 5e af, dan is dat gewoon die termijn - vijf dagen eerder.
@@ -2401,7 +2431,7 @@ function saveUitgaveDoen(){
   haptic();save();closeSheet();render();toast(ontvK?'Ontvangst toegevoegd':'Uitgave toegevoegd');
 }
 function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];const x=p.log[idx];if(!x)return;window._uitBackTab=backTab||window._ovTab||'pot';const isRec=x.kind==='ontvangst';
-  const linkInfo=x.payIso?(()=>{const d=new Date(x.payIso);return `<div class="statusbadge ok" style="margin-bottom:12px">Gekoppeld aan betaling · ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</div>`;})():`<div class="statusbadge none" style="margin-bottom:12px">Losse ${isRec?'ontvangst':'uitgave'}, niet gekoppeld aan een betaling</div>`;
+  const linkInfo=x.payIso?(()=>{const d=new Date(x.payIso);return `<div class="statusbadge ok" style="margin-bottom:12px">Dekt de termijn van ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</div>`;})():`<div class="statusbadge none" style="margin-bottom:12px">Losse ${isRec?'ontvangst':'uitgave'}, niet gekoppeld aan een betaling</div>`;
   const fuelHtml=(p.fuel&&!isRec)?`<div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="ue_l" inputmode="decimal" placeholder="bijv. 32,5" value="${x.l!=null?String(x.l).replace('.',','):''}" oninput="fuelCalc('ue')"></div><div><label>Prijs per liter</label>${mInput('id="ue_ppl" oninput="fuelCalc(\'ue\')"',x.ppl,'2,05')}</div></div>`:'';
   openSheet(`<h2>${isRec?'Ontvangst':'Uitgave'} bewerken</h2>${linkInfo}${fuelHtml}<label>Bedrag</label>${mInput('id="ue_amt"',x.amount,'0,00')}<label>Kostenpost (optioneel)</label><select id="ue_item"><option value="">— geen —</option>${p.items.map(it=>`<option value="${esc(it.id)}" ${(x.itemId===it.id||(!x.itemId&&it.n===x.item))?'selected':''}>${esc(it.n)}</option>`).join('')}</select><label>Datum</label><input id="ue_date" type="date" value="${x.date||isoDate(new Date())}"><label>Omschrijving</label><input id="ue_note" value="${esc(x.note||'')}">${(isRec||!(featOn('once')||x.once))?'':`<span class="adv" onclick="var a=document.getElementById('ue_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span><div id="ue_adv" style="display:${x.once?'block':'none'}"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check ${x.once?'on':''}" id="ue_once" onclick="tgl(this)">${x.once?'✓':''}</div></div></div>`}<div class="row" style="margin-top:14px"><button class="danger" onclick="delUitgave(${pi},${idx})">Verwijderen</button><button class="primary" style="flex:1" onclick="saveUitgaveEdit(${pi},${idx})">Opslaan</button></div>`,()=>openOverzicht(window._uitBackTab||'pot'));}
 function saveUitgaveEdit(pi,idx){const p=db.potjes[pi];const x=p.log[idx];if(!x)return;const oud=+x.amount||0;const nieuw=moneyNum(val('ue_amt'))||0;const itId=val('ue_item')||'';const it=itId?p.items.find(v=>v.id===itId):null;const delta=x.kind==='ontvangst'?(nieuw-oud):(oud-nieuw);p.saldo=round2((+p.saldo||0)+delta);x.amount=nieuw;x.item=it?it.n:'';x.itemId=it?it.id:'';x.date=val('ue_date')||x.date;x.note=val('ue_note');

@@ -1031,7 +1031,7 @@ const GUIDE=[
  t:gt(`Ja. In het instelscherm van een meldingssoort typ je je eigen zin, met plaatshouders die de app invult: <b>{naam}</b>, <b>{bedrag}</b>, <b>{datum}</b> en <b>{wanneer}</b> (vandaag / morgen / over 3 dagen). Laat je het leeg, dan gebruikt de app de standaardtekst.`)},
 {s:'Back-up & veiligheid',q:'Hoe zet ik een back-up veilig en hoe zet ik hem terug?',a:{lbl:'Naar Instellingen → Back-up',fn:"go('instellingen')"},
  v:gv(`<div class="card" style="margin-bottom:0"><h2 style="font-size:15px">Back-up &amp; herstel</h2><div class="row between" style="align-items:center;padding-top:8px;border-top:1px solid var(--line)"><div style="flex:1"><b>Automatisch</b><div class="muted" style="font-size:12.5px">De app schrijft zelf een back-upbestand weg.</div></div><div class="check on">✓</div></div>${GLBL('Frequentie')}${GINP('Bij elke wijziging')}<div class="grid2" style="margin-top:12px"><button class="ghost">Exporteren</button><button class="ghost">Importeren</button></div></div>`),
- t:gt(`<b>Automatisch</b> zet steeds een vers bestand in de map Documenten/GridLife op je telefoon. <b>Exporteren</b> maakt een bestand dat je kunt delen of in de cloud kunt zetten — doe dat af en toe, want een back-up op dezelfde telefoon helpt niet als die telefoon weg is.`)+gt(`<b>Importeren</b> <u>voegt samen</u>: bestaande diensten en potjes blijven staan, wat ontbreekt wordt toegevoegd. Je overschrijft dus nooit per ongeluk je huidige gegevens.<br><br>Je <b>instellingen</b> komen wel mee zoals ze in de back-up stonden: welke functies aan staan, je thema en je profielnaam. Je pincode blijft er bewust buiten — een back-up hoort je niet uit je eigen app te kunnen sluiten. Wil je niets van dit alles? Zet dan bij Functies de hele back-up-kaart uit, inclusief exporteren en importeren.`)},
+ t:gt(`<b>Automatisch</b> zet steeds een vers bestand in de map Documenten/GridLife op je telefoon. <b>Exporteren</b> maakt een bestand dat je kunt delen of in de cloud kunt zetten — doe dat af en toe, want een back-up op dezelfde telefoon helpt niet als die telefoon weg is.`)+gt(`<b>Importeren</b> <u>voegt samen</u>: bestaande diensten en potjes blijven staan, wat ontbreekt wordt toegevoegd. Je overschrijft dus nooit per ongeluk je huidige gegevens.<br><br>Je <b>instellingen</b> komen wel mee zoals ze in de back-up stonden: welke functies aan staan, je thema en je profielnaam. Na afloop krijg je een overzicht van wat er is toegevoegd, wat er al stond en welke functies of instellingen zijn gewijzigd, zodat je niet hoeft te gissen wat die import met je app gedaan heeft. Je pincode blijft er bewust buiten — een back-up hoort je niet uit je eigen app te kunnen sluiten. Wil je niets van dit alles? Zet dan bij Functies de hele back-up-kaart uit, inclusief exporteren en importeren.`)},
 {s:'Back-up & veiligheid',q:'Hoe zet ik een pincode of vingerafdruk op de app?',a:{lbl:'Naar Instellingen',fn:"go('instellingen')"},
  v:gv(`<div class="card" style="margin-bottom:0"><div class="row between"><h2 style="margin:0;font-size:15px">App-slot</h2><div class="check on">✓</div></div><div class="muted" style="margin-top:6px">Vraagt een pincode bij het openen.</div><div class="row between" style="padding:13px 0 3px;border-top:1px solid var(--line);margin-top:12px;align-items:center"><div><b>Vingerafdruk</b><div class="muted" style="font-size:12.5px">Pincode blijft als reserve.</div></div><div class="check on">✓</div></div></div>`),
  t:gt(`Bij Instellingen → App-slot kies je een pincode van 4 cijfers. Daarna kun je ook je <b>vingerafdruk of gezicht</b> aanzetten (alleen in de geïnstalleerde app). De app vraagt erom zodra je 'm opent of terugkomt uit de achtergrond — behalve tijdens exporteren of importeren, want dan opent er even een ander scherm.`)},
@@ -2483,7 +2483,7 @@ function saveUitgaveDoen(){
   if(raak)p.saldo=round2((+p.saldo||0)+(ontvK?amt:-amt));
   haptic();save();closeSheet();render();toast(ontvK?'Ontvangst toegevoegd':'Uitgave toegevoegd');
 }
-function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];const x=p.log[idx];if(!x)return;window._uitBackTab=backTab||window._ovTab||'pot';const isRec=x.kind==='ontvangst';
+function openUitgaveEdit(pi,idx,backTab){const p=db.potjes[pi];if(!p)return closeSheet();const x=(p.log||[])[idx];if(!x)return closeSheet();window._uitBackTab=backTab||window._ovTab||'pot';const isRec=x.kind==='ontvangst';
   window._ueKind=x.kind;window._ueIso=x.payIso||'';window._ueItemId=x.itemId||'';
 
   const fuelHtml=(p.fuel&&!isRec)?`<div class="grid2" style="margin-top:4px"><div><label>Liters</label><input id="ue_l" inputmode="decimal" placeholder="bijv. 32,5" value="${x.l!=null?String(x.l).replace('.',','):''}" oninput="fuelCalc('ue')"></div><div><label>Prijs per liter</label>${mInput('id="ue_ppl" oninput="fuelCalc(\'ue\')"',x.ppl,'2,05')}</div></div>`:'';
@@ -2691,7 +2691,9 @@ function delPot(pi){
   });
 }
 function openItemEdit(pi,ii){
-  const p=db.potjes[pi];const it=ii>=0?p.items[ii]:{n:'',v:'',fn:1,fu:'m',buffer:false,toeslag:null,due:null,ov:null};
+  /* Het potje kan intussen weg zijn (verwijderd terwijl dit scherm nog openstond). Zelfde beveiliging
+     als openPotDetailEdit en openUitgave die al hadden. */
+  const p=db.potjes[pi];if(!p)return closeSheet();const it=ii>=0?p.items[ii]:{n:'',v:'',fn:1,fu:'m',buffer:false,toeslag:null,due:null,ov:null};
   const buf=!!it.buffer;const T=it.toeslag||{};const hasToe=!!it.toeslag;
   openSheet(`<h2>${ii>=0?'Kostenpost bewerken':'Nieuwe kostenpost'}</h2>
     <label>Naam</label><input id="ie_naam" value="${esc(it.n||'')}" placeholder="bijv. Zorgverzekering">
@@ -3540,7 +3542,22 @@ function maybeLock(){
 
 /* ===== BACK-UP ===== */
 async function autoBackup(){if(!(NATIVE&&P.Filesystem))return;if(!featOn('backup')||!featOn('autobackup'))return;const B=db.backup||{};if(B.on===false)return;const lb=db.lastBackup;if(B.freq==='day'&&lb&&Date.now()-lb.t<86400000)return;if(B.freq==='week'&&lb&&Date.now()-lb.t<7*86400000)return;const data=JSON.stringify(db);const dirs=B.dir==='EXTERNAL'?['EXTERNAL','DOCUMENTS']:['DOCUMENTS','EXTERNAL'];for(const dir of dirs){try{await P.Filesystem.writeFile({path:'GridLife/gridlife-backup.json',data,directory:dir,encoding:'utf8',recursive:true});db.lastBackup={t:Date.now(),dir};saveQuiet();if(cur==='instellingen')renderInstellingen();return;}catch(e){}}}
-async function exportData(){if(!featOn('backup')||!featOn('export')){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toast('Opgeslagen in Documenten/GridLife');return;}catch(e2){toast('Export mislukt: '+(e2&&e2.message||e2));return;}}}downloadFile(name,json,'application/json');toast('Back-up gedownload');}
+/* Wat zit er in de back-up die je net hebt weggeschreven. Zelfde gedachte als het import-verslag: je
+   wilt zien dat je administratie er echt in zit voordat je erop vertrouwt. */
+function toonExportVerslag(waar){
+  const n=(a)=>Array.isArray(a)?a.length:0;
+  const rij=(lbl,v)=>v?`<div class=\"kv\"><span class=\"k\">${lbl}</span><span class=\"v\">${v}</span></div>`:'';
+  const logs=(db.potjes||[]).reduce((a,q)=>a+n(q.log),0);
+  openSheet(`<h2>Back-up gemaakt</h2>
+    <div class=\"statusbadge ok\" style=\"display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:14px\">● ${esc(waar)}</div>
+    <div class=\"mini\"><div class=\"mini-h\">Hierin bewaard</div>
+    ${rij('Diensten',n(db.shifts))}${rij('Potjes',n(db.potjes))}${rij('Uitgaven en ontvangsten',logs)}
+    ${rij('Werkgevers',n(db.werkgevers))}${rij('Loon-ontvangsten',n(db.loonLog))}${rij('Recepten',n(db.recepten))}
+    ${rij('Documenten',n(db.documenten))}</div>
+    <div class=\"muted\" style=\"font-size:12.5px;margin-top:12px\">Je instellingen en welke functies aan staan zitten er ook in. Je pincode bewust niet - die hoort niet in een bestand dat je deelt.</div>
+    <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
+}
+async function exportData(){if(!featOn('backup')||!featOn('export')){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld');return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife');return;}catch(e2){toast('Export mislukt: '+(e2&&e2.message||e2));return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload');}
 async function exportOverzichtPDF(){
   if(!featOn('pdf')){toast('PDF-overzicht staat uit');return;}
   const J=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
@@ -3655,8 +3672,92 @@ async function exportOverzichtPDF(){
     }else{doc.save(name);toast('PDF gedownload');}
   }catch(e){toast('PDF mislukt: '+(e&&e.message||e));}
 }
-function importData(e){const f=e.target.files[0];if(!f)return;if(!featOn('backup')||!featOn('import')){toast('Importeren staat uit');return;}const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);mergeImport(d);save();applyModules();applyAccent();render();}catch(x){toast('Ongeldig bestand');}};rd.readAsText(f);e.target.value='';}
-function mergeImport(d){let added=0;if(Array.isArray(d.werkgevers))d.werkgevers.forEach(w=>{if(w&&!db.werkgevers.includes(w))db.werkgevers.push(w);});if(Array.isArray(d.receptCategorieen))d.receptCategorieen.forEach(c=>{if(c&&!db.receptCategorieen.includes(c))db.receptCategorieen.push(c);});if(Array.isArray(d.shifts)){const key=s=>[s.date,s.start,s.end,s.werk,s.note||''].join('|');const have=new Set(db.shifts.map(key));d.shifts.forEach(s=>{if(!s.date)return;const k=key(s);if(have.has(k))return;have.add(k);db.shifts.push({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:s.werk||db.werkgevers[0]||'Werk',date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''});added++;});}if(Array.isArray(d.potjes))d.potjes.forEach(p=>{if(p&&p.n&&!db.potjes.some(x=>x.n===p.n))db.potjes.push(p);});if(Array.isArray(d.rekeningen))d.rekeningen.forEach(r=>{if(r&&r.naam&&!db.rekeningen.some(x=>x.naam===r.naam))db.rekeningen.push(r);});if(Array.isArray(d.recepten))d.recepten.forEach(r=>{if(r&&r.n&&!db.recepten.some(x=>x.n===r.n))db.recepten.push(r);});if(d.loon&&typeof d.loon==='object')db.loon=Object.assign(db.loon,d.loon);if(typeof d.accent==='number')db.accent=d.accent;if(d.modules)db.modules=Object.assign(db.modules,d.modules);if(d.contract&&typeof d.contract==='object')db.contract=Object.assign(db.contract||{},d.contract);if(d.meldTijd)db.meldTijd=d.meldTijd;if(typeof d.meldingen==='boolean')db.meldingen=d.meldingen;if(d.overboek&&typeof d.overboek==='object')Object.keys(d.overboek).forEach(mk=>{db.overboek[mk]=Object.assign(db.overboek[mk]||{},d.overboek[mk]);});if(Array.isArray(d.loonLog)){db.loonLog=db.loonLog||[];const have=new Set(db.loonLog.map(x=>x.date+'|'+x.amount));d.loonLog.forEach(x=>{if(!x||!x.date)return;const k2=x.date+'|'+x.amount;if(have.has(k2))return;have.add(k2);db.loonLog.push(x);});}if(Array.isArray(d.documenten)){db.documenten=db.documenten||[];d.documenten.forEach(x=>{if(x&&x.verloopt&&!db.documenten.some(y=>(y.n||y.type)===(x.n||x.type)&&y.verloopt===x.verloopt))db.documenten.push(x);});}if(Array.isArray(d.docTypes)){db.docTypes=db.docTypes||[];d.docTypes.forEach(t=>{if(t&&!db.docTypes.includes(t))db.docTypes.push(t);});}if(d.meldCfg&&typeof d.meldCfg==='object')db.meldCfg=Object.assign(db.meldCfg||{},d.meldCfg);/* Functie-schakelaars overnemen, niet samenvoegen. 'Aan' is hier het ONTBREKEN van de sleutel, dus een back-up waarin alles aan stond bevat een leeg feat-blok. Met Object.assign(lokaal, leeg) bleef elke lokaal uitgezette functie uit staan en kon een import functies alleen maar uitzetten, nooit terugzetten. */if(d.feat&&typeof d.feat==='object')db.feat=Object.assign({},d.feat);if(typeof d.naam==='string'&&d.naam.trim())db.naam=d.naam.trim();if(d.backup&&typeof d.backup==='object')db.backup=Object.assign(db.backup||{},d.backup);if(d.theme)db.theme=d.theme;if(d.periode!==undefined&&(!db.periode||(d.periode&&d.periode>db.periode)))db.periode=d.periode;if(d.werkCfg&&typeof d.werkCfg==='object')db.werkCfg=Object.assign(db.werkCfg||{},d.werkCfg);if(Array.isArray(d.tegoed)){db.tegoed=db.tegoed||[];const have=new Set(db.tegoed.map(x=>x.id));d.tegoed.forEach(x=>{if(x&&x.id&&!have.has(x.id)){have.add(x.id);db.tegoed.push(x);}});}migrate();toast(added?('Toegevoegd: '+added+' diensten'):'Samengevoegd');}
+function importData(e){const f=e.target.files[0];if(!f)return;if(!featOn('backup')||!featOn('import')){toast('Importeren staat uit');return;}const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);const r=mergeImport(d);save();applyModules();applyAccent();render();toonImportVerslag(r);}catch(x){toast('Ongeldig bestand');}};rd.readAsText(f);e.target.value='';}
+/* Voegt een back-up samen met wat er al staat, en houdt bij wat er precies gebeurt. Lijsten worden
+   aangevuld en dubbelen overgeslagen; instellingen worden overgenomen zoals ze in de back-up stonden.
+   Het verslag dat hieruit komt gaat naar toonImportVerslag, zodat je na afloop ziet wat er is
+   toegevoegd, wat er is overgeslagen en welke instellingen zijn gewijzigd - in plaats van een
+   toast die alleen "Samengevoegd" zei. */
+function mergeImport(d){
+  const r={diensten:0,dienstenDubbel:0,potjes:0,potjesDubbel:0,werkgevers:0,recepten:0,receptenDubbel:0,
+    rekeningen:0,loon:0,loonDubbel:0,documenten:0,documentenDubbel:0,docTypes:0,categorieen:0,tegoed:0,
+    naam:null,functiesAan:[],functiesUit:[],instellingen:[]};
+  const uitVoor=FEATS.map(f=>f.k).filter(k=>!featOn(k));
+  const snap=k=>JSON.stringify(db[k]===undefined?null:db[k]);
+  const was={};['loon','modules','contract','meldCfg','meldTijd','meldingen','overboek','werkCfg','backup','theme'].forEach(k=>{was[k]=snap(k);});
+
+  if(Array.isArray(d.werkgevers))d.werkgevers.forEach(w=>{if(w&&!db.werkgevers.includes(w)){db.werkgevers.push(w);r.werkgevers++;}});
+  if(Array.isArray(d.receptCategorieen))d.receptCategorieen.forEach(c=>{if(c&&!db.receptCategorieen.includes(c)){db.receptCategorieen.push(c);r.categorieen++;}});
+  if(Array.isArray(d.shifts)){
+    const key=s=>[s.date,s.start,s.end,s.werk,s.note||''].join('|');const have=new Set(db.shifts.map(key));
+    d.shifts.forEach(s=>{if(!s.date)return;const k=key(s);if(have.has(k)){r.dienstenDubbel++;return;}have.add(k);
+      db.shifts.push({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:s.werk||db.werkgevers[0]||'Werk',date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''});r.diensten++;});
+  }
+  if(Array.isArray(d.potjes))d.potjes.forEach(q=>{if(!q||!q.n)return;if(db.potjes.some(x=>x.n===q.n)){r.potjesDubbel++;return;}db.potjes.push(q);r.potjes++;});
+  if(Array.isArray(d.rekeningen))d.rekeningen.forEach(q=>{if(q&&q.naam&&!db.rekeningen.some(x=>x.naam===q.naam)){db.rekeningen.push(q);r.rekeningen++;}});
+  if(Array.isArray(d.recepten))d.recepten.forEach(q=>{if(!q||!q.n)return;if(db.recepten.some(x=>x.n===q.n)){r.receptenDubbel++;return;}db.recepten.push(q);r.recepten++;});
+  if(d.loon&&typeof d.loon==='object')db.loon=Object.assign(db.loon,d.loon);
+  if(typeof d.accent==='number')db.accent=d.accent;
+  if(d.modules)db.modules=Object.assign(db.modules,d.modules);
+  if(d.contract&&typeof d.contract==='object')db.contract=Object.assign(db.contract||{},d.contract);
+  if(d.meldTijd)db.meldTijd=d.meldTijd;
+  if(typeof d.meldingen==='boolean')db.meldingen=d.meldingen;
+  if(d.overboek&&typeof d.overboek==='object')Object.keys(d.overboek).forEach(mk=>{db.overboek[mk]=Object.assign(db.overboek[mk]||{},d.overboek[mk]);});
+  if(Array.isArray(d.loonLog)){
+    db.loonLog=db.loonLog||[];const have=new Set(db.loonLog.map(x=>x.date+'|'+x.amount));
+    d.loonLog.forEach(x=>{if(!x||!x.date)return;const k2=x.date+'|'+x.amount;if(have.has(k2)){r.loonDubbel++;return;}have.add(k2);db.loonLog.push(x);r.loon++;});
+  }
+  if(Array.isArray(d.documenten)){
+    db.documenten=db.documenten||[];
+    d.documenten.forEach(x=>{if(!x||!x.verloopt)return;
+      if(db.documenten.some(y=>(y.n||y.type)===(x.n||x.type)&&y.verloopt===x.verloopt)){r.documentenDubbel++;return;}
+      db.documenten.push(x);r.documenten++;});
+  }
+  if(Array.isArray(d.docTypes)){db.docTypes=db.docTypes||[];d.docTypes.forEach(t=>{if(t&&!db.docTypes.includes(t)){db.docTypes.push(t);r.docTypes++;}});}
+  if(d.meldCfg&&typeof d.meldCfg==='object')db.meldCfg=Object.assign(db.meldCfg||{},d.meldCfg);
+  /* Functie-schakelaars overnemen, niet samenvoegen. "Aan" is hier het ONTBREKEN van de sleutel, dus een
+     back-up waarin alles aan stond bevat een leeg feat-blok. Met Object.assign(lokaal, leeg) bleef elke
+     lokaal uitgezette functie uit staan en kon een import functies alleen maar uitzetten. */
+  if(d.feat&&typeof d.feat==='object')db.feat=Object.assign({},d.feat);
+  if(typeof d.naam==='string'&&d.naam.trim()){const oudeNaam=db.naam||'';db.naam=d.naam.trim();if(db.naam!==oudeNaam)r.naam=db.naam;}
+  if(d.backup&&typeof d.backup==='object')db.backup=Object.assign(db.backup||{},d.backup);
+  if(d.theme)db.theme=d.theme;
+  if(d.periode!==undefined&&(!db.periode||(d.periode&&d.periode>db.periode)))db.periode=d.periode;
+  if(d.werkCfg&&typeof d.werkCfg==='object')db.werkCfg=Object.assign(db.werkCfg||{},d.werkCfg);
+  if(Array.isArray(d.tegoed)){db.tegoed=db.tegoed||[];const have=new Set(db.tegoed.map(x=>x.id));d.tegoed.forEach(x=>{if(x&&x.id&&!have.has(x.id)){have.add(x.id);db.tegoed.push(x);r.tegoed++;}});}
+  migrate();
+  /* Na migrate, want die zet functies aan waar gegevens van zijn binnengekomen. */
+  const uitNa=FEATS.map(f=>f.k).filter(k=>!featOn(k));
+  r.functiesAan=uitVoor.filter(k=>!uitNa.includes(k));
+  r.functiesUit=uitNa.filter(k=>!uitVoor.includes(k));
+  const namen={loon:'je loondag',modules:'welke onderdelen aan staan',contract:'contract-uren',meldCfg:'meldingen',meldTijd:'meldingen',meldingen:'meldingen',overboek:'afgevinkte overboekingen',werkCfg:'werkgever-instellingen',backup:'back-up-voorkeuren',theme:'thema'};
+  Object.keys(namen).forEach(k=>{if(was[k]!==snap(k)&&!r.instellingen.includes(namen[k]))r.instellingen.push(namen[k]);});
+  return r;
+}
+/* Het verslag na een import: wat is erbij gekomen, wat was al aanwezig, en wat is er aan je
+   instellingen veranderd. Een toast is te vluchtig voor iets wat je hele administratie raakt. */
+function toonImportVerslag(r){
+  const lbl=k=>{const f=FEATS.find(x=>x.k===k);return f?f.label:k;};
+  const rij=(naam,n,dub)=>n?`<div class="kv"><span class="k">${naam}</span><span class="v">+ ${n}${dub?` <span class="muted" style="font-weight:400">· ${dub} al aanwezig</span>`:''}</span></div>`:'';
+  const toegevoegd=[
+    rij('Diensten',r.diensten,r.dienstenDubbel),rij('Potjes',r.potjes,r.potjesDubbel),
+    rij('Werkgevers',r.werkgevers),rij('Recepten',r.recepten,r.receptenDubbel),
+    rij('Receptcategorieën',r.categorieen),rij('Loon-ontvangsten',r.loon,r.loonDubbel),
+    rij('Documenten',r.documenten,r.documentenDubbel),rij('Documentsoorten',r.docTypes),
+    rij('Rekeningen',r.rekeningen),rij('Openstaande afwijkingen',r.tegoed)
+  ].join('');
+  const dubbelTot=r.dienstenDubbel+r.potjesDubbel+r.receptenDubbel+r.loonDubbel+r.documentenDubbel;
+  const niets=!toegevoegd&&!r.naam&&!r.functiesAan.length&&!r.functiesUit.length&&!r.instellingen.length;
+  openSheet(`<h2>Back-up teruggezet</h2>
+    <div class="statusbadge ok" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:14px">● Gelukt${dubbelTot?` · ${dubbelTot} regel${dubbelTot===1?'':'s'} overgeslagen`:''}</div>
+    ${toegevoegd?`<div class="mini"><div class="mini-h">Toegevoegd</div>${toegevoegd}</div>`:''}
+    ${r.functiesAan.length?`<div class="mini"><div class="mini-h">Weer aangezet</div><div class="muted" style="font-size:12.5px;padding:2px 0 6px">Hier stonden gegevens van in de back-up, dus deze functies zijn weer zichtbaar gemaakt.</div>${r.functiesAan.map(k=>`<div class="kv"><span class="k">${lbl(k)}</span><span class="v" style="color:var(--ok-tx)">aan</span></div>`).join('')}</div>`:''}
+    ${r.functiesUit.length?`<div class="mini"><div class="mini-h">Uitgezet</div><div class="muted" style="font-size:12.5px;padding:2px 0 6px">In de back-up stonden deze functies uit. Je kunt ze bij Functies weer aanzetten.</div>${r.functiesUit.map(k=>`<div class="kv"><span class="k">${lbl(k)}</span><span class="v" style="color:var(--muted)">uit</span></div>`).join('')}</div>`:''}
+    ${(r.naam||r.instellingen.length)?`<div class="mini"><div class="mini-h">Overgenomen uit de back-up</div>${r.naam?`<div class="kv"><span class="k">Je naam</span><span class="v">${esc(r.naam)}</span></div>`:''}${r.instellingen.map(n=>`<div class="kv"><span class="k">${n}</span><span class="v">bijgewerkt</span></div>`).join('')}</div>`:''}
+    ${niets?'<div class="muted">Alles uit deze back-up stond al in de app. Er is niets veranderd.</div>':''}
+    <div class="muted" style="font-size:12.5px;margin-top:12px">Je bestaande gegevens zijn nooit overschreven: wat er al stond is blijven staan, alleen wat ontbrak is toegevoegd. Je pincode komt bewust niet uit een back-up mee.</div>
+    <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
+}
 
 /* ===== UTIL ===== */
 function downloadFile(name,content,type){const b=new Blob([content],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}

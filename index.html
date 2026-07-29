@@ -961,7 +961,7 @@ const GUIDE=[
  t:gt(`Dit is je afvinklijst: alles wat er nog <b>af moet</b> en alles wat er nog <b>bij komt</b>, op datum. Bedragen die van je rekening gaan staan rood met een min, wat binnenkomt groen met een plus. De balk laat zien hoe ver je bent deze maand.<br><br>Met de chips filter je op wat je zoekt; standaard op Openstaand. Is er iets blijven liggen, dan verschijnt er een extra chip <b>Te laat</b> met het aantal erbij — die staat er alleen als er ook echt iets te laat is.`)},
 {s:'Geldstroom',mod:'potjes',q:'Hoe vink ik een betaling af?',
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Zorgverzekering</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:var(--bad-tx)">− ${eur(148.2)}</div>${GBADGE('b-bad','Te laat')}</div></div><div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(47)}</div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check"></div><span class="muted">Tik om betaald te zetten</span></div></div>`),
- t:gt(`Tik op de kaart of op het vierkantje. De app vraagt om het <b>echte bedrag</b> en de datum — die mag afwijken van wat er gepland stond. Het saldo van het bijbehorende potje wordt bijgewerkt en de betaling verhuist naar Afgerond. Per ongeluk afgevinkt? Tik 'm opnieuw aan en bevestig; het saldo komt terug.<br><br>Is een termijn blijven staan omdat hij nog niet af is, dan krijgt hij het label <b>Te laat</b> en blijft hij openstaan tot je hem afvinkt. Komt een afschrijving een keer gewoon niet? Kies dan in datzelfde scherm <b>Deze termijn komt niet</b>. Er gaat dan niets van je saldo af en de termijn verdwijnt uit je openstaande lijst — je vindt hem doorgestreept terug onder Afgerond, en met één tik zet je hem weer op openstaand.`)},
+ t:gt(`Tik op de kaart of op het vierkantje. De app vraagt om het <b>echte bedrag</b> en de datum — die mag afwijken van wat er gepland stond. Het saldo van het bijbehorende potje wordt bijgewerkt en de betaling verhuist naar Afgerond. Per ongeluk afgevinkt? Tik 'm opnieuw aan en bevestig. Was het saldo meeveranderd, dan komt het bedrag terug; boekte je iets uit een eerdere maand met het saldo-vinkje uit, dan blijft je saldo ook nu ongemoeid.<br><br>Is een termijn blijven staan omdat hij nog niet af is, dan krijgt hij het label <b>Te laat</b> en blijft hij openstaan tot je hem afvinkt. Komt een afschrijving een keer gewoon niet? Kies dan in datzelfde scherm <b>Deze termijn komt niet</b>. Er gaat dan niets van je saldo af en de termijn verdwijnt uit je openstaande lijst — je vindt hem doorgestreept terug onder Afgerond, en met één tik zet je hem weer op openstaand.`)},
 {s:'Geldstroom',mod:'potjes',feat:'toeslag',q:'Wat is een toeslag en wat is mijn "eigen deel"?',
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
  t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de kostenpost. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Geldstroom-pagina.`)},
@@ -1270,7 +1270,7 @@ function loonVoorbeeldHTML(L,n){
     const versch=isoDate(s)!==isoDate(ruw);
     const naam=feestNaam(ruw);
     const dgn=Math.round((s-vandaag)/86400000);
-    return `<div class="kv"><span class="k">${DAG[s.getDay()]} ${s.getDate()} ${MND[s.getMonth()].slice(0,3)} ${s.getFullYear()}${versch?` <span style="color:var(--wait-tx)">· ${esc(naam||'weekend')}</span>`:''}</span><span class="v">${dgn<0?'':dgn===0?'vandaag':'over '+dgn+' dg'}</span></div>`;
+    return `<div class="kv"><span class="k">${DAG[s.getDay()]} ${s.getDate()} ${MND[s.getMonth()].slice(0,3)} ${s.getFullYear()}${versch?` <span style="color:var(--wait-tx)">· ${esc(naam||'weekend')}</span>`:''}</span><span class="v">${dgn<0?'':dgn===0?'vandaag':'over '+dgn+' dag'+(dgn===1?'':'en')}</span></div>`;
   }).join('');
 }
 function openFeestSheet(back){
@@ -1810,6 +1810,15 @@ function unskipOccurrence(pi,itemId,iso,kind){
   delete skipMap(it,kind)[iso];
   haptic();save();render();toast('Weer openstaand');
 }
+/* Sinds je een boeking kunt vastleggen zonder het saldo te raken, mag geen enkele tekst nog blind
+   beweren dat er geld terugkomt of afgaat. Deze functie kijkt wat er bij die termijn echt is gebeurd. */
+function raakteSaldo(p,it,iso,kind){
+  const map=kind==='ontvangst'?it.receivedDates:it.paidDates;
+  const ref=map&&map[iso];
+  if(typeof ref!=='string')return true; /* oude afvinkingen zonder log-entry boekten altijd */
+  const le=(p.log||[]).find(x=>x.id===ref);
+  return !(le&&le.geenSaldo);
+}
 function toggleItemPaid(pi,id,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===id);if(!it)return;
   it.paidDates=it.paidDates||{};
@@ -1818,8 +1827,9 @@ function toggleItemPaid(pi,id,iso){
     return;
   }
   if(it.paidDates[iso]){
-    confirmSheet('Weer op open zetten',`"${it.n}" wordt weer als openstaand gemarkeerd. De gekoppelde uitgave wordt verwijderd en het bedrag komt terug in het saldo.`,'Terugzetten',()=>{
-      unmarkOccurrence(pi,id,iso,'uitgave');haptic();save();render();toast('Weer open · saldo hersteld');
+    const raakte=raakteSaldo(p,it,iso,'uitgave');
+    confirmSheet('Weer op open zetten',`"${it.n}" wordt weer als openstaand gemarkeerd. De gekoppelde uitgave wordt verwijderd${raakte?' en het bedrag komt terug in het saldo':'; je saldo blijft zoals het is, want deze boeking heeft het nooit veranderd'}.`,'Terugzetten',()=>{
+      unmarkOccurrence(pi,id,iso,'uitgave');haptic();save();render();toast(raakte?'Weer open · saldo hersteld':'Weer open');
     });
   }
   else openMarkPaidSheet(pi,id,iso);
@@ -1832,8 +1842,9 @@ function toggleItemReceived(pi,id,iso){
     return;
   }
   if(it.receivedDates[iso]){
-    confirmSheet('Weer op open zetten','Deze ontvangst wordt weer als openstaand gemarkeerd. Het bedrag gaat weer van het saldo af.','Terugzetten',()=>{
-      unmarkOccurrence(pi,id,iso,'ontvangst');haptic();save();render();toast('Weer open · saldo hersteld');
+    const raakte=raakteSaldo(p,it,iso,'ontvangst');
+    confirmSheet('Weer op open zetten',raakte?'Deze ontvangst wordt weer als openstaand gemarkeerd. Het bedrag gaat weer van het saldo af.':'Deze ontvangst wordt weer als openstaand gemarkeerd. Je saldo blijft zoals het is, want deze boeking heeft het nooit veranderd.','Terugzetten',()=>{
+      unmarkOccurrence(pi,id,iso,'ontvangst');haptic();save();render();toast(raakte?'Weer open · saldo hersteld':'Weer open');
     });
   }
   else openMarkReceivedSheet(pi,id,iso);
@@ -1870,8 +1881,9 @@ function confirmMarkPaid(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it)return;
   const amount=amt==null?(+it.v||0):amt;
   const chk=document.getElementById('mp_saldo');
-  markOccurrence(pi,itemId,iso,'uitgave',amount,date,note,null,!chk||chk.classList.contains('on'));
-  haptic();save();closeSheet();render();toast('Betaald · saldo −'+eur(amount));
+  const raak=!chk||chk.classList.contains('on');
+  markOccurrence(pi,itemId,iso,'uitgave',amount,date,note,null,raak);
+  haptic();save();closeSheet();render();toast(raak?'Betaald · saldo −'+eur(amount):'Betaald · saldo ongewijzigd');
 }
 function openMarkReceivedSheet(pi,itemId,iso){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);if(!it||!it.toeslag)return;
@@ -1891,8 +1903,9 @@ function confirmMarkReceived(pi,itemId,iso){
   const amount=amt==null?(it.toeslag?+it.toeslag.v||0:0):amt;
   const label=it.toeslag&&it.toeslag.naam?it.toeslag.naam:('Toeslag '+it.n);
   const chk=document.getElementById('mr_saldo');
-  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label,!chk||chk.classList.contains('on'));
-  haptic();save();closeSheet();render();toast('Ontvangen · saldo +'+eur(amount));
+  const raak=!chk||chk.classList.contains('on');
+  markOccurrence(pi,itemId,iso,'ontvangst',amount,date,note,label,raak);
+  haptic();save();closeSheet();render();toast(raak?'Ontvangen · saldo +'+eur(amount):'Ontvangen · saldo ongewijzigd');
 }
 /* KALENDERMAAND-METHODE.
    Per potje wordt puur naar de kalendermaand (1e t/m laatste dag) gekeken.
@@ -1948,7 +1961,11 @@ function projectieRegel(pi,klein){
   if(!pr.maandelijks)return `<div class="muted" style="font-size:${fs};margin-top:4px">Op ${dtxt} staat hier ${eur(pr.eind)}</div>`;
   const ok=Math.abs(pr.verschil)<0.005;
   const kleur=ok?'var(--ok-tx)':(pr.verschil<0?'var(--bad-tx)':'var(--muted)');
-  const oordeel=ok?'precies één maand':(pr.verschil<0?eur(-pr.verschil)+' te weinig voor een hele maand':eur(pr.verschil)+' meer dan één maand');
+  /* "meer dan een maand" las als een tijdsduur terwijl het over een maandbedrag gaat. Het bedrag waar
+     mee vergeleken wordt staat er nu bij, en om welke maand het gaat. */
+  const oordeel=ok?`precies de ${eur(pr.doel)} voor volgende maand`
+    :(pr.verschil<0?`${eur(-pr.verschil)} minder dan de ${eur(pr.doel)} voor volgende maand`
+    :`${eur(pr.verschil)} meer dan de ${eur(pr.doel)} voor volgende maand`);
   return `<div style="font-size:${fs};margin-top:4px;color:${kleur}">Op ${dtxt}: <b>${eur(pr.eind)}</b> · ${oordeel}</div>`;
 }
 function potNeed(pi){const ms=potMonthStatus(pi);return ms?ms.tekort:0;}
@@ -2449,7 +2466,9 @@ function saveUitgaveEdit(pi,idx){const p=db.potjes[pi];const x=p.log[idx];if(!x)
 function delUitgave(i,idx){
   const p=db.potjes[i];const x=p&&p.log[idx];if(!x)return;
   const isRec=x.kind==='ontvangst';
-  const msg=x.payIso?`Dit verwijdert de ${isRec?'ontvangst':'uitgave'} van ${eur(x.amount)} én zet de gekoppelde betaling weer op open.`:`Dit verwijdert de ${isRec?'ontvangst':'uitgave'} van ${eur(x.amount)} en boekt het bedrag terug in het saldo.`;
+  /* Boekingen die het saldo nooit hebben geraakt (historie) mogen niet beloven dat er iets terugkomt. */
+  const terug=x.geenSaldo?'; je saldo blijft zoals het is':' en boekt het bedrag terug in het saldo';
+  const msg=x.payIso?`Dit verwijdert de ${isRec?'ontvangst':'uitgave'} van ${eur(x.amount)} én zet de gekoppelde betaling weer op open${x.geenSaldo?'. Je saldo blijft zoals het is':''}.`:`Dit verwijdert de ${isRec?'ontvangst':'uitgave'} van ${eur(x.amount)}${terug}.`;
   confirmSheet(`${isRec?'Ontvangst':'Uitgave'} verwijderen`,msg,'Verwijderen',()=>{
     removeLogEntry(i,idx);save();openOverzicht(window._uitBackTab||'uit');render();toast('Verwijderd');
   });
@@ -2477,7 +2496,9 @@ function renderOvPot(){
     const toonSpend=!!(p.fuel||p.items.some(it=>it.buffer));
     const ms=spaar?null:potMonthStatus(i);
     const dezeMaand=(ms&&ms.has)?`<div class="row between" style="margin-top:4px"><span class="muted">Deze maand nog nodig</span><span style="font-weight:700;color:${ms.short?'var(--bad-tx)':'var(--ok-tx)'}">${eur(ms.nodig)}${ms.short?' · '+eur(ms.tekort)+' te weinig':''}</span></div>`:'';
-    return `<div class="card" style="background:var(--bg)"><div class="row between"><b>${esc(p.n)}</b><b>${eur(p.saldo)}</b></div>
+        /* Een kaal vetgedrukt bedrag naast een potjesnaam zegt niet wat het is. Klein label erboven, net
+       zoals de potjeskaart dat met "Per maand opzij" doet. */
+return `<div class="card" style="background:var(--bg)"><div class="row between" style="align-items:flex-start"><b>${esc(p.n)}</b><div style="text-align:right;flex-shrink:0"><div class="muted" style="font-size:11.5px;line-height:1.2">saldo</div><b>${eur(p.saldo)}</b></div></div>
       ${potTot(p)>0?`<div class="row between" style="margin-top:8px"><span class="muted">Opzij per maand</span><span style="font-weight:700">${eur(potTot(p))}</span></div>`:''}
       ${dezeMaand}${projectieRegel(i,true)}
       ${(toonSpend&&heeftLog)?`<div class="row between" style="margin-top:${spaar?'8':'4'}px"><span class="muted">Uitgegeven (12 maanden)</span><span style="font-weight:700">${eur(tot12)}</span></div>`:''}

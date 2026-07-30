@@ -712,6 +712,40 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
     meld('jaarpost van 50 + buffer van 40 = 44,17 per maand opzij', !r.fout&&r.extra===44.17, JSON.stringify(r.fout||r.extra));
   }
 }
+/* ===== LANGE RITMES =====
+   Tweejaarlijks, vijfjaarlijks en alles daartussen: klopt het maandbedrag, en vindt de app de
+   eerstvolgende vervaldatum ook als die verder weg ligt dan het oude venster van 36 maanden? */
+{
+  const jaar=new Date().getFullYear();
+  const gevallen=[
+    ['jaarlijks',        1,'j', 50,  (jaar+1)+'-07-10', 4.17,  (jaar+1)+'-07-10'],
+    ['tweejaarlijks',    2,'j', 480, (jaar+2)+'-03-10', 20,    (jaar+2)+'-03-10'],
+    ['driejaarlijks',    3,'j', 300, (jaar+1)+'-09-01', 8.33,  (jaar+1)+'-09-01'],
+    ['vierjaarlijks',    4,'j', 800, (jaar+4)+'-06-01', 16.67, (jaar+4)+'-06-01'],
+    ['tienjaarlijks',   10,'j',1000, (jaar+8)+'-05-05', 8.33,  (jaar+8)+'-05-05'],
+    ['tweemaandelijks',  2,'m',  60, (jaar+0)+'-08-05', 30,    null],
+  ];
+  gevallen.forEach(([naam,fn,fu,v,due,perMnd,verwachteDatum])=>{
+    const it={id:'x',n:naam,v,fn,fu,due,toeslagen:[]};
+    const r=run(basis({potjes:[{n:'P',saldo:0,log:[],items:[it]}]}),a=>{
+      const q=a.db.potjes[0].items[0];const occ=a.itemNextOcc(q);
+      return {mnd:Math.round(a.itMnd(q)*100)/100,occ:occ?a.isoDate(occ):null,maandelijks:a.potIsMaandelijks(a.db.potjes[0])};
+    });
+    const e=r.extra||{};
+    meld('lang ritme '+naam+': maandbedrag '+perMnd,
+      !r.fout&&e.mnd===perMnd&&e.maandelijks===false, JSON.stringify(r.fout||e));
+    if(verwachteDatum)meld('lang ritme '+naam+': eerstvolgende datum gevonden',
+      !r.fout&&e.occ===verwachteDatum, JSON.stringify(r.fout||e));
+  });
+  // een kostenpost die pas ver in de toekomst begint mag niet als "betaald voor nu" gelden
+  {
+    const it={id:'x',n:'Ver weg',v:100,fn:1,fu:'m',due:(jaar+9)+'-01-15',toeslagen:[]};
+    const r=run(basis({potjes:[{n:'P',saldo:0,log:[],items:[it]}]}),
+      a=>{const occ=a.itemNextOcc(a.db.potjes[0].items[0]);return occ?a.isoDate(occ):null;});
+    meld('kostenpost die pas over 9 jaar begint wordt gevonden, niet "betaald voor nu"',
+      !r.fout&&r.extra===(jaar+9)+'-01-15', JSON.stringify(r.fout||r.extra));
+  }
+}
 // 53. loondag-tekst: kort laat de weekdag zien, lang de referentiedatum
 {
   const L={mode:'weeks',intervalWeeks:4,start:'2026-07-22',dag:25};

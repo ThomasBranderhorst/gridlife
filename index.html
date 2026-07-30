@@ -1807,7 +1807,21 @@ function skipMap(bron,kind){const k=kind==='ontvangst'?'recSkipDates':'skipDates
 function itemSkipped(bron,d,kind){if(!bron)return false;const m=kind==='ontvangst'?bron.recSkipDates:bron.skipDates;return !!(m&&m[isoDate(d)]);}
 function monthStart(d){const x=new Date(d);x.setDate(1);x.setHours(0,0,0,0);return x;}
 function monthEnd(d){const x=new Date(d.getFullYear(),d.getMonth()+1,0);x.setHours(23,59,59,0);return x;}
-function itemNextOcc(it){if(!it.due||it.buffer)return null;const now=new Date();now.setHours(0,0,0,0);const from=monthStart(now);const occ=occInRange(it.due,it.fn,it.fu,from,addMonths(now,36));return occ.find(x=>!itemPaid(it,x))||null;}
+/* Het venster keek vast 36 maanden vooruit. Bij een kostenpost die pas over vier jaar vervalt - of die
+   pas ver in de toekomst begint - viel de eerstvolgende termijn daarbuiten, en meldde de app hem als
+   "Betaald voor nu": een uitspraak die niet klopte. Het venster schaalt nu mee met het ritme (bij
+   maandelijks verandert er niets) en haalt zo nodig de eerste datum in. occInRange springt eerst naar
+   het venster toe, dus een verre einddatum kost geen extra werk. */
+function itemNextOcc(it){
+  if(!it.due||it.buffer)return null;
+  const now=new Date();now.setHours(0,0,0,0);const from=monthStart(now);
+  const cyclus=Math.ceil(monthsPer(it.fu||'m',+it.fn||1));
+  let tot=addMonths(now,Math.max(36,cyclus*2+12));
+  const eerste=parseISO(it.due);
+  if(eerste&&eerste>tot)tot=addMonths(eerste,Math.max(1,cyclus));
+  const occ=occInRange(it.due,it.fn,it.fu,from,tot);
+  return occ.find(x=>!itemPaid(it,x))||null;
+}
 function paymentAmount(it){const perM=monthsPer(it.fu,it.fn);const toeslag=itToeslagMnd(it)*perM;const bruto=+it.v||0;return{bruto,toeslag,net:bruto};}
 /* Verander je de datum van een kostenpost of toeslag, dan verschuift het hele schema mee - ook over
    termijnen die je al hebt afgevinkt. Zonder deze regel zie je die maand dan twee keer: je eigen

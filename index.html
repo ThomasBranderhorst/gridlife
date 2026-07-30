@@ -17,7 +17,7 @@
   --accent-soft:#E4F2EA;
   --green:#22794A; --amber:#8A5E00; --red:#BE3A2E;
   --wait-bg:#E7EDF8; --wait-tx:#37538D; --ok-bg:#D9F0E1; --ok-tx:#1B6B3F;
-  --bad-bg:#FBE4E1; --bad-tx:#A03A30; --nav-bg:rgba(255,255,255,.9);
+  --bad-bg:#FBE4E1; --bad-tx:#A03A30; --warn-bg:#F7EDD6; --nav-bg:rgba(255,255,255,.9);
   --radius:22px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
   --shadow:0 1px 2px rgba(16,40,26,.06),0 6px 20px rgba(16,40,26,.06);
   --hero:linear-gradient(150deg,#2E7D4F 0%,#1E6440 100%); --hero-tx:#FFFFFF;
@@ -31,7 +31,7 @@
     --accent-soft:#18261E;
     --green:#5FD597; --amber:#E0B554; --red:#F0998F;
     --wait-bg:#212B40; --wait-tx:#B3C6F2; --ok-bg:#173626; --ok-tx:#8BDDAF;
-    --bad-bg:#3C2521; --bad-tx:#F0A69C; --nav-bg:rgba(10,15,12,.86);
+    --bad-bg:#3C2521; --bad-tx:#F0A69C; --warn-bg:#33290F; --nav-bg:rgba(10,15,12,.86);
     --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.28);
     --hero:linear-gradient(150deg,#1C5A3A 0%,#123F29 100%); --hero-tx:#EAFBF1;
   }
@@ -45,7 +45,7 @@
   --accent-soft:#18261E;
   --green:#5FD597; --amber:#E0B554; --red:#F0998F;
   --wait-bg:#212B40; --wait-tx:#B3C6F2; --ok-bg:#173626; --ok-tx:#8BDDAF;
-  --bad-bg:#3C2521; --bad-tx:#F0A69C; --nav-bg:rgba(10,15,12,.86);
+  --bad-bg:#3C2521; --bad-tx:#F0A69C; --warn-bg:#33290F; --nav-bg:rgba(10,15,12,.86);
   --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.28);
   --hero:linear-gradient(150deg,#1C5A3A 0%,#123F29 100%); --hero-tx:#EAFBF1;
 }
@@ -57,7 +57,7 @@
   --accent-soft:#E4F2EA;
   --green:#22794A; --amber:#8A5E00; --red:#BE3A2E;
   --wait-bg:#E7EDF8; --wait-tx:#37538D; --ok-bg:#D9F0E1; --ok-tx:#1B6B3F;
-  --bad-bg:#FBE4E1; --bad-tx:#A03A30; --nav-bg:rgba(255,255,255,.9);
+  --bad-bg:#FBE4E1; --bad-tx:#A03A30; --warn-bg:#F7EDD6; --nav-bg:rgba(255,255,255,.9);
   --shadow:0 1px 2px rgba(16,40,26,.06),0 6px 20px rgba(16,40,26,.06);
   --hero:linear-gradient(150deg,#2E7D4F 0%,#1E6440 100%); --hero-tx:#FFFFFF;
 }
@@ -143,6 +143,7 @@ input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webki
 .statusbadge.ok{background:var(--ok-bg);color:var(--ok-tx)}
 .statusbadge.short{background:var(--bad-bg);color:var(--bad-tx)}
 .statusbadge.none{background:var(--card2);color:var(--muted)}
+.statusbadge.warn{background:var(--warn-bg);color:var(--amber)}
 .mini{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);border-left:3px solid var(--accent);border-radius:14px;padding:4px 14px 10px;margin:4px 0 12px}
 .mini-h{font-size:11.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;padding:10px 0 2px}
 .kv{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;font-size:14.5px}
@@ -773,6 +774,7 @@ const FEATS=[
  {k:'stats',grp:'uren',label:'Statistieken',oms:'Uren-grafieken per dag, week en maand',mod:'uren'},
  /* Potjes */
  {k:'buffers',grp:'potjes',label:'Buffers',oms:'Sparen voor onvoorspelbare kosten, met maandadvies',mod:'potjes'},
+ {k:'opzijtel',grp:'potjes',label:'Overmaak-teller',oms:'Bij buffer- en jaarpotjes zien hoe vaak je de laatste 12 loondagen echt hebt overgemaakt',mod:'potjes'},
  {k:'toeslag',grp:'potjes',label:'Toeslagen & vergoedingen',oms:'Zorgtoeslag e.d. verrekenen en volgen',mod:'potjes'},
  {k:'ontvangst',grp:'potjes',label:'Losse ontvangsten',oms:'Geld-erbij los kunnen loggen op een potje',mod:'potjes'},
  {k:'fuel',grp:'potjes',label:'Brandstof-potjes',oms:'Tankbeurten met liters en literprijs',mod:'potjes'},
@@ -846,7 +848,12 @@ function renderOnb(){
     html=`<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
     <h1 style="text-align:center">Welkom bij GridLife</h1>
     <p class="muted" style="text-align:center;margin:0 0 22px">Uren, geld en recepten op één plek.<br>Alles blijft op je telefoon — privé, zonder account.<br><br>We stellen de app in een paar stappen helemaal op jou af.</p>
-    <label>Hoe mogen we je noemen? (optioneel)</label><input id="onb_naam" value="${esc(_ob.naam)}" placeholder="bijv. Thomas">`+nav('Beginnen');
+    <label>Hoe mogen we je noemen? (optioneel)</label><input id="onb_naam" value="${esc(_ob.naam)}" placeholder="bijv. Thomas">`+nav('Beginnen')
+    +`<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
+      <div class="muted" style="font-size:12.5px;margin-bottom:9px">Kom je van een oude telefoon?</div>
+      <button class="ghost" style="width:100%" onclick="document.getElementById('onbImportFile').click()">Ik heb al een back-up</button>
+      <input type="file" id="onbImportFile" accept=".json,application/json" style="display:none" onchange="onbImport(event)">
+    </div>`;
   }else if(key==='modules'){
     html=`<h1>Wat wil je bijhouden?</h1><p class="muted" style="margin:0 0 18px">Kies de onderdelen die je gaat gebruiken. Later aanpassen kan altijd.</p>
     ${obRow('uren','Uren','Werkuren bijhouden en controleren','klok')}
@@ -895,6 +902,31 @@ function obNext(){
   if(key==='modules'&&!Object.values(_ob.mods).some(v=>v)&&!_ob.feat.documenten){toast('Kies minstens één onderdeel');return;}
   if(key==='klaar'){finishOnboarding();return;}
   _ob.step++;renderOnb();
+}
+/* Back-up terugzetten vóórdat de wizard is doorlopen. Wie al een back-up heeft, heeft de wizard niet
+   nodig: al zijn onderdelen, functies en zijn loondag staan er al in. mergeImport voegt samen met wat
+   er staat, en op een verse installatie staat er niets - samenvoegen is daar dus gewoon terugzetten.
+   De wizard mag hierna niet meer starten, dus setup gaat expliciet aan: mergeImport neemt dat vlaggetje
+   bewust niet over uit de back-up. */
+function onbImport(e){
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const getypt=(val('onb_naam')||'').trim();
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let d;
+    try{d=JSON.parse(rd.result);}catch(x){toast('Ongeldig bestand');return;}
+    if(!d||typeof d!=='object'||Array.isArray(d)){toast('Ongeldig bestand');return;}
+    let r;
+    try{r=mergeImport(d);}catch(x){toast('Deze back-up kon niet gelezen worden');return;}
+    /* Stond er geen naam in de back-up, dan blijft staan wat je net had ingetypt. */
+    if(getypt&&!db.naam)db.naam=getypt;
+    db.setup=true;save();
+    document.getElementById('onb').classList.remove('show');document.body.classList.remove('noscroll');
+    applyModules();applyAccent();go('start');scheduleLoonMeldingen();
+    toonImportVerslag(r,true);
+  };
+  rd.onerror=()=>toast('Bestand kon niet gelezen worden');
+  rd.readAsText(f);
 }
 function finishOnboarding(){
   db.naam=_ob.naam;
@@ -994,6 +1026,12 @@ const GUIDE=[
 {s:'Potjes & sparen',mod:'potjes',feat:'buffers',q:'Wat is een buffer en wat is dat maandadvies?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm"><span class="tinytag">BUFFER</span> Auto-onderhoud</span><span class="itamt">${eur(25)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div><div class="ln" style="margin-top:8px">Aanbevolen: <b style="color:var(--text)">${eur(33)}/mnd</b></div></div><div class="row between" style="margin-top:8px;align-items:center;gap:10px"><span class="muted">Op basis van je echte uitgaven</span><button class="tiny primary">Overnemen</button></div>`),
  t:gt(`Een buffer is voor kosten die je <b>niet kunt plannen</b>: autoreparaties, tandarts, kapotte apparaten. Er is geen vaste datum, alleen een bedrag dat je maandelijks opzijzet. De app kijkt naar wat je er het afgelopen jaar echt uit betaald hebt en adviseert een realistischer maandbedrag — met één tik neem je dat over.`)},
+{s:'Potjes & sparen',mod:'potjes',feat:'opzijtel',q:'Wat betekent "5 van 7 keer overgemaakt"?',
+ v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Auto</b></div><div class="check"></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Per maand opzij</span><span class="amt">${eur(44.17)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(96)}</div><div style="margin-top:8px"><span class="statusbadge warn">&#9679; 5 van 7 keer overgemaakt</span><div style="font-size:13px;margin-top:4px;color:var(--amber)">2 keer overgeslagen &middot; <b>${eur(88.34)}</b> minder opzij gezet</div></div></div></div></div>`),
+ t:gt(`Bij een potje met alleen maandelijkse kostenposten hoort er steeds precies één maand klaar te staan — dat leest de app zo van je saldo af. Bij een <b>buffer</b> of een <b>jaarpost</b> kan dat niet: daar hoort je saldo juist op te lopen naar één grote afschrijving, en een buffer die je gebruikt is geen fout maar precies de bedoeling.`)
+ +gt(`Daarom kijkt de app hier niet naar je saldo maar naar <b>wat jij er zelf in stopte</b>: hoe vaak heb je dit potje op je loondag afgevinkt? Uitgaven tellen niet mee — betaal je een dure reparatie, dan blijft de teller gewoon op groen staan.`)
+ +gt(`Twee dingen houden het eerlijk. Het tellen begint pas bij de <b>eerste keer dat je afvinkte</b>, dus een potje dat je vandaag aanmaakt krijgt nooit een verzonnen achterstand over de maanden ervoor. En er wordt maximaal <b>12 loondagen</b> teruggekeken: haal je een gemiste maand in, dan rolt hij vanzelf uit beeld. De lopende loonperiode telt nog niet mee — die kun je vandaag nog gewoon overmaken.`)
+ +gt(`Klopt een gemiste keer niet, bijvoorbeeld omdat je het geld wél overmaakte maar het vinkje vergat? Tik dan op <b>Toch overgemaakt?</b> onder de teller. Je krijgt de loondagen zonder vinkje te zien en zet ze alsnog goed. Je saldo verandert daar niet van — dat geld staat er immers al in.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'fuel',q:'Hoe werkt een brandstofpotje?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
  v:gv(`<div class="mini" style="margin-bottom:0"><div class="mini-h">Tanken · laatste 12 maanden</div>${GKV('Gemiddeld per maand',eur(54.94))}${GKV('Gemiddeld per tankbeurt',eur(68.68))}${GKV('Getankt','126,4 L')}${GKV('Gemiddelde literprijs',eur(2.18))}${GKV('Tankbeurten','4')}<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(55)}/mnd</b></span><button class="tiny primary">Overnemen</button></div></div>`),
  t:gt(`Zet bij een potje het brandstof-vlaggetje aan (Potje bewerken → Geavanceerde opties). Bij elke tankbeurt kun je dan ook <b>liters en literprijs</b> invullen — het bedrag wordt automatisch berekend. De app houdt je gemiddelde per maand én per tankbeurt bij en adviseert wat je maandelijks opzij kunt zetten.`)},
@@ -1099,7 +1137,7 @@ function guideItems(){return GUIDE.filter(g=>(!g.mod||moduleOn(g.mod))&&(!g.feat
 function openGuide(fromOnboarding){
   window._gOpen={};window._gFilter='';
   openSheet(`<h2>Uitleg</h2><div class="muted" style="margin-bottom:10px">Elke vraag klapt open naar een voorbeeld uit de app met korte uitleg.${fromOnboarding?' Je vindt dit later terug via Meer → Uitleg.':''}</div>
-    <input id="gZoek" placeholder="Zoek een vraag, bijv. loon of back-up" oninput="gFilter(this.value)" autocomplete="off">
+    <input id="gZoek" data-nosnap placeholder="Zoek een vraag, bijv. loon of back-up" oninput="gFilter(this.value)" autocomplete="off">
     <div id="guideList" style="margin-top:6px"></div>`);
   renderGuide();
 }
@@ -1223,8 +1261,12 @@ function loonFreqTekst(L){
   if(L.mode==='twice')return 'twee keer per maand';
   return 'maandelijks';
 }
-/* Wanneer binnen dat ritme? */
-function loonDagTekst(L){
+/* Wanneer binnen dat ritme?
+   kort=true op schermen waar de eerstvolgende loondagen er al onder staan. Bij een wekenritme is de
+   referentiedatum daar namelijk dubbelop - die datum staat twee regels lager al als échte loondag.
+   De weekdag zegt daar wél iets nieuws: die staat nergens anders in één oogopslag. Op plekken zonder
+   zo'n lijst (de PDF, het instellingenoverzicht) blijft de referentiedatum juist staan. */
+function loonDagTekst(L,kort){
   L=schoonLoonCfg(L);
   if(L.mode==='manual'){
     const t=new Date();t.setHours(0,0,0,0);
@@ -1233,7 +1275,9 @@ function loonDagTekst(L){
   }
   if(L.mode==='weeks'){
     const s=parseISO(L.start);
-    return s?('geteld vanaf '+s.getDate()+' '+MND[s.getMonth()].slice(0,3)+' '+s.getFullYear()):'referentiedatum ontbreekt';
+    if(!s)return 'referentiedatum ontbreekt';
+    if(kort)return 'steeds op '+DAGVOL[s.getDay()];
+    return 'geteld vanaf '+s.getDate()+' '+MND[s.getMonth()].slice(0,3)+' '+s.getFullYear();
   }
   if(L.mode==='twice')return 'de '+dagKort(L.dag)+' en de '+dagKort(L.dag2)+' van de maand';
   if(L.dagType==='werkdag')return 'laatste werkdag van de maand';
@@ -2149,6 +2193,114 @@ function projectieRegel(pi,klein){
     :`${eur(pr.verschil)} meer dan de ${eur(pr.doel)} voor volgende maand`);
   return `<div style="font-size:${fs};margin-top:4px;color:${kleur}">Op ${dtxt}: <b>${eur(pr.eind)}</b> · ${oordeel}</div>`;
 }
+/* ===== OVERMAAK-TELLER =====
+   Bij een potje met alleen maandelijkse kostenposten zegt projectieRegel al of er straks een maand
+   klaarstaat. Bij buffers en jaarposten kan hij dat niet: daar hoort je saldo juist op te lopen naar
+   één grote afschrijving, en een buffer die je gebruikt is geen fout maar de bedoeling.
+   Daarom kijken we daar niet naar je saldo maar naar wat je er zelf in stopte: heb je op je loondagen
+   daadwerkelijk overgemaakt? Dat weet de app al, want elke afvinking staat in db.overboek.
+   Twee dingen houden hem eerlijk:
+   - Tellen begint pas bij je EERSTE afvinking. Daarvoor bestond het potje voor de app niet, dus een
+     potje dat je vandaag aanmaakt krijgt nooit een verzonnen achterstand over de maanden ervoor.
+   - Er wordt maximaal 12 loondagen teruggekeken. Een misser uit 2024 blijft dus niet eeuwig staan:
+     haal je hem in, dan rolt hij vanzelf uit beeld. Dat maakt hem ook ongevoelig voor een loonritme
+     dat je jaren geleden hebt gewijzigd. */
+/* De sleutels van de laatste n loonperiodes, nieuwste eerst, in dezelfde vorm als db.overboek ze
+   gebruikt. Bewust dezelfde route als currentPeriodKey: ruwe loondag zoeken en die dan verschuiven,
+   anders lopen de sleutels uit elkaar zodra een loondag in een weekend valt. */
+function recentePeriodes(n){
+  const L=db.loon;const out=[];
+  const t=new Date();t.setHours(0,0,0,0);
+  let d=rawNextPayday(L);
+  if(!d||isNaN(d))return out;
+  if(loonShift(d,L)>t)d=rawPaydayBefore(L,d);
+  let g=0;
+  while(d&&!isNaN(d)&&out.length<n&&g<400){
+    const s=loonShift(d,L);
+    if(L.vanaf&&isoDate(s)<L.vanaf)break;
+    out.push('p'+isoDate(s));
+    d=rawPaydayBefore(L,d);g++;
+  }
+  /* De lopende periode komt uit currentPeriodKey, want die kan bewust op een eerder vastgelegde loondag
+     blijven staan nadat je je loondag hebt gewijzigd (anders zou je potjes-checklist zichzelf resetten).
+     Zonder deze gelijkschakeling belandt het vinkje van vandaag in een sleutel die deze lijst niet kent. */
+  const cur=currentPeriodKey();
+  if(cur.charAt(0)==='p'&&out[0]!==cur){const i=out.indexOf(cur);if(i>0)out.splice(i,1);out.unshift(cur);}
+  return out.slice(0,n);
+}
+/* null = niets te melden (geen maandbedrag, of geen loondag uit de instelling te halen). */
+function potOpzijTeller(pi){
+  const p=db.potjes[pi];if(!p)return null;
+  const mnd=round2(potTot(p));
+  if(!(mnd>0))return null;
+  /* 13 ophalen: de lopende periode plus 12 afgeronde. De lopende telt niet mee - die kun je vandaag
+     nog gewoon overmaken, en meteen "overgeslagen" roepen op je loondag zelf klopt niet. */
+  const keys=recentePeriodes(13);
+  if(keys.length<2)return null;
+  const gedaanIn=k=>!!((db.overboek||{})[k]||{})[pi];
+  const af=keys.slice(1).reverse();
+  const lopendGedaan=gedaanIn(keys[0]);
+  const eerste=af.findIndex(gedaanIn);
+  if(eerste<0)return {gestart:false,lopendGedaan,periodes:0,gedaan:0,gemist:0,achterstand:0};
+  const venster=af.slice(eerste);
+  const gedaan=venster.filter(gedaanIn).length;
+  const gemist=venster.length-gedaan;
+  return {gestart:true,lopendGedaan,periodes:venster.length,gedaan,gemist,achterstand:round2(gemist*mnd)};
+}
+/* De regel op de potjeskaart. Uitgaven komen hier bewust niet in voor. */
+function opzijRegel(pi){
+  if(!featOn('opzijtel'))return '';
+  const p=db.potjes[pi];if(!p||!(p.items||[]).length)return '';
+  if(potIsMaandelijks(p))return '';
+  const s=potOpzijTeller(pi);if(!s)return '';
+  /* Nog niet gestart: zeg waaróm er niets staat, en verander die tekst zodra je vandaag afvinkt -
+     anders lijkt het alsof je afvinken niets deed, terwijl het tellen dan juist net begonnen is. */
+  if(!s.gestart)return `<div style="margin-top:8px"><span class="statusbadge none">${s.lopendGedaan?'Bijhouden gestart · telt vanaf je volgende loondag':"Telt mee zodra je 'm afvinkt"}</span></div>`;
+  if(!s.gemist)return `<div style="margin-top:8px"><span class="statusbadge ok">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span></div>`;
+  return `<div style="margin-top:8px"><span class="statusbadge warn">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span>`
+    +`<div style="font-size:13px;margin-top:4px;color:var(--amber)">${s.gemist} keer overgeslagen · <b>${eur(s.achterstand)}</b> minder opzij gezet</div>`
+    +`<button class="tiny ghost" style="margin-top:7px" onclick="event.stopPropagation();openInhaal(${pi})">Toch overgemaakt?</button></div>`;
+}
+/* ===== GEMISTE LOONDAGEN GOEDZETTEN =====
+   Een gat in de teller komt vaker doordat je het vinkje vergat dan doordat je het geld niet overmaakte.
+   Zonder een manier om dat recht te zetten beweert de app iets wat je niet kunt weerleggen, en blijft dat
+   twaalf loondagen staan. Vandaar dit schermpje.
+   Het saldo blijft er bewust buiten: het geld van toen staat er al in (of niet), en er alsnog een bedrag
+   bij optellen zou de tweede keer zijn. Dit zet alleen de administratie goed. */
+function gemistePeriodes(pi){
+  const p=db.potjes[pi];if(!p)return [];
+  const keys=recentePeriodes(13);if(keys.length<2)return [];
+  const af=keys.slice(1).reverse();
+  const gedaanIn=k=>!!((db.overboek||{})[k]||{})[pi];
+  const eerste=af.findIndex(gedaanIn);
+  if(eerste<0)return [];
+  return af.slice(eerste).filter(k=>!gedaanIn(k));
+}
+function openInhaal(pi){
+  const p=db.potjes[pi];if(!p)return;
+  const gem=gemistePeriodes(pi);
+  if(!gem.length){toast('Niets in te halen');return;}
+  const mnd=round2(potTot(p));
+  const rij=k=>{const d=parseISO(k.slice(1));if(!d)return '';
+    return `<div class="row between" style="align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="flex:1;min-width:0"><b>${DAG[d.getDay()]} ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</b>
+      <div class="muted" style="font-size:12.5px">${eur(mnd)} niet afgevinkt</div></div>
+      <div class="check" onclick="inhaalTgl(this,${pi},'${k}')"></div></div>`;};
+  openSheet(`<h2>Gemiste loondagen</h2>
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Bij deze loondagen staat geen vinkje voor <b>${esc(p.n)}</b>. Had je het toen tóch overgemaakt? Tik hem dan aan — dan telt hij weer mee.</div>
+    <div class="mini" style="margin-top:0"><div class="mini-h">Zonder vinkje</div>${gem.map(rij).join('')}</div>
+    <div class="muted" style="font-size:12.5px;margin-top:12px">Dit zet alleen het vinkje goed; je saldo blijft precies zoals het nu is. Het geld van toen staat er immers al in — er nu nóg een bedrag bij optellen zou het dubbel tellen.</div>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="closeSheet()">Klaar</button>`);
+}
+function inhaalTgl(el,pi,k){
+  const p=db.potjes[pi];if(!p)return;
+  const aan=!el.classList.contains('on');
+  el.classList.toggle('on',aan);el.textContent=aan?'✓':'';
+  db.overboek[k]=db.overboek[k]||{};
+  if(aan)db.overboek[k][pi]={done:true,amt:round2(potTot(p)),inhaal:true};
+  else delete db.overboek[k][pi];
+  haptic();save();render();
+}
 function potNeed(pi){const ms=potMonthStatus(pi);return ms?ms.tekort:0;}
 function totalSaldo(){return db.potjes.reduce((a,p)=>a+(+p.saldo||0),0);}
 /* 'once'-uitgaven (eenmalig-vinkje) tellen niet mee in gemiddelden en buffer-adviezen; het saldo raken ze wel gewoon. */
@@ -2285,12 +2437,11 @@ function renderPotjes(){
     const primaryLbl=spaar?'Saldo':'Per maand opzij';const primaryAmt=spaar?eur(p.saldo):eur(t);
     const secondary=spaar?(p.fuel?'Brandstofpotje':'Spaarpotje'):((p.fuel?'Brandstofpotje · ':'')+'saldo '+eur(p.saldo));
     // Twee vragen onder elkaar: red ik deze maand (badge) en staat er straks een maand klaar (projectie)?
-    const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}`;
+    const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}${spaar?'':opzijRegel(i)}`;
     return `<div class="pot" id="pot${i}"><div class="ph"><div ${tog} style="flex:1"><b>${esc(p.n)}</b>${p.note?`<div class="muted" style="margin-top:2px;font-style:italic">${esc(p.note)}</div>`:''}</div>${t>0?`<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleOverboek(${i})">${on?'✓':''}</div>`:''}</div>
       <div class="pot-sum" ${tog}><div style="flex:1;min-width:0">${potSumInner}</div><span class="cvx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;display:block"><path d="M6 9.5l6 6 6-6"/></svg></span></div>
       <div class="sub">${fuelPanel}${monthPanel}${items}${advies}
       <button class="ghost" style="width:100%;margin-top:12px" onclick="openPotDetailEdit(${i},'potjes')">Potje bewerken</button>
-      ${p.target?`<div class="muted" style="margin-top:6px">${(+p.saldo||0)<+p.target?'<span style="color:var(--amber)">onder streefbuffer '+eur(p.target)+'</span>':'boven streefbuffer '+eur(p.target)}</div>`:''}
       </div></div>`;
   }).join(''):`<div class="empty">Nog geen potjes.<br>Tik op Beheren om te beginnen.<br><span style="font-size:12px">Tip: een potje zonder kostenposten is gewoon een spaarpotje (bijv. Bunq).</span></div>`;
 }
@@ -3098,7 +3249,7 @@ function renderLoon(){
     const ws=esc(w).replace(/'/g,"\\'");
     bron.innerHTML=`<div class="kv"><span class="k">Werkgever</span><span class="v">${esc(w)}</span></div>
       <div class="kv"><span class="k">Hoe vaak</span><span class="v">${loonFreqTekst(L)}</span></div>
-      <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L)}</span></div>
+      <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L,true)}</span></div>
       ${L.mode!=='manual'?`<div class="kv stack"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}
       <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,4)}</div>
       <button class="ghost" style="width:100%;margin-top:12px" onclick="openWerkCfg('${ws}','loon')">Loondag wijzigen bij ${esc(w)}</button>
@@ -4116,7 +4267,9 @@ function mergeImport(d){
 }
 /* Het verslag na een import: wat is erbij gekomen, wat was al aanwezig, en wat is er aan je
    instellingen veranderd. Een toast is te vluchtig voor iets wat je hele administratie raakt. */
-function toonImportVerslag(r){
+/* vanOnb=true: de import kwam in plaats van de onboarding. Dan is de uitleg overgeslagen, dus die
+   moet je hier alsnog kunnen openen - anders is dat scherm voor deze groep onbereikbaar geworden. */
+function toonImportVerslag(r,vanOnb){
   const lbl=k=>{const f=FEATS.find(x=>x.k===k);return f?f.label:k;};
   const rij=(naam,n,dub)=>n?`<div class="kv"><span class="k">${naam}</span><span class="v">+ ${n}${dub?` <span class="muted" style="font-weight:400">· ${dub} al aanwezig</span>`:''}</span></div>`:'';
   const toegevoegd=[
@@ -4136,7 +4289,10 @@ function toonImportVerslag(r){
     ${(r.naam||r.instellingen.length)?`<div class="mini"><div class="mini-h">Overgenomen uit de back-up</div>${r.naam?`<div class="kv"><span class="k">Je naam</span><span class="v">${esc(r.naam)}</span></div>`:''}${r.instellingen.map(n=>`<div class="kv"><span class="k">${n}</span><span class="v">bijgewerkt</span></div>`).join('')}</div>`:''}
     ${niets?'<div class="muted">Alles uit deze back-up stond al in de app. Er is niets veranderd.</div>':''}
     <div class="muted" style="font-size:12.5px;margin-top:12px">Je bestaande gegevens zijn nooit overschreven: wat er al stond is blijven staan, alleen wat ontbrak is toegevoegd. Je pincode komt bewust niet uit een back-up mee.</div>
-    <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
+    ${vanOnb?`<div style="background:var(--accent-soft);border-radius:14px;padding:12px 13px;margin-top:14px">
+      <div style="font-size:13px;color:var(--accent2);margin-bottom:9px">De uitleg is overgeslagen — je instellingen kwamen uit de back-up mee.</div>
+      <button class="ghost" style="width:100%;background:var(--card)" onclick="closeSheet();setTimeout(()=>openGuide(true),300)">Uitleg toch bekijken</button></div>`:''}
+    <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">${vanOnb?'Naar de app':'Klaar'}</button>`);
 }
 
 /* ===== UTIL ===== */
@@ -4171,9 +4327,12 @@ function runConfirmSheet(){const cb=window._confirmCb;window._confirmCb=null;doc
    de tik naast het venster — komen uit bij closeSheet of sheetBack, dus die twee zijn genoeg. */
 /* De echte invoervelden van een sheet. De gids toont voorbeeldschermpjes met nagemaakte velden erin;
    die staan in .gvis en tellen niet mee, anders zou de gids zichzelf als een formulier zien. */
+/* data-nosnap: een veld dat alleen filtert of zoekt, en dus niets is wat je kunt "opslaan". Zonder deze
+   uitzondering maakte één woord in de zoekbalk van de Uitleg dat scherm al "gewijzigd", en vroeg de app
+   bij het sluiten of je je wijziging wilde weggooien - terwijl er niets weg te gooien viel. */
 function sheetVelden(){
   const s=document.getElementById('sheet');if(!s)return [];
-  return [...s.querySelectorAll('input,select,textarea')].filter(e=>!e.closest('.gvis'));
+  return [...s.querySelectorAll('input,select,textarea')].filter(e=>!e.closest('.gvis')&&!e.hasAttribute('data-nosnap'));
 }
 function sheetSnapshot(){
   const s=document.getElementById('sheet');if(!s)return '';

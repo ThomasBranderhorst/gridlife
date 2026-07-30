@@ -607,6 +607,121 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   const e=r.extra||{};
   meld('potje met saldo of notitie blijft staan', !r.fout&&e.wegMetSaldo===false&&e.wegMetNotitie===false&&e.aantal===2, JSON.stringify(r.extra||r.fout));
 }
+/* ===== OVERMAAK-TELLER =====
+   De sleutels van db.overboek hangen aan echte loondagen, dus die vragen we eerst aan de app zelf op.
+   Anders zou deze test alleen kloppen op de dag dat hij geschreven is. */
+{
+  const bufferPot=()=>({n:'Auto',saldo:0,log:[],items:[{n:'Onderhoud',v:50,fn:1,fu:'m',buffer:true}]});
+  const kR=run(basis({potjes:[bufferPot()]}),a=>a.recentePeriodes(13));
+  const keys=kR.extra||[];
+  meld('teller: 13 loonperiodes terug te tellen', !kR.fout&&keys.length===13&&new Set(keys).size===13, JSON.stringify(kR.fout||keys.length));
+  const af=keys.slice(1);                                   // afgeronde periodes, nieuwste eerst
+  const vink=ks=>{const o={};ks.forEach(k=>{o[k]={0:{done:true,amt:50}};});return o;};
+  const tel=(overboek,extra)=>{
+    const p=bufferPot();if(extra)Object.assign(p,extra);
+    const r=run(basis({potjes:[p],overboek}),a=>a.potOpzijTeller(0));
+    return r.fout?{fout:r.fout}:r.extra;
+  };
+  // 43. alles afgevinkt = 12 van 12, geen achterstand
+  {
+    const e=tel(vink(af))||{};
+    meld('teller: 12 van 12 afgevinkt geeft geen achterstand',
+      e.gestart===true&&e.periodes===12&&e.gedaan===12&&e.gemist===0&&e.achterstand===0, JSON.stringify(e));
+  }
+  // 44. tellen begint pas bij de EERSTE afvinking - niet bij de oudste periode
+  {
+    const e=tel(vink(af.slice(0,3)))||{};
+    meld('teller: begint bij je eerste afvinking, niet 12 periodes terug',
+      e.gestart===true&&e.periodes===3&&e.gedaan===3&&e.gemist===0, JSON.stringify(e));
+  }
+  // 45. overgeslagen periodes binnen dat venster = achterstand tegen het maandbedrag
+  {
+    const e=tel(vink([af[0],af[4]]))||{};
+    meld('teller: 2 van 5, dus 3 overgeslagen a 50 = 150 achterstand',
+      e.gestart===true&&e.periodes===5&&e.gedaan===2&&e.gemist===3&&e.achterstand===150, JSON.stringify(e));
+  }
+  // 46. uitgaven uit het potje raken de teller niet - een buffer gebruiken is de bedoeling
+  {
+    const log=[{date:af[1].slice(1),amount:900,kind:'uitgave'},{date:af[2].slice(1),amount:400,kind:'uitgave'}];
+    const e=tel(vink([af[0],af[4]]),{log,saldo:-99})||{};
+    meld('teller: uitgaven en een leeg saldo veranderen de telling niet',
+      e.gestart===true&&e.periodes===5&&e.gedaan===2&&e.gemist===3&&e.achterstand===150, JSON.stringify(e));
+  }
+  // 47. de lopende loonperiode telt nog niet mee: die kun je vandaag nog overmaken
+  {
+    const e=tel(vink([keys[0]]))||{};
+    meld('teller: alleen de lopende periode afgevinkt = nog niet gestart, maar wel herkend',
+      e&&e.gestart===false&&e.lopendGedaan===true&&e.achterstand===0, JSON.stringify(e));
+  }
+  // 48. nooit afgevinkt = geen oordeel
+  {
+    const e=tel({})||{};
+    meld('teller: nooit afgevinkt geeft geen achterstand', e&&e.gestart===false&&e.periodes===0, JSON.stringify(e));
+  }
+  // 49. verder dan 12 loondagen terug kijkt hij niet
+  {
+    const lang=run(basis({potjes:[bufferPot()]}),a=>a.recentePeriodes(30)).extra||[];
+    const e=tel(vink([lang[20]]))||{};
+    meld('teller: een afvinking van 20 loondagen terug valt buiten het venster',
+      lang.length===30&&e&&e.gestart===false, JSON.stringify({n:lang.length,e}));
+  }
+  // 49b. gemiste loondagen zijn precies de periodes zonder vinkje binnen het venster
+  {
+    const p=bufferPot();
+    const r=run(basis({potjes:[p],overboek:vink([af[0],af[4]])}),a=>a.gemistePeriodes(0));
+    meld('inhalen: precies de 3 loondagen zonder vinkje worden aangeboden',
+      !r.fout&&JSON.stringify(r.extra)===JSON.stringify([af[3],af[2],af[1]]), JSON.stringify(r.fout||r.extra));
+  }
+  // 49c. een gemiste loondag alsnog aanvinken haalt de achterstand weg, zonder het saldo te raken
+  {
+    const ob=vink([af[0],af[4]]);
+    ob[af[2]]={0:{done:true,amt:50,inhaal:true}};
+    const r=run(basis({potjes:[Object.assign(bufferPot(),{saldo:75})],overboek:ob}),
+      a=>({t:a.potOpzijTeller(0),saldo:a.db.potjes[0].saldo,rest:a.gemistePeriodes(0).length}));
+    const e=r.extra||{};
+    meld('inhalen: ingehaalde loondag telt mee, saldo blijft ongemoeid',
+      !r.fout&&e.t&&e.t.gedaan===3&&e.t.gemist===2&&e.t.achterstand===100&&e.saldo===75&&e.rest===2, JSON.stringify(r.fout||e));
+  }
+  // 49d. een vastgelegde periode die vóór de berekende loondag ligt (loondag gewijzigd) blijft de kop
+  {
+    const laat='2099-01-25';
+    const r=run(basis({potjes:[bufferPot()],periode:laat}),a=>({
+      cur:a.currentPeriodKey(),kop:a.recentePeriodes(13)[0],n:a.recentePeriodes(13).length}));
+    const e=r.extra||{};
+    meld('teller: lopende periode blijft gelijk aan die van de potjes-checklist',
+      !r.fout&&e.cur==='p'+laat&&e.kop===e.cur&&e.n===13, JSON.stringify(r.fout||e));
+  }
+  // 50. zonder maandbedrag valt er niets te tellen (spaarpotje)
+  {
+    const r=run(basis({potjes:[{n:'Bunq',saldo:4000,log:[],items:[]}],overboek:vink(af)}),a=>a.potOpzijTeller(0));
+    meld('teller: spaarpotje zonder kostenposten krijgt geen teller', !r.fout&&r.extra===null, JSON.stringify(r.fout||r.extra));
+  }
+  // 51. alleen potjes waar projectieRegel geen oordeel geeft, krijgen de teller
+  {
+    const maand={n:'Vaste lasten',saldo:0,log:[],items:[{n:'Huur',v:800,fn:1,fu:'m',due:'2026-01-01'}]};
+    const jaar={n:'Auto',saldo:0,log:[],items:[{n:'APK',v:50,fn:1,fu:'j',due:'2026-07-01'}]};
+    const r=run(basis({potjes:[maand,jaar,bufferPot()]}),a=>a.db.potjes.map(p=>a.potIsMaandelijks(p)));
+    meld('teller: maandpotje wel maandelijks, jaarpost en buffer niet',
+      !r.fout&&JSON.stringify(r.extra)==='[true,false,false]', JSON.stringify(r.fout||r.extra));
+  }
+  // 52. APK van 50 per jaar = 4,17 per maand opzij
+  {
+    const r=run(basis({potjes:[{n:'Auto',saldo:0,log:[],items:[
+      {n:'APK',v:50,fn:1,fu:'j',due:'2026-07-01'},{n:'Onderhoud',v:40,fn:1,fu:'m',buffer:true}]}]}),
+      a=>Math.round(a.potTot(a.db.potjes[0])*100)/100);
+    meld('jaarpost van 50 + buffer van 40 = 44,17 per maand opzij', !r.fout&&r.extra===44.17, JSON.stringify(r.fout||r.extra));
+  }
+}
+// 53. loondag-tekst: kort laat de weekdag zien, lang de referentiedatum
+{
+  const L={mode:'weeks',intervalWeeks:4,start:'2026-07-22',dag:25};
+  const r=run(basis({loon:L}),a=>[a.loonDagTekst(a.db.loon,true),a.loonDagTekst(a.db.loon)]);
+  const m=run(basis({loon:{mode:'month',dag:25,intervalWeeks:4,start:''}}),a=>[a.loonDagTekst(a.db.loon,true),a.loonDagTekst(a.db.loon)]);
+  meld('loondag: wekenritme kort = weekdag, lang = referentiedatum',
+    !r.fout&&r.extra[0]==='steeds op woensdag'&&r.extra[1]==='geteld vanaf 22 jul 2026', JSON.stringify(r.fout||r.extra));
+  meld('loondag: maandritme verandert niet door kort',
+    !m.fout&&m.extra[0]==='de 25e van de maand'&&m.extra[0]===m.extra[1], JSON.stringify(m.fout||m.extra));
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

@@ -326,7 +326,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
       <div id="loonBron"></div>
       <div id="loonEdit"></div>
       <div class="muted" id="loonStatus" style="margin-top:12px"></div>
-      <button class="primary" style="width:100%;margin-top:12px" onclick="go('potjes')">Naar potjes →</button>
+      <button class="ghost" style="width:100%;margin-top:12px" onclick="go('potjes')">Bedragen naar je potjes afvinken</button>
     </div>
     <div class="card" id="loonLogCard"></div>
   </section>
@@ -355,7 +355,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
         <label>Vast tijdstip</label><input type="time" id="meldTijd">
         <div class="muted" style="font-size:12px;margin-top:6px">Geldt voor alle meldingen — tenzij een type hieronder een eigen tijdstip heeft.</div>
         <div id="meldTypeList" style="margin-top:14px"></div>
-        <button class="ghost" style="width:100%;margin-top:14px" onclick="testMelding()">Testmelding</button>
+        <button class="ghost" style="width:100%;margin-top:14px" onclick="testMelding()">Stuur mezelf een proefmelding</button>
       </div></div>
     <div class="card" id="beheerCard"><h2>Lijsten &amp; categorieën</h2><div id="beheerList"></div></div>
     <div class="card" id="slotCard"><div class="row between"><h2 style="margin:0">App-slot</h2><div class="check" id="lockToggle" onclick="toggleLock()"></div></div><div class="muted" style="margin-top:6px">Vraagt een pincode bij het openen.</div>
@@ -1118,7 +1118,7 @@ const GUIDE=[
  t:gt(`Dit is je gemiddelde netto inkomen (over het <b>laatste jaar</b>) min alles wat je maandelijks opzij zet voor je potjes. Wat overblijft is je <b>vrije ruimte</b>: boodschappen, uitjes, sparen. Het is geen uitgaven-app — de app rekent niet mee wat je daarvan uitgeeft.`)
   +gt(`Waarom een heel jaar? Zo tellen je <b>vakantiegeld</b>, een eventuele 13e maand en drukke of rustige maanden allemaal mee in één stabiel cijfer, in plaats van dat één uitschieter je gemiddelde even flink laat springen. Nadeel: begin je bij een nieuwe, beter betaalde baan, dan trekt het oude loon het gemiddelde nog even omlaag totdat er genoeg nieuwe maanden zijn.`)},
 {s:'Loon',mod:'loon',feat:'loonlog',q:'Kan ik gewoon los loon toevoegen, zonder loondag of werkgever?',a:{lbl:'Loon toevoegen',fn:"go('loon');setTimeout(openLoonLog,200)"},
- v:gv(`<div class="card" style="margin-bottom:0"><div class="row between"><h2 style="margin:0;font-size:15px">Netto ontvangen</h2><button class="tiny primary">＋ Loon</button></div><div class="muted" style="margin:6px 0 8px">Log wat er binnenkomt; de app rekent je maandinkomen uit.</div>${GKV('Gemiddeld inkomen',eur(1780)+' p/mnd')}${GKV('Naar potjes','− '+eur(208.7))}${GKV('Hou je over',eur(1571.3)+' p/mnd','var(--ok-tx)')}</div>`),
+ v:gv(`<div class="card" style="margin-bottom:0"><div class="row between"><h2 style="margin:0;font-size:15px">Netto ontvangen</h2><button class="tiny primary">＋ Loon</button></div><div class="muted" style="margin:6px 0 8px">Vul elke keer in wat er op je rekening kwam. Na een paar keer weet de app wat je gemiddeld per maand verdient.</div>${GKV('Gemiddeld inkomen',eur(1780)+' p/mnd')}${GKV('Naar potjes','− '+eur(208.7))}${GKV('Hou je over',eur(1571.3)+' p/mnd','var(--ok-tx)')}</div>`),
  t:gt(`Ja. Met de knop <b>＋ Loon</b> op de Loon-pagina boek je een bedrag met een datum, los van alles. Je hebt er geen werkgever en geen ingestelde loondag voor nodig. Het enige wat ermee gebeurt is dat je <b>gemiddelde maandinkomen</b> en "hou je over" opnieuw worden uitgerekend.`)
   +gt(`Eén ding om te weten: valt zo'n losse ontvangst in dezelfde maand als een loondag die de app verwacht, dan koppelt hij die twee aan elkaar en geldt die loondag als binnen. Dat is expres — anders zou je hetzelfde loon twee keer in de app zien staan. Heb je meerdere loondagen in één maand (2× per maand of per aantal weken), dan gaat de ontvangst naar de loondag die er het dichtst bij ligt, niet naar allemaal.`)
   +gt(`Het gemiddelde gaat over het laatste jaar (de laatste twaalf volledige maanden), zodat vakantiegeld en drukke of rustige maanden meetellen. Heb je nog niet zo lang gelogd, dan deelt de app alles wat er staat door het aantal maanden dat het beslaat, zodat er meteen een bruikbaar cijfer staat.`)},
@@ -1331,7 +1331,7 @@ function loonKort(L){
    nog geen werkgever hebt, rechtstreeks op de Loon-pagina. Die twee mogen nooit uit elkaar lopen, dus
    ze delen exact dezelfde velden. ctx bepaalt alleen waar de wijziging naartoe gaat: 'wc' = het
    werkgever-concept in window._wc, 'lp' = db.loon rechtstreeks. */
-const LOONMODI=[['month','Maandelijks'],['twice','2× per maand'],['weeks','Per aantal weken'],['manual','Wisselend']];
+const LOONMODI=[['month','Maandelijks'],['twice','2× per maand'],['weeks','Per aantal weken'],['manual','Ik vul de datums zelf in']];
 const DAGTYPES=[['nr','Op een vaste dag van de maand'],['werkdag','Laatste werkdag van de maand'],['weekdag','Een vaste weekdag van de maand']];
 function dagOpties(sel){
   return Array.from({length:30},(_,i)=>i+1).map(n=>`<option value="${n}" ${+sel===n?'selected':''}>${n}e van de maand</option>`).join('')
@@ -1370,7 +1370,7 @@ function loonNaDatumWijziging(ctx){
 /* De velden die bij de gekozen frequentie horen. */
 function loonWanneerHTML(L,ctx){
   const zet=k=>`loonSet('${ctx}','${k}',`;
-  if(L.mode==='weeks')return `<div class="grid2"><div><label>Interval</label><select id="${ctx}_loonIv" onchange="${zet('intervalWeeks')}+this.value)">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${+L.intervalWeeks===n?'selected':''}>elke ${n} ${n===1?'week':'weken'}</option>`).join('')}</select></div><div><label>Referentiedatum</label><input type="date" id="${ctx}_loonStart" value="${L.start||''}" onchange="${zet('start')}this.value)"></div></div>
+  if(L.mode==='weeks')return `<div class="grid2"><div><label>Interval</label><select id="${ctx}_loonIv" onchange="${zet('intervalWeeks')}+this.value)">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${+L.intervalWeeks===n?'selected':''}>elke ${n} ${n===1?'week':'weken'}</option>`).join('')}</select></div><div><label>Een datum waarop je loon kreeg</label><input type="date" id="${ctx}_loonStart" value="${L.start||''}" onchange="${zet('start')}this.value)"></div></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Eén datum waarop je loon kreeg — daarvandaan rekent de app alle volgende loondagen uit.${L.start?'':` <b style="color:var(--bad-tx)">Zonder deze datum kan de app geen enkele loondag berekenen.</b>`}</div>`;
   if(L.mode==='twice')return `<div class="grid2"><div><label>Eerste loondag</label><select id="${ctx}_loonDag" onchange="${zet('dag')}+this.value)">${dagOpties(L.dag)}</select></div><div><label>Tweede loondag</label><select id="${ctx}_loonDag2" onchange="${zet('dag2')}+this.value)">${dagOpties(L.dag2)}</select></div></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Bijvoorbeeld de 15e en de laatste dag van de maand. Dat zijn 24 loondagen per jaar.${(+L.dag>28&&+L.dag<31)||(+L.dag2>28&&+L.dag2<31)?' In kortere maanden (februari) schuift een dag na de 28e automatisch naar de laatste dag.':''}${+L.dag===+L.dag2?' <b style="color:var(--wait-tx)">Twee keer dezelfde dag telt als één loondag — kies twee verschillende dagen.</b>':''}</div>`;
@@ -1406,18 +1406,30 @@ function loonWeekendHTML(L,ctx){
 }
 /* Een voorbeeld met de ECHTE eerstvolgende loondagen. Dit is de snelste manier om te zien of een
    instelling klopt: je leest de uitkomst in plaats van dat je hem uit de instellingen moet afleiden. */
+/* Achter een verschoven loondag stond alleen het grijze woord "weekend" of de feestdagnaam. Dat
+   verklaarde niets: je ziet een vrijdag staan met "weekend" erachter en denkt dat er iets misgaat.
+   Nu staat de reden er voluit, met de oorspronkelijke datum erbij. */
+function verschuifReden(ruw,verschoven,naam){
+  const richting=verschoven<ruw?'eerder':'later';
+  const d=ruw.getDate()+' '+MND[ruw.getMonth()].slice(0,3);
+  if(naam)return richting+' betaald, '+d+' is '+naam;
+  /* Sprong hij verder dan één weekend, dan lagen er ook feestdagen naast - denk aan een loondag op
+     zondag 27 december, die dan helemaal naar de 24e schuift. Dat alleen "weekend" noemen klopt niet. */
+  const dagen=Math.abs(Math.round((verschoven-ruw)/86400000));
+  return richting+' betaald, '+d+' valt in het weekend'+(dagen>2?', met feestdagen ernaast':'');
+}
 function loonVoorbeeldHTML(L,n){
   L=schoonLoonCfg(L);
   const uit=[];let d=rawNextPayday(L),g=0;
   while(d&&!isNaN(d)&&uit.length<n&&g<200){uit.push(new Date(d));d=rawPaydayAfter(L,d);g++;}
-  if(!uit.length)return `<div class="muted" style="font-size:12.5px">Hier kan de app nog geen loondag uit halen. ${L.mode==='weeks'?'Vul hierboven een referentiedatum in.':L.mode==='manual'?'Vul hierboven je eerstvolgende loondag in.':'Controleer je instelling hierboven.'}</div>`;
+  if(!uit.length)return `<div class="muted" style="font-size:12.5px">Hier kan de app nog geen loondag uit halen. ${L.mode==='weeks'?'Vul hierboven een datum in waarop je loon kreeg.':L.mode==='manual'?'Vul hierboven je eerstvolgende loondag in.':'Controleer je instelling hierboven.'}</div>`;
   const vandaag=new Date();vandaag.setHours(0,0,0,0);
   return uit.map(ruw=>{
     const s=loonShift(ruw,L);
     const versch=isoDate(s)!==isoDate(ruw);
     const naam=feestNaam(ruw);
     const dgn=Math.round((s-vandaag)/86400000);
-    return `<div class="kv"><span class="k">${DAG[s.getDay()]} ${s.getDate()} ${MND[s.getMonth()].slice(0,3)} ${s.getFullYear()}${versch?` <span style="color:var(--wait-tx)">· ${esc(naam||'weekend')}</span>`:''}</span><span class="v">${dgn<0?'':dgn===0?'vandaag':'over '+dgn+' dag'+(dgn===1?'':'en')}</span></div>`;
+    return `<div class="kv"><span class="k">${DAG[s.getDay()]} ${s.getDate()} ${MND[s.getMonth()].slice(0,3)} ${s.getFullYear()}${versch?` <span style="color:var(--wait-tx)">· ${esc(verschuifReden(ruw,s,naam))}</span>`:''}</span><span class="v">${dgn<0?'':dgn===0?'vandaag':'over '+dgn+' dag'+(dgn===1?'':'en')}</span></div>`;
   }).join('');
 }
 function openFeestSheet(back){
@@ -2350,8 +2362,8 @@ function openInhaal(pi){
   openSheet(`<h2>Gemiste loondagen</h2>
     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Bij deze loondagen staat geen vinkje voor <b>${esc(p.n)}</b>. Had je het toen tóch overgemaakt? Tik hem dan aan — dan telt hij weer mee.</div>
     <div class="mini" style="margin-top:0"><div class="mini-h">Zonder vinkje</div>${gem.map(rij).join('')}</div>
-    <div class="muted" style="font-size:12.5px;margin-top:12px">Dit zet alleen het vinkje goed; je saldo blijft precies zoals het nu is. Het geld van toen staat er immers al in — er nu nóg een bedrag bij optellen zou het dubbel tellen.</div>
-    <button class="primary" style="width:100%;margin-top:14px" onclick="closeSheet()">Klaar</button>`);
+    <div class="muted" style="font-size:12.5px;margin-top:12px">Elk vinkje wordt meteen bewaard; tik nog eens om het weg te halen. Dit zet alleen het vinkje goed — je saldo blijft precies zoals het nu is, want het geld van toen staat er al in.</div>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="closeSheet()">Sluiten</button>`);
 }
 function inhaalTgl(el,pi,k){
   const p=db.potjes[pi];if(!p)return;
@@ -3397,8 +3409,8 @@ function renderLoonLog(){
   const logs=[...(db.loonLog||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const inc=avgIncome();const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));
   lc.innerHTML=`<div class="row between"><h2 style="margin:0">Netto ontvangen</h2><button class="tiny primary" onclick="openLoonLog()">＋ Loon</button></div>
-    <div class="muted" style="margin:6px 0 4px">Log wat er binnenkomt; de app rekent je maandinkomen uit.</div>
-    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld inkomen</span><span class="v">${eur(inc)} p/mnd</span></div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} p/mnd</span></div>`:''}
+    <div class="muted" style="margin:6px 0 4px">Vul elke keer in wat er op je rekening kwam. Na een paar keer weet de app wat je gemiddeld per maand verdient.</div>
+    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld per maand</span><span class="v">${eur(inc)}</span></div><div class="muted" style="font-size:12px;margin:-2px 0 6px">Over je laatste 12 maanden · nu ${logs.length} keer loon ingevuld</div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} p/mnd</span></div>`:''}
     ${logs.length?`<div class="muted" style="margin-top:12px;font-weight:800">Laatste ontvangsten · tik om te bewerken</div>`+logs.slice(0,6).map(x=>{const d=new Date(x.date);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer" onclick="openLoonLog('${x.id}')"><span class="muted">${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}${x.note?' · '+esc(x.note):''}</span><b>${eur(x.amount)}</b></div>`;}).join(''):`<div class="muted" style="margin-top:10px">Nog geen loon gelogd.</div>`}`;
 }
 function openLoonLog(id){
@@ -3677,7 +3689,9 @@ function typeTime(cfg){return (cfg.tijd||db.meldTijd||'08:00').split(':').map(Nu
 function remDate(base,r,hh,mm){const x=new Date(base);const n=+r.n||0;if(r.u==='d')x.setDate(x.getDate()-n);else if(r.u==='w')x.setDate(x.getDate()-7*n);else if(r.u==='m')x.setMonth(x.getMonth()-n);else x.setFullYear(x.getFullYear()-n);x.setHours(hh,mm,0,0);return x;}
 function fillTekst(t,ctx){return String(t).replace(/\{naam\}/g,ctx.naam||'').replace(/\{bedrag\}/g,ctx.bedrag||'').replace(/\{datum\}/g,ctx.datum||'').replace(/\{dagen\}/g,ctx.dagen||'').replace(/\{wanneer\}/g,ctx.wanneer||'');}
 function remLabel(r){if(!(+r.n))return 'Op de dag zelf';const U={d:['dag','dagen'],w:['week','weken'],m:['maand','maanden'],j:['jaar','jaar']};const u=U[r.u]||U.d;return r.n+' '+(+r.n===1?u[0]:u[1])+' vooraf';}
-function remShort(r){if(!(+r.n))return 'op de dag';const U={d:'d',w:'w',m:'mnd',j:'jr'};return r.n+' '+(U[r.u]||'d')+' vooraf';}
+/* "1 d · op de dag · 08:00" was code. Een opsomming in gewone taal leest als een zin. */
+function lijstTekst(a){a=(a||[]).filter(Boolean);if(!a.length)return '';if(a.length===1)return a[0];return a.slice(0,-1).join(', ')+' en '+a[a.length-1];}
+function remShort(r){if(!(+r.n))return 'op de dag zelf';const n=+r.n;const U={d:['dag','dagen'],w:['week','weken'],m:['maand','maanden'],j:['jaar','jaar']};const w=U[r.u]||U.d;return n+' '+(n===1?w[0]:w[1])+' vooraf';}
 async function scheduleLoonMeldingen(){if(!(NATIVE&&P.LocalNotifications))return;const LN=P.LocalNotifications;try{
   const perm=await LN.requestPermissions();if(perm.display!=='granted')return;
   const pend=await LN.getPending();if(pend&&pend.notifications&&pend.notifications.length)await LN.cancel({notifications:pend.notifications.map(x=>({id:x.id}))});
@@ -3712,7 +3726,7 @@ function renderMeldTypes(){
   const c=document.getElementById('meldTypeList');if(!c)return;
   c.innerHTML=MELD_TYPES.filter(t=>(!t.mod||moduleOn(t.mod))&&(t.k!=='toeslag'||featOn('toeslag'))&&(t.k!=='document'||featOn('documenten'))&&(t.k!=='controle'||featOn('comp'))).map(t=>{
     const cfg=meldCfgOf(t.k);
-    const sum=cfg.on?(cfg.reminders.length?cfg.reminders.map(remShort).join(' · '):'geen herinneringen')+(cfg.tijd?' · '+cfg.tijd:''):'Uit';
+    const sum=cfg.on?(cfg.reminders.length?lijstTekst(cfg.reminders.map(remShort)):'geen herinneringen')+(cfg.tijd?', om '+cfg.tijd:''):'Uit';
     return `<div class="mrow" onclick="openMeldSheet('${t.k}')"><span style="color:var(--accent);padding-left:6px">${ico(t.ico,'width:20px;height:20px;margin:0 6px 0 0')}</span><div style="flex:1;min-width:0"><b>${t.label}</b><div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sum}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`;
   }).join('');
 }
@@ -3756,7 +3770,7 @@ function saveMeldSheet(){
   db.meldCfg=db.meldCfg||{};db.meldCfg[window._msK]=c;
   haptic();save();scheduleLoonMeldingen();closeSheet();render();toast('Opgeslagen');
 }
-async function testMelding(){if(!(NATIVE&&P.LocalNotifications)){toast('Meldingen niet beschikbaar ('+(Cap?(Cap.getPlatform?Cap.getPlatform():'?'):'geen Capacitor')+')');return;}try{const perm=await P.LocalNotifications.requestPermissions();if(perm.display!=='granted'){toast('Geen toestemming — zet meldingen aan bij telefooninstellingen → Apps → GridLife');return;}await P.LocalNotifications.schedule({notifications:[{id:999,title:'Testmelding',body:'Zo ziet je loon-melding eruit.',schedule:{at:new Date(Date.now()+5000).toISOString(),allowWhileIdle:true}}]});toast('Melding volgt over ± 5 sec');}catch(e){toast('Mislukt: '+(e&&e.message||e));}}
+async function testMelding(){if(!(NATIVE&&P.LocalNotifications)){toast('Meldingen werken alleen in de geinstalleerde app, niet in de browser');return;}try{const perm=await P.LocalNotifications.requestPermissions();if(perm.display!=='granted'){toast('Geen toestemming — zet meldingen aan bij telefooninstellingen → Apps → GridLife');return;}await P.LocalNotifications.schedule({notifications:[{id:999,title:'Testmelding',body:'Zo ziet je loon-melding eruit.',schedule:{at:new Date(Date.now()+5000).toISOString(),allowWhileIdle:true}}]});toast('Melding volgt over ± 5 sec');}catch(e){toast('Mislukt: '+(e&&e.message||e));}}
 
 /* ===== RECEPTEN ===== */
 let receptFilter='';

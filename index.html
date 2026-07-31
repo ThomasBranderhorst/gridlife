@@ -229,7 +229,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .onb .logo svg{width:48px;height:48px}
 .onbrow{display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--line);border-radius:18px;margin-bottom:10px;background:var(--card);cursor:pointer;box-shadow:var(--shadow)}
 .onbrow .tt{flex:1}.onbrow b{display:block;font-size:15px}
-.confirmOverlay{position:fixed;inset:0;background:rgba(8,14,10,.55);backdrop-filter:blur(3px);z-index:200;display:none;align-items:center;justify-content:center;padding:24px}
+/* Boven de onboarding (300), want een bevestiging hoort altijd boven het scherm dat erom vraagt.
+   Onder het app-slot (500), want dat mag nooit door iets heen te bedienen zijn. */
+.confirmOverlay{position:fixed;inset:0;background:rgba(8,14,10,.55);backdrop-filter:blur(3px);z-index:350;display:none;align-items:center;justify-content:center;padding:24px}
 .confirmOverlay.show{display:flex}
 .confirmCard{background:var(--card);border-radius:20px;padding:22px 22px 18px;max-width:340px;width:100%;box-shadow:var(--shadow);animation:fade .18s ease}
 .confirmCard h2{font-size:17px;margin:0 0 8px}
@@ -853,7 +855,7 @@ function renderOnb(){
     <label>Hoe mogen we je noemen? (optioneel)</label><input id="onb_naam" value="${esc(_ob.naam)}" placeholder="bijv. Thomas">`+nav('Beginnen')
     +`<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
       <div class="muted" style="font-size:12.5px;margin-bottom:9px">Kom je van een oude telefoon?</div>
-      <button class="ghost" style="width:100%" onclick="document.getElementById('onbImportFile').click()">Ik heb al een back-up</button>
+      <button class="ghost" style="width:100%" onclick="onbImportStart()">Ik heb een back-upbestand van mijn oude telefoon</button>
       <input type="file" id="onbImportFile" accept=".json,application/json" style="display:none" onchange="onbImport(event)">
       <div id="onbFout" style="display:none;text-align:left;margin-top:10px;background:var(--bad-bg);color:var(--bad-tx);border-radius:12px;padding:11px 12px;font-size:12.5px;line-height:1.5"></div>
     </div>`;
@@ -866,34 +868,34 @@ function renderOnb(){
     ${obRow('documenten','Documenten','Verloopdatums van ID en passen bewaken','doc')}`+nav();
   }else if(key==='uren'){
     html=`<h1>Werk & uren</h1><p class="muted" style="margin:0 0 18px">Wat wil je rondom je werk gebruiken?</p>
-    ${obRow('contract','Contract-uren','Zien of je boven of onder je contract zit')}
+    ${obRow('contract','Vast aantal uur per week','Je ziet dan of je meer of minder hebt gewerkt dan afgesproken. Heb je een oproepcontract, laat dit dan uit.')}
     ${obRow('comp','Uren controleren','Checken of je uren kloppen en afwijkingen rechtzetten')}
-    ${obRow('stats','Statistieken','Grafieken per dag, week en maand')}
+    ${obRow('stats','Statistieken','Grafieken van je gewerkte uren per dag, week en maand')}
     <label style="margin-top:16px">Bij welke werkgever(s) werk je? (optioneel)</label><input id="onb_werk" value="${esc(_ob.werk)}" placeholder="bijv. Jumbo, Sincere"><div class="muted" style="font-size:12px;margin-top:4px">Komma's ertussen. Later aan te passen via Instellingen → Beheren.</div>`+nav();
   }else if(key==='potjes'){
     html=`<h1>Geld & potjes</h1><p class="muted" style="margin:0 0 18px">Stel je geld-onderdeel samen.</p>
-    ${obRow('buffers','Buffers','Sparen voor onvoorspelbare kosten, met maandadvies')}
-    ${obRow('toeslag','Toeslagen','Zorgtoeslag e.d. verrekenen en volgen')}
-    ${obRow('ontvangst','Losse ontvangsten','Geld-erbij los kunnen loggen')}
+    ${obRow('buffers','Sparen voor onverwachte kosten','Voor dingen die je niet kunt plannen: tandarts, autoreparatie, kapotte wasmachine')}
+    ${obRow('toeslag','Toeslagen','Geld dat je terugkrijgt van de overheid, zoals zorgtoeslag of huurtoeslag')}
+    ${obRow('ontvangst','Geld dat binnenkomt','Los geld erbij noteren, bijvoorbeeld als iemand je terugbetaalt')}
     ${obRow('fuel','Ik heb een auto','Benzine bijhouden met liters en literprijs — we zetten een Benzine-potje voor je klaar')}
-    ${obRow('once','Eenmalige uitgaven','Uitschieters niet laten meetellen in gemiddelden')}
-    ${obRow('hints','Slimme hints','Verwachte échte datum én bedrag van een betaling tonen')}`+nav();
+    ${obRow('once','Eenmalige grote uitgave','Een uitschieter niet laten meetellen, zodat je gemiddelde klopt')}
+    ${obRow('hints','Leren van je historie','De app onthoudt wanneer een rekening echt afgeschreven wordt en voor hoeveel')}`+nav();
   }else if(key==='loon'){
     /* De loondag hier al zetten scheelt veel: hij bepaalt je meldingen, "volgende loon" én het moment
        waarop je potjes-checklist reset. Het voorbeeldblok laat meteen zien of het klopt. */
     const OL=_ob.loon;
-    html=`<h1>Loon</h1><p class="muted" style="margin:0 0 18px">Wanneer krijg je loon? Hier draait je hele planning op: je meldingen, "volgende loon" en het moment waarop je potjes-checklist opnieuw begint. Later aanpassen kan altijd.</p>
+    html=`<h1>Loon</h1><p class="muted" style="margin:0 0 18px">Wanneer krijg je loon? Vul je loondag in — de app rekent daarna zelf uit wanneer je weer geld krijgt. Later aanpassen kan altijd.</p>
     <label>Hoe vaak krijg je loon?</label>
     <div class="row" style="flex-wrap:wrap;gap:8px">${LOONMODI.map(([k,l])=>`<span class="chip ${OL.mode===k?'on':''}" onclick="loonSet('ob','mode','${k}')">${l}</span>`).join('')}</div>
     ${loonWanneerHTML(OL,'ob')}
     ${loonWeekendHTML(OL,'ob')}
     <div class="mini" style="margin:14px 0 18px;background:var(--card2)"><div class="mini-h">Je eerstvolgende loondagen</div>${loonVoorbeeldHTML(OL,4)}</div>
-    ${obRow('loonlog','Loon loggen','Netto inkomen bijhouden en zien wat je maandelijks overhoudt')}`+nav();
+    ${obRow('loonlog','Je loon noteren','Bijhouden wat er binnenkomt, zodat je ziet wat je maandelijks overhoudt')}`+nav();
   }else{
     const aan=[];
     MODULES.forEach(m=>{if(_ob.mods[m.k])aan.push(m.naam);});if(_ob.feat.documenten)aan.push('Documenten');
     html=`<h1>Klaar!</h1><p class="muted" style="margin:0 0 14px">Je app is ingesteld met: <b style="color:var(--text)">${aan.join(' · ')||'—'}</b>.</p>
-    <p class="muted" style="margin:0 0 6px">Na de start krijg je een korte uitleg op maat van jouw functies. Alles is later aan te passen via Instellingen → Personaliseren.</p>`+nav('Aan de slag →');
+    <p class="muted" style="margin:0 0 6px">Na de start krijg je een korte uitleg op maat van jouw functies. Alles kun je later aanpassen bij Instellingen.</p>`+nav('Aan de slag →');
   }
   c.innerHTML=html;window.scrollTo(0,0);document.getElementById('onb').scrollTop=0;
 }
@@ -919,6 +921,15 @@ function onbFout(kop){
   const el=document.getElementById('onbFout');if(!el)return;
   el.innerHTML=`<b>${kop}</b><br>${BESTAND_UITLEG}<br>Tik hierboven nog eens om een ander bestand te kiezen.`;
   el.style.display='block';
+}
+/* Eerst vertellen wat er gaat gebeuren, dan pas de bestandenmap openen. De knop sloeg de hele wizard
+   over en gooide meteen een systeemscherm open; wie er uit nieuwsgierigheid op tikte wist niet meer
+   waar hij was. */
+function onbImportStart(){
+  confirmSheet('Back-up terugzetten',
+    'We openen zo je bestanden. Kies daar het bestand dat begint met "gridlife-backup". Al je potjes, diensten en instellingen komen dan terug en de rest van deze vragen slaan we over.',
+    'Bestand kiezen',
+    ()=>document.getElementById('onbImportFile').click());
 }
 function onbImport(e){
   const f=e.target.files[0];e.target.value='';if(!f)return;
@@ -1680,8 +1691,20 @@ function resolveAfw(id,via){
   const s=db.shifts.find(x=>x.id===id);if(!s)return;const c=ctrlOf(s);
   if(c.opgelost){toast('Deze afwijking is al rechtgezet');return;}
   if(via==='later'){
-    const opts=[...db.shifts].filter(x=>x.id!==id&&x.werk===s.werk).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,120).map(x=>{const d=new Date(x.date);return `<option value="${x.id}">${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()} · ${fmtDur(hoursOf(x))}</option>`;}).join('');
-    openSheet(`<h2>Rechtgezet op latere dienst</h2><div class="muted" style="margin-bottom:8px">Bij welke dienst zijn de ${c.min?fmtDur(c.min/60):'uren'} erbij gezet?</div><label>Dienst</label><select id="ra_shift">${opts||'<option value="">— geen andere diensten —</option>'}</select><button class="primary" style="width:100%;margin-top:14px" onclick="confirmResolve('${id}','later')">Bevestigen</button>`,openControle);
+    /* De lijst heette "latere dienst" maar filterde niet op datum: elke dienst van deze werkgever stond
+       erin, ook die van vóór de afwijking. Bij uren die later zijn bijgeboekt kan dat per definitie niet.
+       Bovendien stond de eerste optie al geselecteerd, dus wie meteen op Bevestigen tikte koppelde zijn
+       uren stilletjes aan een dienst die hij nooit had gekozen. Nu: alleen diensten ná de afwijking,
+       oudste eerst (dat is de waarschijnlijkste), met de weekdag erbij zodat je hem herkent, en niets
+       voorgeselecteerd. */
+    const kort=d=>DAG[d.getDay()]+' '+d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear();
+    const later=[...db.shifts].filter(x=>x.id!==id&&x.werk===s.werk&&x.date>s.date).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,120);
+    const opts=later.map(x=>`<option value="${x.id}">${kort(new Date(x.date))} · ${fmtDur(hoursOf(x))}</option>`).join('');
+    const leeg=`<div class="muted" style="font-size:12.5px;margin-top:10px">Je hebt na ${kort(new Date(s.date))} nog geen dienst bij ${esc(s.werk||'deze werkgever')} genoteerd. Voeg die dienst eerst toe, of kies "Apart nabetaald" als het los wordt uitbetaald.</div>`;
+    openSheet(`<h2>Rechtgezet op latere dienst</h2><div class="muted" style="margin-bottom:8px">Bij welke dienst zijn de ${c.min?fmtDur(c.min/60):'uren'} erbij gezet? Je ziet alleen diensten ná ${kort(new Date(s.date))}.</div>`
+      +(later.length
+        ? `<label>Dienst</label><select id="ra_shift"><option value="">— kies een dienst —</option>${opts}</select><button class="primary" style="width:100%;margin-top:14px" onclick="confirmResolve('${id}','later')">Bevestigen</button>`
+        : leeg),openControle);
   }else if(via==='nabetaald'){
     openSheet(`<h2>Apart nabetaald</h2><div class="muted" style="margin-bottom:8px">De ${c.min?fmtDur(c.min/60):'uren'} worden los uitbetaald. Op welke datum?</div><label>Nabetaald op</label><input type="date" id="ra_date" value="${suggestNabetaal(s.werk)}" oninput="nabDateHint()"><div id="ra_hint" style="font-size:12px;margin-top:4px"></div><button class="primary" style="width:100%;margin-top:14px" onclick="confirmResolve('${id}','nabetaald')">Bevestigen</button>`,openControle);
     nabDateHint();
@@ -1692,6 +1715,9 @@ function resolveAfw(id,via){
 function confirmResolve(id,via){
   const s=db.shifts.find(x=>x.id===id);if(!s)return;const cc=ctrlOf(s);
   if(cc.opgelost){toast('Deze afwijking is al rechtgezet');return;}
+  /* Zonder gekozen dienst niets vastleggen: anders staat de afwijking als rechtgezet te boek zonder
+     dat er iets aan hangt, en zie je later alleen nog "rechtgezet op latere dienst" zonder datum. */
+  if(via==='later'&&!val('ra_shift')){toast('Kies eerst een dienst');return;}
   cc.opgelost=true;cc.via=via;
   if(via==='later')cc.corrShiftId=val('ra_shift')||'';
   if(via==='nabetaald'){cc.nabetaalDatum=val('ra_date')||'';cc.nabOntvangen=false;}

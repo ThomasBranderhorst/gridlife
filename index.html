@@ -303,7 +303,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
 
   <section class="tab" id="tab-potjes">
     <div id="potHeader"></div>
-    <button class="ghost" style="width:100%;margin-bottom:12px" onclick="openOverzicht()">Overzicht</button>
+    <button class="ghost" id="potOverzichtBtn" style="width:100%;margin-bottom:12px" onclick="openOverzicht()">Al mijn uitgaven</button>
     <div id="potList"></div>
     <div class="grid2"><button class="ghost" onclick="toggleAllOverboek()" id="potAllBtn">Alles overgemaakt</button><button class="ghost" onclick="openPotEdit()">Beheren</button></div>
   </section>
@@ -402,7 +402,7 @@ const P={LocalNotifications:plug('LocalNotifications'),Filesystem:plug('Filesyst
 /* ===== OPSLAG ===== */
 const KEY='mijnapp_v1';
 const MODULES=[{k:'uren',naam:'Uren',ico:'klok',oms:'Werkuren bijhouden en controleren'},{k:'potjes',naam:'Potjes / Sparen',ico:'pot',oms:'Vaste lasten, buffers en spaargeld'},{k:'loon',naam:'Loon',ico:'loon',oms:'Loondag en meldingen'},{k:'recept',naam:'Recepten',ico:'recept',oms:'Eigen recepten met categorieën'}];
-const FREQ=[{k:'m',label:'per maand',n:1,u:'m'},{k:'w',label:'per week',n:1,u:'w'},{k:'4w',label:'per 4 weken',n:4,u:'w'},{k:'q',label:'per kwartaal',n:3,u:'m'},{k:'6m',label:'per half jaar',n:6,u:'m'},{k:'j',label:'per jaar',n:1,u:'j'},{k:'x',label:'aangepast…',n:1,u:'m'}];
+const FREQ=[{k:'m',label:'per maand',n:1,u:'m'},{k:'w',label:'per week',n:1,u:'w'},{k:'4w',label:'per 4 weken',n:4,u:'w'},{k:'q',label:'per kwartaal',n:3,u:'m'},{k:'6m',label:'per half jaar',n:6,u:'m'},{k:'j',label:'per jaar',n:1,u:'j'},{k:'x',label:'Anders — zelf instellen',n:1,u:'m'}];
 const DEFAULT={setup:false,modules:{uren:true,potjes:true,loon:true,recept:true},accent:0,lock:{on:false,pin:''},werkgevers:[],werkCfg:{},shifts:[],potjes:[],rekeningen:[],loon:{mode:'month',dag:25,intervalWeeks:4,start:''},meldingen:true,meldTijd:'08:00',overboek:{},boodschappen:[],lastBackup:null,backup:{on:true,dir:'DOCUMENTS',freq:'change'},receptCategorieen:[],recepten:[]};
 /* Standaard-instelling per werkgever ("houd het simpel"): elke dienst controleren, correctie op een latere dienst. */
 /* mode      month = maandelijks · twice = 2x per maand · weeks = per aantal weken · manual = wisselend
@@ -1028,28 +1028,28 @@ const GUIDE=[
  t:gt(`Op het Uren-scherm staat de knop <b>Statistieken bekijken</b>. Daar zie je je uren per dag, week of maand, met een filter per werkgever. Handig om te zien of je meer of minder bent gaan werken.`)},
 /* ---------- POTJES ---------- */
 {s:'Potjes & sparen',mod:'potjes',q:'Wat is een potje precies?',a:{lbl:'Naar Potjes',fn:"go('potjes')"},
- v:gv(`<div class="pot" style="margin-bottom:8px"><div class="ph"><div style="flex:1"><b>Vaste Lasten</b></div><div class="check on">✓</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Per maand opzij</span><span class="amt">${eur(208.7)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(225.59)}</div><div style="margin-top:8px"><span class="statusbadge ok">● Saldo genoeg</span></div></div></div></div><div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Bunq spaar</b></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Saldo</span><span class="amt">${eur(4195.67)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">Spaarpotje</div></div></div></div>`),
+ v:gv(`<div class="pot" style="margin-bottom:8px"><div class="ph"><div style="flex:1"><b>Vaste Lasten</b></div><div class="check on">✓</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(208.7)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(225.59)}</div><div style="margin-top:8px"><span class="statusbadge ok">● Saldo genoeg</span></div></div></div></div><div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Bunq spaar</b></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Saldo</span><span class="amt">${eur(4195.67)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">Spaarpotje</div></div></div></div>`),
  t:gt(`Een potje is een <b>doel om geld voor apart te zetten</b> — het hoeft geen echte rekening te zijn. Zet je er vaste lasten in — huur, verzekering, abonnementen — dan rekent de app uit hoeveel je per maand opzij moet zetten en of je saldo genoeg is. Zonder vaste lasten is het gewoon een <b>spaarpotje</b>: alleen een saldo.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Hoe voeg ik een vaste last toe?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Volgende betaaldatum','1 aug 2026')}</div>`),
  t:gt(`Open een potje, tik op <b>Potje bewerken</b> en voeg een vaste last toe met bedrag, frequentie en de eerstvolgende betaaldatum. De app rekent alles om naar een maandbedrag — ook als iets per kwartaal of per jaar afgeschreven wordt — en zet de betaling op je Betalingen-pagina.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Wat betekent "per maand opzij"?',
- v:gv(`<div class="card" style="margin-bottom:0"><div class="muted">Opzij voor de komende maand</div><div class="big">${eur(208.7)}</div><div class="bar" style="margin-top:14px"><div style="width:64%"></div></div>${GKV('Overgemaakt',eur(133.5),'var(--green)')}<div class="muted" style="margin-top:2px;font-size:12.5px">reset bij loon (25 jul 2026)</div></div>`),
+ v:gv(`<div class="card" style="margin-bottom:0"><div class="muted">Opzij zetten deze maand</div><div class="big">${eur(208.7)}</div><div class="bar" style="margin-top:14px"><div style="width:64%"></div></div>${GKV('Overgemaakt',eur(133.5),'var(--green)')}<div class="muted" style="margin-top:2px;font-size:12.5px">reset bij loon (25 jul 2026)</div></div>`),
  t:gt(`Dat is de optelsom van al je vaste lasten, omgerekend naar één maand. Een jaarabonnement van ${eur(120)} telt dus als ${eur(10)} per maand. Het is het bedrag dat je op je loondag opzij zet <b>voor de maand die eraan komt</b>.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Hoe weet ik of ik genoeg in een potje heb staan?',a:{lbl:'Naar Potjes',fn:"go('potjes')"},
- v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Maandelijkse vaste lasten</b></div><div class="check on">&#10003;</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Per maand opzij</span><span class="amt">${eur(208.09)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(433.68)}</div><div style="margin-top:8px"><span class="statusbadge ok">&#9679; Deze maand nog ${eur(225.59)} &middot; saldo genoeg</span></div><div style="font-size:13px;margin-top:4px;color:var(--ok-tx)">Op 1 aug: <b>${eur(208.09)}</b> &middot; precies één maand</div></div></div></div>`),
+ v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Maandelijkse vaste lasten</b></div><div class="check on">&#10003;</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(208.09)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(433.68)}</div><div style="margin-top:8px"><span class="statusbadge ok">&#9679; Deze maand nog ${eur(225.59)} &middot; saldo genoeg</span></div><div style="font-size:13px;margin-top:4px;color:var(--ok-tx)">Op 1 aug: <b>${eur(208.09)}</b> &middot; precies één maand</div></div></div></div>`),
  t:gt(`Er staan twee regels onder elkaar, met twee verschillende vragen.`)
   +gt(`<b>De badge</b> gaat over nu: hoeveel er deze maand nog van dit potje af moet, en of je saldo dat dekt. Staat er rood, dan komt er een afschrijving aan waar je saldo niet voor toereikend is.`)
   +gt(`<b>De regel eronder</b> gaat over straks: wat er op de 1e van de volgende maand overblijft als alles is afgehandeld. Zet je netjes een maand vooruit opzij, dan hoort daar precies één maand te staan — de app zegt het als het meer of minder is.`)
   +gt(`Bij bufferpotjes (tandarts, auto-onderhoud) en spaarpotjes staat die tweede regel er niet: daar hoort je saldo juist op te lopen.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Wat doet het vinkje "overgemaakt"?',a:{lbl:'Naar Potjes',fn:"go('potjes')"},
- v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Vaste Lasten</b></div><div class="check on">✓</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Per maand opzij</span><span class="amt">${eur(208.7)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(225.59)}</div></div></div></div>`),
+ v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Vaste Lasten</b></div><div class="check on">✓</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(208.7)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(225.59)}</div></div></div></div>`),
  t:gt(`Heb je het geld daadwerkelijk overgemaakt naar dat potje? Zet dan het vinkje aan — de app vraagt met welk bedrag en telt dat bij je saldo op. De hele checklist <b>reset vanzelf op je loondag</b>, zodat je elke loonperiode opnieuw begint. Vergissing? Vink 'm uit en kies of het saldo mee terug moet.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'buffers',q:'Wat is een buffer en wat is dat maandadvies?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
  v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm"><span class="tinytag">BUFFER</span> Auto-onderhoud</span><span class="itamt">${eur(25)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div><div class="ln" style="margin-top:8px">Aanbevolen: <b style="color:var(--text)">${eur(33)}/mnd</b></div></div><div class="row between" style="margin-top:8px;align-items:center;gap:10px"><span class="muted">Op basis van je echte uitgaven</span><button class="tiny primary">Overnemen</button></div>`),
  t:gt(`Een buffer is voor kosten die je <b>niet kunt plannen</b>: autoreparaties, tandarts, kapotte apparaten. Er is geen vaste datum, alleen een bedrag dat je maandelijks opzijzet. De app kijkt naar wat je er het afgelopen jaar echt uit betaald hebt en adviseert een realistischer maandbedrag — met één tik neem je dat over.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'opzijtel',q:'Wat betekent "5 van 7 keer overgemaakt"?',
- v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Auto</b></div><div class="check"></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Per maand opzij</span><span class="amt">${eur(44.17)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(96)}</div><div style="margin-top:8px"><span class="statusbadge warn">&#9679; 5 van 7 keer overgemaakt</span><div style="font-size:13px;margin-top:4px;color:var(--amber)">2 keer overgeslagen &middot; <b>${eur(88.34)}</b> minder opzij gezet</div></div></div></div></div>`),
+ v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Auto</b></div><div class="check"></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(44.17)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(96)}</div><div style="margin-top:8px"><span class="statusbadge warn">&#9679; 5 van 7 keer overgemaakt</span><div style="font-size:13px;margin-top:4px;color:var(--amber)">2 keer overgeslagen &middot; <b>${eur(88.34)}</b> minder opzij gezet</div></div></div></div></div>`),
  t:gt(`Bij een potje met alleen maandelijkse vaste lasten hoort er steeds precies één maand klaar te staan — dat leest de app zo van je saldo af. Bij een <b>buffer</b> of een <b>jaarpost</b> kan dat niet: daar hoort je saldo juist op te lopen naar één grote afschrijving, en een buffer die je gebruikt is geen fout maar precies de bedoeling.`)
  +gt(`Daarom kijkt de app hier niet naar je saldo maar naar <b>wat jij er zelf in stopte</b>: hoe vaak heb je dit potje op je loondag afgevinkt? Uitgaven tellen niet mee — betaal je een dure reparatie, dan blijft de teller gewoon op groen staan.`)
  +gt(`Twee dingen houden het eerlijk. Het tellen begint pas bij de <b>eerste keer dat je afvinkte</b>, dus een potje dat je vandaag aanmaakt krijgt nooit een verzonnen achterstand over de maanden ervoor. En er wordt maximaal <b>12 loondagen</b> teruggekeken: haal je een gemiste maand in, dan rolt hij vanzelf uit beeld. De lopende loonperiode telt nog niet mee — die kun je vandaag nog gewoon overmaken.`)
@@ -1223,7 +1223,7 @@ function renderStart(){
   if(moduleOn('loon')&&featOn('loonlog')&&featOn('st_over')){const inc=avgIncome();if(inc!=null){const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));const vrij=round2(inc-opzij);overTile=`<div class="dashcard" style="margin-bottom:0" onclick="go('loon')"><div class="muted" style="font-size:12.5px">Hou ik over</div><div class="big" style="font-size:19px;margin-top:3px;color:${vrij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(vrij)}</div><div class="muted" style="font-size:12px;margin-top:1px">per maand</div></div>`;}}
   if(loonTile&&overTile)html+=`<div class="grid2" style="margin-bottom:12px">${loonTile}${overTile}</div>`;
   else if(loonTile||overTile)html+=`<div style="margin-bottom:12px">${loonTile||overTile}</div>`;
-  if(moduleOn('potjes')&&featOn('st_potjes')&&db.potjes.length){const pk=currentPeriodKey();const done=db.overboek[pk]||{};let tot=0,ged=0,cd=0,rel=0;db.potjes.forEach((p,i)=>{const t=potTot(p);if(t>0){rel++;tot+=t;if(done[i]){ged+=t;cd++;}}});const pct=tot?Math.round(ged/tot*100):0;if(rel)html+=`<div class="dashcard" onclick="go('potjes')"><div class="row between"><b>${ico('pot')}Opzij voor komende maand</b><span class="muted">${cd}/${rel}</span></div><div class="bar" style="margin:8px 0 4px"><div style="width:${pct}%"></div></div><div class="muted">${eur(ged)} van ${eur(tot)} overgemaakt</div></div>`;}
+  if(moduleOn('potjes')&&featOn('st_potjes')&&db.potjes.length){const pk=currentPeriodKey();const done=db.overboek[pk]||{};let tot=0,ged=0,cd=0,rel=0;db.potjes.forEach((p,i)=>{const t=potTot(p);if(t>0){rel++;tot+=t;if(done[i]){ged+=t;cd++;}}});const pct=tot?Math.round(ged/tot*100):0;if(rel)html+=`<div class="dashcard" onclick="go('potjes')"><div class="row between"><b>${ico('pot')}Opzij zetten deze maand</b><span class="muted">${cd}/${rel}</span></div><div class="bar" style="margin:8px 0 4px"><div style="width:${pct}%"></div></div><div class="muted">${eur(ged)} van ${eur(tot)} overgemaakt</div></div>`;}
   if(moduleOn('uren')&&featOn('st_uren')){const wk=isoWeek(new Date()),wy=isoWeekYear(new Date());const wkMin=db.shifts.filter(s=>{const d=new Date(s.date);return isoWeek(d)===wk&&isoWeekYear(d)===wy;}).reduce((a,s)=>a+hoursOf(s)*60,0);const openAfw=afwOpenShifts().length,minOpen=afwMinOpen(),todo=teCheckShifts().length,nabW=nabWachtShifts().length;const tegHtml=!featOn('comp')?'':(openAfw?`<div class="muted" style="color:var(--bad-tx);margin-top:4px">${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' &middot; '+fmtDur(minOpen/60):''}</div>`:(todo?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${todo} dienst${todo===1?'':'en'} te controleren</div>`:(nabW?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${nabW} nabetaling${nabW===1?'':'en'} verwacht</div>`:'<div class="muted" style="margin-top:4px;color:var(--ok-tx)">Alles gecontroleerd</div>')));html+=`<div class="dashcard" onclick="go('uren')"><div class="row between"><b>${ico('klok')}Uren deze week</b><span>${fmtDur(wkMin/60)}</span></div>${tegHtml}</div>`;}
   if(moduleOn('uren')&&featOn('stats')&&featOn('st_grafiek')&&db.shifts.length){const by={};db.shifts.forEach(s=>{if(!geldigeDatum(s.date))return;const k=s.date.slice(0,7);by[k]=(by[k]||0)+hoursOf(s);});const keys=Object.keys(by).sort().slice(-6);const max=Math.max(...keys.map(k=>by[k]),1);html+=`<div class="dashcard" onclick="go('uren');setTimeout(openStats,120)"><div class="row between"><b>${ico('chart')}Uren per maand</b><span class="statusbadge none">meer</span></div><div style="display:flex;align-items:flex-end;gap:6px;height:74px;margin-top:10px">${keys.map(k=>{const mo=k.split('-')[1];return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;background:linear-gradient(var(--accent),var(--accent2));border-radius:4px 4px 0 0;height:${Math.max(6,Math.round(by[k]/max*54))}px"></div><span class="muted" style="font-size:10px">${MND[+mo-1].slice(0,3)}</span></div>`;}).join('')}</div></div>`;}
   if(moduleOn('potjes')&&featOn('st_bet')){const nb=nextPaymentOrReceipt();if(nb){const diff=Math.round((nb.date-now)/86400000);html+=`<div class="dashcard" onclick="go('betalingen')"><div class="row between"><b>${ico('cal')}Eerstvolgende ${nb.isRec?'ontvangst':'betaling'}</b><span class="muted">${nb.date.getDate()} ${MND[nb.date.getMonth()].slice(0,3)} ${nb.date.getFullYear()}</span></div><div class="big" style="font-size:20px;margin-top:4px">${esc(nb.label)}</div><div class="muted" style="margin-top:2px">${diff===0?'Vandaag':diff===1?'Morgen':'Over '+diff+' dagen'} &middot; ${nb.isRec?'+ ':''}${eur(nb.amount)}</div></div>`;}}
@@ -2237,12 +2237,13 @@ function projectieRegel(pi,klein){
   if(!pr.maandelijks)return `<div class="muted" style="font-size:${fs};margin-top:4px">Op ${dtxt} staat hier ${eur(pr.eind)}</div>`;
   const ok=Math.abs(pr.verschil)<0.005;
   const kleur=ok?'var(--ok-tx)':(pr.verschil<0?'var(--bad-tx)':'var(--muted)');
-  /* "meer dan een maand" las als een tijdsduur terwijl het over een maandbedrag gaat. Het bedrag waar
-     mee vergeleken wordt staat er nu bij, en om welke maand het gaat. */
-  const oordeel=ok?`precies de ${eur(pr.doel)} voor volgende maand`
-    :(pr.verschil<0?`${eur(-pr.verschil)} minder dan de ${eur(pr.doel)} voor volgende maand`
-    :`${eur(pr.verschil)} meer dan de ${eur(pr.doel)} voor volgende maand`);
-  return `<div style="font-size:${fs};margin-top:4px;color:${kleur}">Op ${dtxt}: <b>${eur(pr.eind)}</b> · ${oordeel}</div>`;
+  /* Eerst stond hier de hele rekensom: eindsaldo, streefbedrag én het verschil, alle drie als bedrag.
+     Drie getallen om één ja-of-nee-vraag te beantwoorden. Nu het oordeel voorop, en een bedrag alleen
+     waar je er iets mee kunt - namelijk als je tekortkomt. */
+  const tekst=ok?`Op ${dtxt} staat er genoeg klaar voor volgende maand`
+    :(pr.verschil<0?`Op ${dtxt} kom je <b>${eur(-pr.verschil)}</b> tekort voor volgende maand`
+    :`Op ${dtxt} staat er ${eur(pr.verschil)} meer klaar dan nodig`);
+  return `<div style="font-size:${fs};margin-top:4px;color:${kleur}">${tekst}</div>`;
 }
 /* ===== OVERMAAK-TELLER =====
    Bij een potje met alleen maandelijkse kostenposten zegt projectieRegel al of er straks een maand
@@ -2306,7 +2307,7 @@ function opzijRegel(pi){
   const s=potOpzijTeller(pi);if(!s)return '';
   /* Nog niet gestart: zeg waaróm er niets staat, en verander die tekst zodra je vandaag afvinkt -
      anders lijkt het alsof je afvinken niets deed, terwijl het tellen dan juist net begonnen is. */
-  if(!s.gestart)return `<div style="margin-top:8px"><span class="statusbadge none">${s.lopendGedaan?'Bijhouden gestart · telt vanaf je volgende loondag':"Telt mee zodra je 'm afvinkt"}</span></div>`;
+  if(!s.gestart)return `<div style="margin-top:8px"><span class="statusbadge none">${s.lopendGedaan?'Genoteerd · vanaf je volgende loondag gaat de app tellen':"Vink dit potje af zodra je het hebt overgemaakt"}</span></div>`;
   if(!s.gemist)return `<div style="margin-top:8px"><span class="statusbadge ok">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span></div>`;
   return `<div style="margin-top:8px"><span class="statusbadge warn">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span>`
     +`<div style="font-size:13px;margin-top:4px;color:var(--amber)">${s.gemist} keer overgeslagen · <b>${eur(s.achterstand)}</b> minder opzij gezet</div>`
@@ -2435,19 +2436,27 @@ function renderPotjes(){
   document.getElementById('potHeader').innerHTML=`
     <div class="card hero"><div class="row between" style="align-items:center"><div><div class="muted">Totaal in je potjes</div><div class="big">${eur(totalSaldo())}</div></div><span class="pill" style="background:rgba(255,255,255,.16);color:var(--hero-tx)">${db.potjes.length} potje${db.potjes.length===1?'':'s'}</span></div></div>
     <div class="card">
-      <div class="row between" style="align-items:flex-start"><div><div class="muted">Opzij voor de komende maand</div><div class="big">${eur(tot)}</div></div><span class="statusbadge ${cnt&&cntDone===cnt?'ok':'none'}">${cnt?`${cntDone}/${cnt} overgemaakt`:'geen potjes'}</span></div>
+      <div class="row between" style="align-items:flex-start"><div><div class="muted">Opzij zetten deze maand</div><div class="big">${eur(tot)}</div></div><span class="statusbadge ${cnt&&cntDone===cnt?'ok':'none'}">${cnt?`${cntDone}/${cnt} overgemaakt`:'geen potjes'}</span></div>
       <div class="bar" style="margin-top:14px"><div style="width:${tot?Math.round(gedaan/tot*100):0}%"></div></div>
       <div class="kv"><span class="k">Overgemaakt</span><span class="v" style="color:var(--green)">${eur(gedaan)}</span></div>
-      ${nx?`<div class="muted" style="margin-top:2px;font-size:12.5px">reset bij loon (${nx.getDate()} ${MND[nx.getMonth()].slice(0,3)} ${nx.getFullYear()})</div>`:''}
+      ${nx?`<div class="muted" style="margin-top:2px;font-size:12.5px">De vinkjes beginnen opnieuw op je loondag, ${nx.getDate()} ${MND[nx.getMonth()].slice(0,3)}. Je saldo blijft gewoon staan.</div>`:''}
     </div>`;
   document.getElementById('potAllBtn').textContent=(cnt&&cntDone===cnt)?'Toch niet overgemaakt':'Alles overgemaakt';
+  /* De knop heette "Overzicht" zonder te zeggen waarvan. De juiste tekst hangt ervan af of je losse
+     ontvangsten gebruikt, en dat weet uitOntvLabel al - maar dit is vaste HTML, geen template. */
+  const ov=document.getElementById('potOverzichtBtn');if(ov)ov.textContent='Al mijn '+uitOntvLabel().toLowerCase();
   document.getElementById('potList').innerHTML=db.potjes.length?db.potjes.map((p,i)=>{
     const t=potTot(p);const on=done[i];const budget=p.fuel?(+p.maand||0):0;const spaar=!p.items.length&&!budget;
     const items=p.items.map((it,ii)=>{
       /* Elke toeslag zijn eigen regel: bij twee vergoedingen op één kostenpost wil je zien welke wat is. */
       const toeRow=toeslagenOf(it).filter(T=>toeMnd(T)>0).map(T=>`<div class="kv"><span class="k">${T.naam?esc(T.naam):'Toeslag'} terug</span><span class="v" style="color:var(--ok-tx)">+ ${eur(T.v)} ${freqTxt(T.fn,T.fu)}</span></div>`).join('');
       const occ=(it.due&&!it.buffer)?itemNextOcc(it):null;
-      const dueRow=occ?`<div class="kv"><span class="k">Volgende betaaldatum</span><span class="v">${termijnDatumTekst(occ,itemSpan(it),true)}</span></div>`:(it.due&&!it.buffer?`<div class="kv"><span class="k">Status</span><span class="v" style="color:var(--ok-tx)">Betaald voor nu</span></div>`:'');
+      /* "Betaald voor nu" zei niet tot wanneer, en dat is juist het enige wat je wilt weten. Nu staat
+         de echte volgende datum er, met de mededeling dat die al is afgevinkt. */
+      const alBetaald=(!occ&&it.due&&!it.buffer)?occInRange(it.due,it.fn,it.fu,monthStart(new Date()),addMonths(new Date(),Math.max(36,Math.ceil(monthsPer(it.fu||'m',+it.fn||1))*2+12)))[0]:null;
+      const dueRow=occ?`<div class="kv"><span class="k">Volgende betaaldatum</span><span class="v">${termijnDatumTekst(occ,itemSpan(it),true)}</span></div>`
+        :(alBetaald?`<div class="kv"><span class="k">Volgende betaaldatum</span><span class="v" style="color:var(--ok-tx)">${termijnDatumTekst(alBetaald,itemSpan(it),true)} · al afgevinkt</span></div>`
+        :(it.due&&!it.buffer?`<div class="kv"><span class="k">Status</span><span class="v" style="color:var(--ok-tx)">Alles afgevinkt</span></div>`:''));
       const noteRow=it.note?`<div class="muted" style="margin-top:8px;font-style:italic;font-size:13px">${esc(it.note)}</div>`:'';
       return `<div class="potitem"><div class="row between" style="align-items:flex-start"><span class="nm">${it.buffer?'<span class="tinytag">BUFFER</span> ':''}${esc(it.n)}</span><span class="itamt">${eur(itMnd(it))}<span class="muted" style="font-weight:400"> p/mnd</span></span></div><div class="kv"><span class="k">Bedrag</span><span class="v">${eur(it.v)} ${freqTxt(it.fn,it.fu)}</span></div>${toeRow}${dueRow}${noteRow}</div>`;
     }).join('');
@@ -2459,8 +2468,8 @@ function renderPotjes(){
     let badge='';
     if(!spaar&&p.items.length){
       if(!ms||!ms.has)badge=`<span class="statusbadge none">Geen betalingen deze maand</span>`;
-      else if(ms.short)badge=`<span class="statusbadge short">● Deze maand nog ${eur(ms.nodig)} · ${eur(ms.tekort)} te weinig</span>`;
-      else badge=`<span class="statusbadge ok">● Deze maand nog ${eur(ms.nodig)} · saldo genoeg</span>`;
+      else if(ms.short)badge=`<span class="statusbadge short">● Er staat ${eur(ms.tekort)} te weinig in dit potje</span>`;
+      else badge=`<span class="statusbadge ok">● Er gaat nog ${eur(ms.nodig)} af · dat staat klaar</span>`;
     }
     // Brandstof-paneel (alleen bij potjes met het brandstof-vlaggetje)
     let fuelPanel='';
@@ -2485,7 +2494,7 @@ function renderPotjes(){
     }
     const tog=`onclick="document.getElementById('pot${i}').classList.toggle('open')"`;
     // Eén duidelijk hoofdbedrag + één rustige tweede regel (i.p.v. saldo in de subtitel dat concurreert).
-    const primaryLbl=spaar?'Saldo':'Per maand opzij';const primaryAmt=spaar?eur(p.saldo):eur(t);
+    const primaryLbl=spaar?'Saldo':'Opzij zetten deze maand';const primaryAmt=spaar?eur(p.saldo):eur(t);
     const secondary=spaar?(p.fuel?'Brandstofpotje':'Spaarpotje'):((p.fuel?'Brandstofpotje · ':'')+'saldo '+eur(p.saldo));
     // Twee vragen onder elkaar: red ik deze maand (badge) en staat er straks een maand klaar (projectie)?
     const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}${spaar?'':opzijRegel(i)}`;
@@ -3105,7 +3114,7 @@ function openPotDetailEdit(pi,vanaf){
     <label style="margin-top:14px">Vaste lasten</label>
     <div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Geen vaste lasten? Dan is dit een spaarpotje met alleen een saldo.</div>
     <div id="peItems"></div>
-    <button class="ghost" style="width:100%;margin-top:10px" onclick="savePotNaam(${pi});openItemEdit(${pi},-1)">Vaste last toevoegen</button>
+    <button class="ghost" style="width:100%;margin-top:10px" onclick="savePotNaam(${pi});openItemEdit(${pi},-1)">Vaste last toevoegen</button><div class="muted" style="font-size:12px;margin-top:4px">Bijvoorbeeld huur, zorgverzekering of Spotify.</div>
     <div class="row" style="margin-top:18px"><button class="danger" onclick="delPot(${pi})">Verwijderen</button><button class="primary" style="flex:1" onclick="potKlaar(${pi})">Klaar</button></div>`,uitPotjes?null:()=>{potWegAlsLeeg();openPotEdit();});
   renderPeItems(pi);
 }
@@ -3150,7 +3159,11 @@ function potWegAlsLeeg(){
 /* De wizard vroeg vroeger "Ik heb een auto" en zette dan een Benzine-potje klaar. Die vraag is weg,
    dus komt de suggestie nu op de plek waar hij ergens over gaat: zodra je een potje een naam geeft
    waar tanken in doorklinkt. Het juiste moment in plaats van de eerste minuut. */
-const FUELNAAM=/benzine|tanken|tankbeurt|brandstof|diesel|lpg|auto/i;
+/* Bewust alleen woorden die niets anders kunnen betekenen. "auto" staat er níét bij: een potje
+   "Auto onderhoud & APK" of "Autoverzekering" gaat niet over tanken en zou de hint onterecht laten
+   opduiken. "gas" ook niet - dat is bij de meeste mensen hun energierekening.
+   "tank" zonder woordgrens vangt tanken, tankbeurt, tankpas, bijtanken en volgetankt in één keer. */
+const FUELNAAM=/benzine|diesel|brandstof|lpg|tank|getankt|euro\s?9[58]|\be10\b|liters?\b/i;
 function peBrandstofHint(pi){
   const el=document.getElementById('pe_fuelHint');if(!el)return;
   const p=db.potjes[pi];const naam=val('pe_naam')||'';
@@ -3165,7 +3178,7 @@ function peBrandstofAan(pi){
   document.getElementById('pe_fuelHint').style.display='none';
   haptic();
 }
-function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${toeslagenOf(it).length?(toeslagenOf(it).length===1?' · 1 toeslag':' · '+toeslagenOf(it).length+' toeslagen'):''}${(it.due&&!it.buffer)?' · '+termijnDatumTekst(new Date(it.due),itemSpan(it),true):''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen vaste lasten.</div>';}
+function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${toeslagenOf(it).length?(toeslagenOf(it).length===1?' · 1 toeslag':' · '+toeslagenOf(it).length+' toeslagen'):''}${(it.due&&!it.buffer)?' · '+termijnDatumTekst(new Date(it.due),itemSpan(it),true):''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen rekeningen toegevoegd. Denk aan huur, zorgverzekering of je telefoonabonnement.</div>';}
 function peFuelToggle(el){tgl(el);const b=document.getElementById('pe_fuelBudget');if(b)b.style.display=el.classList.contains('on')?'block':'none';}
 function savePotNaam(pi){const el=document.getElementById('pe_naam');if(el&&el.value.trim())db.potjes[pi].n=el.value.trim();const sb=document.getElementById('pe_saldo');if(sb){const v=moneyNum(sb.value);db.potjes[pi].saldo=v==null?0:v;}const nt=document.getElementById('pe_note');if(nt)db.potjes[pi].note=nt.value.trim();const ft=document.getElementById('pe_fuel');if(ft)db.potjes[pi].fuel=ft.classList.contains('on');const mb=document.getElementById('pe_maand');if(mb)db.potjes[pi].maand=moneyNum(mb.value)||0;save();}
 function delPot(pi){
@@ -3184,10 +3197,10 @@ function openItemEdit(pi,ii){
   openSheet(`<h2>${ii>=0?'Vaste last bewerken':'Nieuwe vaste last'}</h2>
     <label>Naam</label><input id="ie_naam" value="${esc(it.n||'')}" placeholder="bijv. Zorgverzekering">
     <label style="margin-top:14px">Notitie (optioneel)</label><textarea id="ie_note" placeholder="Korte notitie...">${esc(it.note||'')}</textarea>
-    <div class="row between" style="margin-top:16px;display:${(featOn('buffers')||buf)?'flex':'none'}"><div><b>Buffer</b><div class="muted" style="font-size:12.5px">Voor onvoorspelbare kosten, zonder vast bedrag</div></div><div class="check ${buf?'on':''}" id="ie_buf" onclick="ieBufToggle(this)">${buf?'✓':''}</div></div>
+    <div class="row between" style="margin-top:16px;display:${(featOn('buffers')||buf)?'flex':'none'}"><div><b>Buffer</b><div class="muted" style="font-size:12.5px">Voor kosten die je niet kunt plannen — tandarts, autoreparatie. Je weet niet wannéér, dus je zet er elke maand een vast bedrag voor opzij.</div></div><div class="check ${buf?'on':''}" id="ie_buf" onclick="ieBufToggle(this)">${buf?'✓':''}</div></div>
     <div id="ie_vast" style="display:${buf?'none':'block'}">
       <div class="grid2" style="margin-top:4px"><div><label>Bedrag</label>${mInput('id="ie_v"',it.v,'47,50')}</div><div><label>Hoe vaak</label>${freqControl('f',it.fn,it.fu)}</div></div>
-      <div class="grid2" style="margin-top:4px"><div><label>Geplande datum (optioneel)</label><input id="ie_due" type="date" value="${it.due||''}"></div><div><label>Uiterlijk op (optioneel)</label><input id="ie_dueTot" type="date" value="${it.dueTot||''}"></div></div>
+      <div class="grid2" style="margin-top:4px"><div><label>Wanneer wordt het afgeschreven?</label><input id="ie_due" type="date" value="${it.due||''}"></div><div><label>Uiterlijk op (optioneel)</label><input id="ie_dueTot" type="date" value="${it.dueTot||''}"></div></div>
       <div class="muted" style="font-size:12.5px;margin-top:4px">Staat de dag niet vast — bijvoorbeeld "tussen 4 en 8 juni" — vul dan ook de laatste dag in. Alles daartussen geldt dan als op tijd, en de melding komt op de eerste dag.</div>
       <div style="display:${(featOn('toeslag')||toe.length)?'block':'none'}">
         <label style="margin-top:16px">Toeslagen &amp; vergoedingen</label>
@@ -3296,6 +3309,15 @@ function saveItemEdit(pi,ii,door){
   if(p&&n&&!door){
     const al=bestaandeNaam(p.items.map(x=>x.n),n,ii>=0?ii:-1);
     if(al){vraagDubbel('een vaste last in dit potje',al,()=>saveItemEdit(pi,ii,true));return;}
+  }
+  /* Het datumveld heette "optioneel" en is dat technisch ook, maar zonder datum verdwijnt de vaste
+     last uit je Betalingen en zegt je potje "geen betalingen deze maand" - zonder dat iets uitlegt
+     waarom. Wie hem leeg laat weet nu wat dat betekent en kan alsnog terug. */
+  const buf=document.getElementById('ie_buf');
+  const isBuffer=buf&&buf.classList.contains('on');
+  if(!door&&!isBuffer&&!val('ie_due')){
+    confirmSheet('Zonder datum opslaan?','Je hebt niet ingevuld wanneer dit wordt afgeschreven. Deze vaste last telt dan wel mee in "opzij zetten", maar verschijnt niet in je Betalingen en de app kan je er niet aan herinneren.','Toch opslaan',()=>saveItemEdit(pi,ii,true));
+    return;
   }
   const k=ieCommit(pi,ii);if(k<0)return;
   haptic();openPotDetailEdit(pi);render();toast('Opgeslagen');

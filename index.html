@@ -837,11 +837,21 @@ function fabAction(){haptic();if(cur==='uren')openShift();else if(cur==='recept'
 let _ob=null;
 function showOnboarding(){
   _ob={step:0,naam:db.naam||'',werk:'',loon:schoonLoonCfg(db.loon),
+    /* De wizard vroeg vroeger naar elf losse functies. Dat is de verkeerde vraag op het verkeerde
+       moment: "wil je uitschieters niet laten meetellen in gemiddelden?" kan niemand beantwoorden
+       vóór hij de app heeft gebruikt. Alles staat nu gewoon aan; wie iets niet wil zet het uit bij
+       Functies. Dat is ook de veilige kant op: een functie die aanstaat en irriteert zie je en zet
+       je uit, maar een functie die uitstaat ontdek je nooit - het vangnet HEEFT_DATA kan hem niet
+       terugzetten, want zonder knop maak je ook geen gegevens. Alleen Documenten blijft een keuze,
+       want die staat als eigen onderdeel in de lijst hierboven. */
     mods:{uren:true,potjes:true,loon:true,recept:true},
-    feat:{documenten:true,contract:true,comp:true,stats:true,buffers:true,toeslag:true,ontvangst:true,fuel:false,once:true,hints:true,loonlog:true}};
+    feat:{documenten:true}};
   document.getElementById('onb').classList.add('show');document.body.classList.add('noscroll');renderOnb();
 }
-function obSteps(){const s=['welkom','modules'];if(_ob.mods.uren)s.push('uren');if(_ob.mods.potjes)s.push('potjes');if(_ob.mods.loon)s.push('loon');s.push('klaar');return s;}
+/* De geld-stap is weg: die bestond alleen uit functievinkjes. De uren- en loon-stap blijven, maar
+   alleen voor de twee dingen die de app echt van je moet weten: bij wie je werkt en wanneer je
+   loon krijgt. */
+function obSteps(){const s=['welkom','modules'];if(_ob.mods.uren)s.push('uren');if(_ob.mods.loon)s.push('loon');s.push('klaar');return s;}
 function obRow(k,label,oms,ic){const store=(k in _ob.mods)?_ob.mods:_ob.feat;const on=store[k];return `<div class="onbrow" onclick="obToggle('${k}',this)">${ic?`<span style="color:var(--accent)">${ico(ic,'width:24px;height:24px;margin:0')}</span>`:''}<div class="tt"><b>${label}</b><span class="muted">${oms}</span></div><div class="check ${on?'on':''}">${on?'✓':''}</div></div>`;}
 function obToggle(k,row){const store=(k in _ob.mods)?_ob.mods:_ob.feat;store[k]=!store[k];const ch=row.querySelector('.check');ch.classList.toggle('on',store[k]);ch.textContent=store[k]?'✓':'';}
 function renderOnb(){
@@ -867,19 +877,8 @@ function renderOnb(){
     ${obRow('recept','Recepten','Eigen recepten met categorieën','recept')}
     ${obRow('documenten','Documenten','Verloopdatums van ID en passen bewaken','doc')}`+nav();
   }else if(key==='uren'){
-    html=`<h1>Werk & uren</h1><p class="muted" style="margin:0 0 18px">Wat wil je rondom je werk gebruiken?</p>
-    ${obRow('contract','Vast aantal uur per week','Je ziet dan of je meer of minder hebt gewerkt dan afgesproken. Heb je een oproepcontract, laat dit dan uit.')}
-    ${obRow('comp','Uren controleren','Checken of je uren kloppen en afwijkingen rechtzetten')}
-    ${obRow('stats','Statistieken','Grafieken van je gewerkte uren per dag, week en maand')}
-    <label style="margin-top:16px">Bij welke werkgever(s) werk je? (optioneel)</label><input id="onb_werk" value="${esc(_ob.werk)}" placeholder="bijv. Jumbo, Sincere"><div class="muted" style="font-size:12px;margin-top:4px">Komma's ertussen. Later aan te passen via Instellingen → Beheren.</div>`+nav();
-  }else if(key==='potjes'){
-    html=`<h1>Geld & potjes</h1><p class="muted" style="margin:0 0 18px">Stel je geld-onderdeel samen.</p>
-    ${obRow('buffers','Sparen voor onverwachte kosten','Voor dingen die je niet kunt plannen: tandarts, autoreparatie, kapotte wasmachine')}
-    ${obRow('toeslag','Toeslagen','Geld dat je terugkrijgt van de overheid, zoals zorgtoeslag of huurtoeslag')}
-    ${obRow('ontvangst','Geld dat binnenkomt','Los geld erbij noteren, bijvoorbeeld als iemand je terugbetaalt')}
-    ${obRow('fuel','Ik heb een auto','Benzine bijhouden met liters en literprijs — we zetten een Benzine-potje voor je klaar')}
-    ${obRow('once','Eenmalige grote uitgave','Een uitschieter niet laten meetellen, zodat je gemiddelde klopt')}
-    ${obRow('hints','Leren van je historie','De app onthoudt wanneer een rekening echt afgeschreven wordt en voor hoeveel')}`+nav();
+    html=`<h1>Je werk</h1><p class="muted" style="margin:0 0 18px">Bij wie werk je? Dan houdt de app je uren per werkgever apart bij.</p>
+    <label>Werkgever(s)</label><input id="onb_werk" value="${esc(_ob.werk)}" placeholder="bijv. Jumbo, Sincere"><div class="muted" style="font-size:12px;margin-top:4px">Meerdere? Zet er komma's tussen. Je kunt dit later altijd aanvullen bij Instellingen.</div>`+nav();
   }else if(key==='loon'){
     /* De loondag hier al zetten scheelt veel: hij bepaalt je meldingen, "volgende loon" én het moment
        waarop je potjes-checklist reset. Het voorbeeldblok laat meteen zien of het klopt. */
@@ -890,7 +889,7 @@ function renderOnb(){
     ${loonWanneerHTML(OL,'ob')}
     ${loonWeekendHTML(OL,'ob')}
     <div class="mini" style="margin:14px 0 18px;background:var(--card2)"><div class="mini-h">Je eerstvolgende loondagen</div>${loonVoorbeeldHTML(OL,4)}</div>
-    ${obRow('loonlog','Je loon noteren','Bijhouden wat er binnenkomt, zodat je ziet wat je maandelijks overhoudt')}`+nav();
+`+nav();
   }else{
     const aan=[];
     MODULES.forEach(m=>{if(_ob.mods[m.k])aan.push(m.naam);});if(_ob.feat.documenten)aan.push('Documenten');
@@ -962,7 +961,6 @@ function finishOnboarding(){
   if(_ob.mods.uren&&_ob.werk){const alEen=!!actiefWerk();
     /* "Jumbo, jumbo" in één regel typen levert één werkgever op, niet twee. */
     _ob.werk.split(',').map(x=>x.trim()).filter(Boolean).forEach((w,i)=>{if(!bestaandeNaam(db.werkgevers,w)){db.werkgevers.push(w);const c=defWerkCfg();c.loon=schoonLoonCfg(db.loon);if(i>0||alEen)c.actief=false;db.werkCfg[w]=c;}});}
-  if(_ob.mods.potjes&&_ob.feat.fuel&&!db.potjes.some(p=>p.fuel))db.potjes.push({n:'Benzine',saldo:0,log:[],items:[],fuel:true});
   if(!MODULES.some(m=>moduleOn(m.k)))db.modules.uren=true;
   db.setup=true;save();
   document.getElementById('onb').classList.remove('show');document.body.classList.remove('noscroll');
@@ -3095,7 +3093,8 @@ function openPotDetailEdit(pi,vanaf){
   const uitPotjes=_potVanaf==='potjes';
   const p=db.potjes[pi];if(!p)return uitPotjes?closeSheet():openPotEdit();
   openSheet(`<h2>Potje bewerken</h2>
-    <label>Naam</label><input id="pe_naam" value="${esc(p.n)}" placeholder="bijv. Vaste Lasten">
+    <label>Naam</label><input id="pe_naam" value="${esc(p.n)}" placeholder="bijv. Vaste Lasten" oninput="peBrandstofHint(${pi})">
+    <div id="pe_fuelHint" style="display:none;margin-top:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px"><div style="font-size:12.5px;color:var(--accent2);margin-bottom:8px">Gaat dit potje over tanken? Dan kan de app ook je liters en literprijs bijhouden.</div><button type="button" class="tiny primary" onclick="peBrandstofAan(${pi})">Ja, liters bijhouden</button></div>
     <label style="margin-top:14px">Huidig saldo</label>${mInput('id="pe_saldo"',p.saldo,'0,00')}
     <label style="margin-top:14px">Notitie (optioneel)</label><textarea id="pe_note" placeholder="Korte notitie, bijv. bijzonderheden of afspraken...">${esc(p.note||'')}</textarea>
     <span class="adv" onclick="var a=document.getElementById('pe_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerde opties</span>
@@ -3147,6 +3146,24 @@ function potWegAlsLeeg(){
   Object.keys(db.overboek||{}).forEach(k=>{const old=db.overboek[k]||{};const nw={};Object.keys(old).forEach(oi=>{const n=+oi;if(!old[oi])return;if(n<pi)nw[n]=true;else if(n>pi)nw[n-1]=true;});db.overboek[k]=nw;});
   save();
   return true;
+}
+/* De wizard vroeg vroeger "Ik heb een auto" en zette dan een Benzine-potje klaar. Die vraag is weg,
+   dus komt de suggestie nu op de plek waar hij ergens over gaat: zodra je een potje een naam geeft
+   waar tanken in doorklinkt. Het juiste moment in plaats van de eerste minuut. */
+const FUELNAAM=/benzine|tanken|tankbeurt|brandstof|diesel|lpg|auto/i;
+function peBrandstofHint(pi){
+  const el=document.getElementById('pe_fuelHint');if(!el)return;
+  const p=db.potjes[pi];const naam=val('pe_naam')||'';
+  const chk=document.getElementById('pe_fuel');
+  const alAan=(chk&&chk.classList.contains('on'))||(p&&p.fuel);
+  el.style.display=(!alAan&&FUELNAAM.test(naam))?'block':'none';
+}
+function peBrandstofAan(pi){
+  const chk=document.getElementById('pe_fuel');
+  if(chk&&!chk.classList.contains('on'))peFuelToggle(chk);
+  const adv=document.getElementById('pe_adv');if(adv)adv.style.display='block';
+  document.getElementById('pe_fuelHint').style.display='none';
+  haptic();
 }
 function renderPeItems(pi){const p=db.potjes[pi];document.getElementById('peItems').innerHTML=p.items.length?p.items.map((it,ii)=>`<div class="mrow" onclick="savePotNaam(${pi});openItemEdit(${pi},${ii})"><div style="flex:1"><b>${esc(it.n)}</b><div class="muted">${it.buffer?'Buffer · ':''}${eur(it.v)} ${freqTxt(it.fn,it.fu)}${toeslagenOf(it).length?(toeslagenOf(it).length===1?' · 1 toeslag':' · '+toeslagenOf(it).length+' toeslagen'):''}${(it.due&&!it.buffer)?' · '+termijnDatumTekst(new Date(it.due),itemSpan(it),true):''}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`).join(''):'<div class="muted" style="padding:4px 0 8px">Nog geen vaste lasten.</div>';}
 function peFuelToggle(el){tgl(el);const b=document.getElementById('pe_fuelBudget');if(b)b.style.display=el.classList.contains('on')?'block':'none';}

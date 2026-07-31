@@ -95,6 +95,8 @@ button.tiny{padding:8px 14px;font-size:13.5px}
 button.danger{color:var(--bad-tx);background:var(--bad-bg)}
 button.line{background:var(--card);border:1.5px solid var(--line);color:var(--text)}
 .stdlbl{font-size:9.5px;font-weight:800;letter-spacing:.4px;opacity:.7;text-transform:uppercase}
+/* Een hele zin in kapitalen leest niet. Gebruikt onder de rechtzet-knoppen, waar uitleg staat. */
+.stdlbl.zin{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;opacity:.85;white-space:normal}
 .fab{position:fixed;right:18px;bottom:calc(96px + var(--safe-b));z-index:40;width:60px;height:60px;border-radius:20px;font-size:28px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 38%,transparent);border:none;transition:transform .15s ease,border-radius .15s ease}
 .fab:active{transform:scale(.92);border-radius:26px}
 label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:12px 0 6px;letter-spacing:.1px}
@@ -1004,7 +1006,7 @@ const GUIDE=[
  v:gv(`<div class="tegoed" style="background:var(--wait-bg);margin-bottom:8px"><b style="color:var(--wait-tx)">2 diensten te controleren</b><div class="muted" style="margin-top:3px">Tik om te controleren</div></div><div class="card" style="margin-bottom:0;padding:12px 14px"><div class="row between" style="align-items:center"><div><b>Jumbo</b><div class="muted" style="font-size:12.5px">ma 20 jul · 8u 00m</div></div></div><div class="grid2" style="margin-top:10px"><button class="tiny" style="background:var(--ok-bg);color:var(--ok-tx)">Klopt</button><button class="tiny" style="background:var(--bad-bg);color:var(--bad-tx)">Klopt niet</button></div></div>`),
  t:gt(`Werkgevers maken fouten met urenregistratie. Zodra jouw werkgever de uren klaarzet, vergelijk je ze met wat er in de app staat en tik je <b>Klopt</b> of <b>Klopt niet</b>. Zo weet je altijd zeker dat je krijgt betaald voor wat je gewerkt hebt — en zie je bovenaan het Uren-scherm in één oogopslag wat er nog open staat.`)},
 {s:'Uren',mod:'uren',feat:'comp',q:'Mijn uren kloppen niet — wat doe ik dan?',a:{lbl:'Naar Uren controleren',fn:"go('uren');setTimeout(openControle,200)"},
- v:gv(`<div class="card" style="margin-bottom:0;padding:12px 14px"><div class="row between" style="align-items:flex-start;gap:10px"><div style="min-width:0"><b>Jumbo</b><div class="muted" style="font-size:12.5px">ma 20 jul 2026</div></div><span class="badge b-bad" style="flex-shrink:0">45m te weinig</span></div><div class="muted" style="font-size:12px;margin:11px 0 6px">Hoe recht zetten?</div><div class="grid2" style="gap:6px"><button class="tiny" style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1;background:var(--accent-soft);color:var(--accent)">Op latere dienst<span class="stdlbl">standaard</span></button><button class="tiny ghost">Apart nabetaald</button></div><button class="tiny ghost" style="width:100%;margin-top:6px">Zelf geregeld</button></div>`),
+ v:gv(`<div class="card" style="margin-bottom:0;padding:12px 14px"><div class="row between" style="align-items:flex-start;gap:10px"><div style="min-width:0"><b>Jumbo</b><div class="muted" style="font-size:12.5px">ma 20 jul 2026</div></div><span class="badge b-bad" style="flex-shrink:0">45m te weinig</span></div><div class="muted" style="font-size:12px;margin:11px 0 6px">Hoe recht zetten?</div><div class="grid2" style="gap:6px"><button class="tiny" style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1;background:var(--accent-soft);color:var(--accent)">Op latere dienst<span class="stdlbl">jouw gebruikelijke keuze</span></button><button class="tiny ghost">Apart nabetaald</button></div><button class="tiny ghost" style="width:100%;margin-top:6px">Zelf geregeld</button></div>`),
  t:gt(`Kies <b>Klopt niet</b> en vul in hoeveel tijd je miste (bijvoorbeeld "45 min" of "1 uur 15"). De dienst krijgt dan een rode afwijking die open blijft staan tot je 'm rechtzet. De groene knop is de manier die je bij deze werkgever als standaard hebt ingesteld — meestal is dat de goede.`)},
 {s:'Uren',mod:'uren',feat:'comp',q:'Wat is het verschil tussen "op latere dienst", "apart nabetaald" en "zelf geregeld"?',
  v:gv(`${GSHIFT('Jumbo','di 28 juli','12:00–18:00','6u 00m','','var(--green)',`<div class="potitem">${GKV('Correctie voor 20 jul 2026','+ 0u 45m','var(--ok-tx)')}</div>`)}<div class="mini" style="margin-bottom:0"><div class="mini-h">Nabetaald verwacht</div>${GKV('25 jul 2026','+ 1u 15m (2 diensten)')}</div>`),
@@ -1453,21 +1455,23 @@ function renderUren(){
   sel.innerHTML=`<option value="">Alles</option>`+db.werkgevers.map(w=>`<option>${esc(w)}</option>`).join('');sel.value=prev;sel.onchange=()=>renderUren();
   const filt=sel.value;
   const tc=document.getElementById('tegoedCard');
-  if(featOn('comp')){
+  /* Zonder één enkele dienst is "Alle uren gecontroleerd" een groen vinkje voor niets gedaan werk,
+     en het duwt de knop waar je wél moet zijn uit beeld. */
+  if(featOn('comp')&&db.shifts.length){
     const openAfw=afwOpenShifts(filt).length,minOpen=afwMinOpen(filt),todo=teCheckShifts(filt).length,nabW=nabWachtShifts(filt).length,nabWMin=nabWachtMin(filt);
     if(openAfw)tc.innerHTML=`<div class="tegoed" onclick="openControle()"><b>${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' · '+fmtDur(minOpen/60):''}</b><div class="muted" style="margin-top:3px">Tik om recht te zetten</div></div>`;
     else if(todo)tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${todo} dienst${todo===1?'':'en'} te controleren</b><div class="muted" style="margin-top:3px">Tik om te controleren</div></div>`;
     else if(nabW)tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${nabW} nabetaling${nabW===1?'':'en'} verwacht${nabWMin?' · '+fmtDur(nabWMin/60):''}</b><div class="muted" style="margin-top:3px">Tik om af te vinken als ontvangen</div></div>`;
     else tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--ok-bg)"><b style="color:var(--ok-tx)">Alle uren gecontroleerd</b><div class="muted" style="margin-top:3px">Tik voor het overzicht</div></div>`;
   }else tc.innerHTML='';
-  document.getElementById('statusChips').innerHTML=[['','Alles'],['todo','Te controleren'],['afw','Afwijking']].map(([k,l])=>`<span class="chip ${urenStatusFilter===k?'on':''}" onclick="urenStatusFilter='${k}';renderUren()">${l}</span>`).join('');
+  document.getElementById('statusChips').innerHTML=[['','Alles'],['todo','Te controleren'],['afw','Klopt niet']].map(([k,l])=>`<span class="chip ${urenStatusFilter===k?'on':''}" onclick="urenStatusFilter='${k}';renderUren()">${l}</span>`).join('');
   const now=new Date();let maandMin=0;
   const list=[...db.shifts].sort((a,b)=>b.date.localeCompare(a.date)||(b.start||'').localeCompare(a.start||''));
   const shown=list.filter(s=>(!filt||s.werk===filt)&&(!urenStatusFilter||ctrlOf(s).st===urenStatusFilter));
   list.filter(s=>!filt||s.werk===filt).forEach(s=>{const d=new Date(s.date);if(monthKey(d)===monthKey(now))maandMin+=hoursOf(s)*60;});
-  document.getElementById('urenMaandTotaal').textContent=fmtDur(maandMin/60);
+  document.getElementById('urenMaandTotaal').textContent=maandMin>0?fmtDur(maandMin/60):'nog niets';
   const c=document.getElementById('shiftList');
-  if(!shown.length){c.innerHTML=`<div class="empty">${urenStatusFilter?'Geen diensten met deze status.':'Nog geen diensten. Tik op ＋.'}</div>`;return;}
+  if(!shown.length){c.innerHTML=`<div class="empty">${urenStatusFilter?'Geen diensten met deze status.':'Nog geen gewerkte dagen.<br><button class="primary" style="width:100%;max-width:260px;margin:16px auto 0;display:block" onclick="openShift()">Gewerkte dag toevoegen</button>'}</div>`;return;}
   const groups=[];shown.forEach(s=>{const d=new Date(s.date);const wk=isoWeek(d)+'|'+isoWeekYear(d);let g=groups.find(x=>x.wk===wk);if(!g){g={wk,week:isoWeek(d),year:isoWeekYear(d),items:[],months:new Set()};groups.push(g);}g.items.push(s);g.months.add(d.getMonth());});
   const cu=(featOn('contract')&&filt&&db.contract&&db.contract[filt]!=null)?+db.contract[filt]:null;
   let html='';groups.forEach(g=>{const min=g.items.reduce((a,x)=>a+hoursOf(x)*60,0);const mnd=[...g.months].sort((a,b)=>a-b).map(m=>MND[m].slice(0,3)).join(' / ');let diff='';if(cu!=null){const d=min/60-cu;diff=`<div class="muted" style="font-size:11px;text-align:right;color:${d>=0?'var(--ok-tx)':'var(--muted)'}">${d>=0?'+':'−'}${fmtDur(Math.abs(d))} ${d>=0?'boven':'onder'} contract</div>`;}html+=`<div class="weekhdr"><span>Week ${g.week} · <b>${mnd} ${g.year}</b></span><div style="text-align:right"><b>${fmtDur(min/60)}</b>${diff}</div></div>`;g.items.forEach(s=>html+=shiftCard(s));});
@@ -1559,7 +1563,10 @@ function controlePanel(s,id){
   const ndtxt=nd?(nd.getDate()+' '+MND[nd.getMonth()].slice(0,3)+' '+nd.getFullYear()):'';
   const resBlock=resolved
     ?`<div class="potitem" id="ctrlResBlock" style="margin-top:10px">${c.min?ctrlKv('Gemiste tijd',fmtDur(c.min/60)):''}${ctrlKv('Rechtgezet',capFirst(resolveShort(c)),'var(--ok-tx)',corrLinkId(c))}${nab?ctrlKv(c.nabOntvangen?'Ontvangen op':'Wordt nabetaald op',ndtxt,c.nabOntvangen?'var(--ok-tx)':'var(--muted)'):''}<div class="row" style="gap:8px;margin-top:10px">${(nab&&!c.nabOntvangen)?`<button class="tiny line" style="flex:1" onclick="markNabOntvangenShift('${id}')">Markeer ontvangen</button>`:''}<button class="tiny line" style="flex:1" onclick="reopenAfw('${id}')">Heropenen</button></div></div>`
-    :`<div class="muted" style="font-size:12px;margin-top:4px">Los van je gewerkte uren hierboven — telt nooit dubbel. Rechtzetten doe je via de controle-kaart bovenaan het Uren-scherm.</div>`;
+    /* Bij een nieuwe dienst valt er nog niets te controleren: je loonstrook bestaat nog niet. De
+       uitleg over dubbeltellen ging bovendien over de boekhouding van de app, niet over wat je moet
+       doen. Alleen bij bewerken tonen, en dan als vraag. */
+    :(id?`<div class="muted" style="font-size:12px;margin-top:4px">Stond dit ook zo op je loonstrook?</div>`:'');
   const chips=[['todo','Te controleren'],['ok','Klopt'],['afw','Klopt niet']].map(([k,l])=>`<span class="chip ${(!resolved&&c.st===k)?'on':''}" data-st="${k}" onclick="pickCtrl(this)">${l}</span>`).join('')
     +(resolved?`<span class="chip on" style="pointer-events:none;background:var(--ok-bg);color:var(--ok-tx);border-color:transparent">Rechtgezet</span>`:'');
   return `<label style="margin-top:10px">Controle</label>
@@ -1608,7 +1615,7 @@ function saveShift(id){
 }
 /* ===== UREN-CONTROLE (per dienst: te controleren / klopt / afwijking, met rechtzetten) ===== */
 function openControle(){
-  openSheet(`<h2>Uren controleren</h2><div class="muted" style="margin-bottom:8px">Vergelijk je gewerkte uren met wat de werkgever registreerde. Klopt iets niet, dan noteer je het en zet je het later recht — los van je gewerkte uren, dus niets telt dubbel.</div><div id="ctrlBody"></div>`);
+  openSheet(`<h2>Uren controleren</h2><div class="muted" style="margin-bottom:8px">Ging er een uur af dat je wél gewerkt hebt? Vink hier per dienst af of het klopt.</div><div id="ctrlBody"></div>`);
   renderControle();
 }
 function ctrlHead(t){return `<div class="muted" style="font-weight:700;color:var(--text);margin:16px 0 6px;font-size:13.5px">${t}</div>`;}
@@ -1624,7 +1631,7 @@ function renderControle(){
   h+=ctrlHead('Te controleren'+(todo.length?' ('+todo.length+')':''));
   h+=todo.length?todo.map(todoCard).join(''):'<div class="muted" style="padding:2px 0 6px">Alles gecontroleerd.</div>';
   if(nabKeys.length){
-    h+=ctrlHead('Nabetaald verwacht');
+    h+=ctrlHead('Krijg je nog');
     const vandaag=new Date();vandaag.setHours(0,0,0,0);
     h+=nabKeys.map(k=>{const d=new Date(k);const g=nabG[k];const past=d<=vandaag;
       const line=`<div class="row between" style="padding:8px 0;border-top:1px solid var(--line)"><span>${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</span><b style="color:var(--ok-tx)">+ ${fmtDur(g.min/60)}${g.n>1?' · '+g.n+' diensten':''}</b></div>`;
@@ -1643,19 +1650,21 @@ function todoCard(s){
 }
 function afwCard(s){
   const c=ctrlOf(s);const d=new Date(s.date);const rec=werkCfgOf(s.werk).correctie;
-  const rbtn=(via,label,full)=>{const isDef=via===rec;return `<button class="tiny${isDef?'':' ghost'}" style="${full?'width:100%;margin-top:6px;':''}display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1${isDef?';background:var(--accent-soft);color:var(--accent)':''}" onclick="resolveAfw('${s.id}','${via}')">${label}${isDef?'<span class="stdlbl">standaard</span>':''}</button>`;};
+  /* uitleg: onder elke knop één regel over wat er daarna gebeurt. Drie keuzes met alleen een naam
+     erop lieten je gokken welke gevolgen je koos. */
+  const rbtn=(via,label,full,uitleg)=>{const isDef=via===rec;return `<button class="tiny${isDef?'':' ghost'}" style="${full?'width:100%;margin-top:6px;':''}display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.2;padding:9px 8px;height:auto${isDef?';background:var(--accent-soft);color:var(--accent)':''}" onclick="resolveAfw('${s.id}','${via}')"><b style="font-weight:600">${label}</b>${uitleg?`<span class="stdlbl zin">${uitleg}</span>`:''}${isDef?'<span class="stdlbl">jouw gebruikelijke keuze</span>':''}</button>`;};
   return `<div class="card" style="margin-bottom:8px;padding:12px 14px">
     <div class="row between" style="align-items:flex-start;gap:10px"><div style="min-width:0"><b>${esc(s.werk)}</b><div class="muted" style="font-size:12.5px">${DAG[d.getDay()]} ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}${c.note?' · '+esc(c.note):''}</div></div><span class="badge b-bad" style="flex-shrink:0">${c.min?fmtDur(c.min/60)+' te weinig':'afwijking'}</span></div>
     <div class="muted" style="font-size:12px;margin:11px 0 6px">Hoe recht zetten?</div>
-    <div class="grid2" style="gap:6px">${rbtn('later','Op latere dienst')}${rbtn('nabetaald','Apart nabetaald')}</div>
-    ${rbtn('zelf','Zelf geregeld',true)}
+    <div class="grid2" style="gap:6px">${rbtn('later','Op latere dienst','','Je baas draait de uren mee op een volgende dienst')}${rbtn('nabetaald','Apart nabetaald','','Je krijgt het los uitbetaald, bijvoorbeeld op je loonstrook')}</div>
+    ${rbtn('zelf','Zelf geregeld',true,'Al opgelost — deze melding mag weg')}
   </div>`;
 }
 function reopenAfw(id){const s=db.shifts.find(x=>x.id===id);if(!s)return;
-  confirmSheet('Weer op open zetten','Deze afwijking wordt weer als open (nog recht te zetten) gemarkeerd. Je kunt hem daarna opnieuw rechtzetten.','Heropenen',()=>{
+  confirmSheet('Toch niet opgelost','Je zet deze uren weer op "nog niet gekregen". Ze verschijnen dan opnieuw in je lijstje met dingen om recht te zetten.','Toch niet opgelost',()=>{
     const t=db.shifts.find(x=>x.id===id);if(!t)return;const cc=ctrlOf(t);cc.opgelost=false;cc.via='';cc.corrShiftId='';cc.nabetaalDatum='';cc.nabOntvangen=false;t.ctrl=cc;haptic();save();render();if(document.getElementById('ctrlBody'))openControle();else openShift(id);toast('Weer op open gezet');
   });}
-function nabDateHint(){const el=document.getElementById('ra_hint');if(!el)return;const p=nextPaydayEff();const li=p?isoDate(p):'';const v=val('ra_date');if(li&&v===li)el.innerHTML='<b style="color:var(--ok-tx)">Staat op je loondag</b>';else if(v){const d=new Date(v);el.innerHTML='<span class="muted">'+DAG[d.getDay()]+' '+d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()+(li?' · niet je loondag':'')+'</span>';}else el.textContent='';}
+function nabDateHint(){const el=document.getElementById('ra_hint');if(!el)return;const p=nextPaydayEff();const li=p?isoDate(p):'';const v=val('ra_date');if(li&&v===li)el.innerHTML='<b style="color:var(--ok-tx)">Staat op je loondag</b>';else if(v){const d=new Date(v);el.innerHTML='<span class="muted">'+DAG[d.getDay()]+' '+d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()+'</span>';}else el.textContent='';}
 function markKlopt(id){const s=db.shifts.find(x=>x.id===id);if(!s)return;s.ctrl={st:'ok',min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''};haptic();save();renderControle();render();toast('Op Klopt gezet');}
 /* Alle nabetaalde afwijkingen met deze datum markeren als daadwerkelijk ontvangen (verdwijnen uit "verwacht"). */
 function markNabOntvangen(dateKey){
@@ -2095,10 +2104,10 @@ function toggleItemPaid(pi,id,iso){
   }
   if(it.paidDates[iso]){
     const raakte=raakteSaldo(p,it,iso,'uitgave');const blijft=inSchema(it,iso,'uitgave');
-    const saldoTxt=raakte?' en het bedrag komt terug in het saldo':'; je saldo blijft zoals het is, want deze boeking heeft het nooit veranderd';
+    const saldoTxt=raakte?' en het bedrag komt terug in het saldo':'. Je saldo verandert niet — dit bedrag was er nooit vanaf gehaald';
     confirmSheet(blijft?'Weer op open zetten':'Betaling verwijderen',
       blijft?`"${it.n}" wordt weer als openstaand gemarkeerd. De gekoppelde uitgave wordt verwijderd${saldoTxt}.`
-        :`Deze betaling staat niet in het schema van "${it.n}", dus hij verdwijnt uit je overzicht in plaats van open te blijven staan. De uitgave wordt verwijderd${saldoTxt}.`,
+        :`Je haalt het vinkje weg. Deze datum hoort niet meer bij "${it.n}", dus je ziet hem daarna niet meer in de lijst. De betaling wordt gewist${saldoTxt}.`,
       blijft?'Terugzetten':'Verwijderen',()=>{
       unmarkOccurrence(pi,id,iso,'uitgave');haptic();save();render();toast(blijft?(raakte?'Weer open · saldo hersteld':'Weer open'):'Verwijderd');
     });
@@ -2131,7 +2140,7 @@ function openMarkPaidSheet(pi,itemId,iso){
     <label>Bedrag</label>${mInput('id="mp_amt"',it.v,'0,00')}
     <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mp_saldoUitleg"></div></div><div class="check" id="mp_saldo" onclick="tgl(this);markSaldoInfo('mp')"></div></div>
     <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven">
-    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Bevestigen — boekt af en logt uitgave</button>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">${document.getElementById('mp_saldo')&&!document.getElementById('mp_saldo').classList.contains('on')?'Betaald — mijn saldo blijft gelijk':'Betaald — haal dit van het potje af'}</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','uitgave')">Deze betaling komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Wordt deze afschrijving een keer overgeslagen? Dan verdwijnt hij uit je openstaande lijst zonder dat er iets van je saldo af gaat. Je kunt dat altijd terugdraaien.</div>`);
   markSaldoStand('mp');
@@ -2157,7 +2166,7 @@ function confirmMarkPaid(pi,itemId,iso){
   const chk=document.getElementById('mp_saldo');
   const raak=!chk||chk.classList.contains('on');
   markOccurrence(pi,itemId,iso,'uitgave',amount,date,note,null,raak);
-  haptic();save();closeSheet();render();toast(raak?'Betaald · saldo −'+eur(amount):'Betaald · saldo ongewijzigd');
+  haptic();save();closeSheet();render();toast(raak?'Betaald · saldo −'+eur(amount):'Betaald genoteerd · je saldo blijft gelijk');
 }
 function openMarkReceivedSheet(pi,itemId,iso,toeId){
   const p=db.potjes[pi];const it=p&&p.items.find(x=>x.id===itemId);const T=toeVan(it,toeId);if(!it||!T)return;
@@ -2599,7 +2608,7 @@ function renderBetalingen(){
   const recOpenSum=openReceipts.reduce((a,x)=>a+x.amount,0);
   document.getElementById('betOntvSub').textContent=recOpenSum>0?('+ '+eur(recOpenSum)+' te ontvangen'):'';
   let kvHtml='';
-  if(openToe>0)kvHtml+=`<div class="kv"><span class="k">Waarvan eigen deel</span><span class="v">${eur(openNet-openToe)}</span></div>`;
+  if(openToe>0)kvHtml+=`<div class="kv"><span class="k">Wat je zelf betaalt (na toeslag)</span><span class="v">${eur(openNet-openToe)}</span></div>`;
   document.getElementById('betKvWrap').innerHTML=kvHtml;
   const short=shortage>0.005;
   document.getElementById('betStatusWrap').innerHTML=`<span class="statusbadge ${short?'short':'ok'}" style="display:flex;justify-content:center;width:100%;box-sizing:border-box">${short?'● Nog '+eur(shortage)+' nodig in je potjes':'● Je potjes dekken deze betalingen'}</span>`;
@@ -2631,7 +2640,7 @@ function renderBetalingen(){
     else if(beide&&rec>0)hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b>${open>0?'<span class="muted"> · </span>':''}<b style="color:var(--ok-tx)">+ ${eur(rec)}</b>`;
     else hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b><div class="muted" style="font-size:11px">${betalingFilter==='done'?'afgerond':'open'}</div>`;
     return `<div class="weekhdr"><span><b>${MND[+m-1]} ${y}</b></span><div style="text-align:right">${hdrR}</div></div>${grp[k].map(x=>x.kind==='loon'?loonCard(x):x.kind==='receipt'?receiptCard(x):betalingCard(x)).join('')}`;
-  }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Nog geen betalingen of ontvangsten. Voeg vaste lasten toe bij een potje.'}</div>`;
+  }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Hier komen je vaste lasten te staan, zoals huur en verzekering. Zodra je er één invult, zie je per maand wat eraf gaat.'}</div>`;
 }
 /* Op een afgeronde regel staat de datum waarop het geld echt van je rekening ging of binnenkwam. Dat
    is meestal niet de dag die in je kostenpost staat, en dan is onduidelijk welke termijn je nu eigenlijk

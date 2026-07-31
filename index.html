@@ -348,7 +348,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
   <section class="tab" id="tab-instellingen">
     <button class="backpill" onclick="go('meer')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>
     <div class="card" id="profielCard"><h2>Profiel</h2><label>Je naam</label><input id="profNaam" placeholder="bijv. Thomas"><div class="muted" style="font-size:12.5px;margin-top:6px">Wordt gebruikt voor de begroeting op Start en bovenaan het PDF-overzicht.</div></div>
-    <div class="card" id="weergaveCard"><h2>Weergave</h2><div class="row" style="gap:8px;flex-wrap:wrap" id="themeChips"><span class="chip" data-t="system" onclick="setTheme('system')">Volg telefoon</span><span class="chip" data-t="light" onclick="setTheme('light')">Licht</span><span class="chip" data-t="dark" onclick="setTheme('dark')">Donker</span></div></div>
+    <div class="card" id="weergaveCard"><h2>Kleur van de app</h2><div class="row" style="gap:8px;flex-wrap:wrap" id="themeChips"><span class="chip" data-t="system" onclick="setTheme('system')">Zelfde als mijn telefoon</span><span class="chip" data-t="light" onclick="setTheme('light')">Licht</span><span class="chip" data-t="dark" onclick="setTheme('dark')">Donker</span></div></div>
     <div class="card" id="functiesCard"><h2>Functies</h2><div class="muted" style="margin-bottom:10px">Kies per onderdeel wat je gebruikt — tot en met losse kaarten op je startscherm. Wat uit staat verdwijnt uit de app; je gegevens blijven bewaard.</div><button class="ghost" style="width:100%" onclick="openFeatSheet()">Functies aanpassen</button><div class="muted" id="featSamenvatting" style="margin-top:8px;font-size:12.5px"></div></div>
     <div class="card" id="meldCard"><div class="row between"><h2 style="margin:0">Meldingen</h2><div class="check" id="meldToggle" onclick="toggleMeld()"></div></div>
       <div id="meldOpts">
@@ -363,7 +363,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
       <button class="ghost" id="pinChangeBtn" style="width:100%;margin-top:10px;display:none" onclick="setPin()">Pincode wijzigen</button></div>
     <div class="card" id="backupCard"><h2 style="margin:0 0 4px">Back-up &amp; herstel</h2><div class="muted" style="font-size:12.5px;margin-bottom:10px">Je gegevens staan alleen op deze telefoon. Een back-up is je enige vangnet.</div>
       <div id="autoBackupBlock"><div class="row between" style="align-items:center;padding-top:8px;border-top:1px solid var(--line)"><div style="flex:1;min-width:0;padding-right:10px"><b>Automatisch</b><div class="muted" style="font-size:12.5px">De app schrijft zelf een back-upbestand weg.</div></div><div class="check" id="backupToggle" onclick="toggleBackup()"></div></div>
-        <div id="backupOpts"><label>Locatie</label><select id="backupDir"><option value="DOCUMENTS">Documenten / GridLife</option><option value="EXTERNAL">App-map</option></select><label>Frequentie</label><select id="backupFreq"><option value="change">Bij elke wijziging</option><option value="day">Dagelijks</option><option value="week">Wekelijks</option></select></div>
+        <div id="backupOpts"><label>Locatie</label><select id="backupDir"><option value="DOCUMENTS">In je map Documenten — blijft staan als je de app verwijdert</option><option value="EXTERNAL">In de app zelf — verdwijnt met de app</option></select><label>Hoe vaak?</label><select id="backupFreq"><option value="change">Meteen na elke aanpassing</option><option value="day">Eén keer per dag</option><option value="week">Eén keer per week</option></select></div>
         <div class="muted" id="autoBackupInfo" style="margin-top:10px"></div><hr class="sep"></div>
       <div id="expImpRow" class="grid2"><button id="expBtn" onclick="armNoLock();exportData()">Kopie opslaan</button><button id="impBtn" onclick="armNoLock();document.getElementById('importFile').click()">Kopie terugzetten</button></div>
       <div class="muted" id="impHint" style="margin-top:8px;font-size:12px">Opslaan maakt een bestand dat je kunt bewaren of mailen. Terugzetten voegt je lijsten samen: wat er al staat blijft staan. Je instellingen — loondag, thema, je naam en welke functies aanstaan — worden wél overgenomen uit het bestand.</div>
@@ -737,7 +737,8 @@ const ICONS={
  doc:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/>',
  bell:'<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 004 0"/>',
- pdf:'<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/>'
+ pdf:'<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/>',
+ uitleg:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 015 .9c0 1.7-2.5 2.2-2.5 3.8"/><path d="M12 17.5v.01"/>'
 };
 function ico(n,s){return '<svg class="ico"'+(s?' style="'+s+'"':'')+' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[n]||'')+'</svg>';}
 function starSvg(fav){return '<svg class="ico" style="margin:0;width:21px;height:21px" viewBox="0 0 24 24" fill="'+(fav?'var(--amber)':'none')+'" stroke="'+(fav?'var(--amber)':'currentColor')+'" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z"/></svg>';}
@@ -778,18 +779,18 @@ const FEATS=[
  {k:'stats',grp:'uren',label:'Statistieken',oms:'Uren-grafieken per dag, week en maand',mod:'uren'},
  /* Potjes */
  {k:'buffers',grp:'potjes',label:'Buffers',oms:'Sparen voor onvoorspelbare kosten, met maandadvies',mod:'potjes'},
- {k:'opzijtel',grp:'potjes',label:'Overmaak-teller',oms:'Bij buffer- en jaarpotjes zien hoe vaak je de laatste 12 loondagen echt hebt overgemaakt',mod:'potjes'},
+ {k:'opzijtel',grp:'potjes',label:'Bijhouden of je echt overmaakt',oms:'Bij potjes waar je voor spaart zie je hoe vaak je het geld de laatste 12 loondagen echt hebt overgemaakt',mod:'potjes'},
  {k:'toeslag',grp:'potjes',label:'Toeslagen & vergoedingen',oms:'Zorgtoeslag e.d. verrekenen en volgen',mod:'potjes'},
  {k:'ontvangst',grp:'potjes',label:'Losse ontvangsten',oms:'Geld-erbij los kunnen loggen op een potje',mod:'potjes'},
  {k:'fuel',grp:'potjes',label:'Brandstof-potjes',oms:'Tankbeurten met liters en literprijs',mod:'potjes'},
- {k:'once',grp:'potjes',label:'Eenmalige uitgaven',oms:'Uitschieters niet laten meetellen in gemiddelden',mod:'potjes'},
- {k:'hints',grp:'potjes',label:'Slimme hints',oms:'Verwachte echte datum en bedrag tonen op basis van je historie',mod:'potjes'},
+ {k:'once',grp:'potjes',label:'Losse, ongewone uitgave',oms:'Die ene dure reparatie telt dan niet mee als je normale maandbedrag',mod:'potjes'},
+ {k:'hints',grp:'potjes',label:'Vooruitblik bij een betaling',oms:'De app onthoudt wanneer een rekening echt afgeschreven wordt en voor hoeveel, en zegt dat erbij',mod:'potjes'},
  /* Loon */
  {k:'loonlog',grp:'loon',label:'Loon loggen',oms:'Netto inkomen bijhouden en zien wat je overhoudt',mod:'loon'},
  /* Recepten */
- {k:'receptcat',grp:'recept',label:'Categorieen',oms:'Recepten indelen en filteren op categorie',mod:'recept'},
+ {k:'receptcat',grp:'recept',label:'Recept-categorieën',oms:'Recepten indelen en filteren op categorie',mod:'recept'},
  {k:'receptfav',grp:'recept',label:'Favorieten',oms:'Sterretje bij je favoriete recepten; die staan bovenaan',mod:'recept'},
- {k:'receptporties',grp:'recept',label:'Porties omrekenen',oms:'Ingredienten meeschalen als je meer of minder porties maakt',mod:'recept'},
+ {k:'receptporties',grp:'recept',label:'Porties omrekenen',oms:'Ingrediënten meeschalen als je meer of minder porties maakt',mod:'recept'},
  /* Extra */
  {k:'documenten',grp:'extra',label:'Documenten',oms:'Verloopdatums van ID en passen bewaken'},
  {k:'profiel',grp:'extra',label:'Profiel',oms:'Je naam bewaren voor de begroeting en het PDF-overzicht'},
@@ -825,7 +826,12 @@ function renderFeatList(){
   c.innerHTML=html;
 }
 function toggleFeatGrp(k){_featOpen[k]=!_featOpen[k];renderFeatList();}
-function toggleModuleFeat(k){db.modules[k]=!moduleOn(k);if(!MODULES.some(m=>moduleOn(m.k)))db.modules[k]=true;save();applyModules();renderFeatList();render();}
+function toggleModuleFeat(k){
+  db.modules[k]=!moduleOn(k);
+  /* Zonder melding zette de app de schakelaar gewoon terug en leek je tik niets te doen. */
+  if(!MODULES.some(m=>moduleOn(m.k))){db.modules[k]=true;toast('Er moet minstens één tabblad onderin blijven staan');}
+  save();applyModules();renderFeatList();render();
+}
 function toggleFeat(k){db.feat[k]=featOn(k)?false:true;if(db.feat[k]===true)delete db.feat[k];save();renderFeatList();scheduleLoonMeldingen();render();}
 function applyModules(){document.querySelectorAll('#nav button').forEach(b=>{b.style.display=moduleOn(b.dataset.tab)?'flex':'none';});if(!moduleOn(cur))go('start');}
 function go(t){cur=t;document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='meer'&&(t==='instellingen'||t==='documenten'))));document.getElementById('pageTitle').textContent=TITLES[t];document.getElementById('fab').style.display=(t==='uren'||t==='recept'||t==='potjes')?'flex':'none';window.scrollTo(0,0);render();}
@@ -917,7 +923,7 @@ function obNext(){
 /* Eén verhaal voor een bestand dat geen back-up blijkt. "Ongeldig bestand" in een balkje van twee
    seconden liet iemand die zijn gegevens probeert te redden met lege handen staan: hij weet niet of
    hij het verkeerde bestand pakte of dat zijn back-up stuk is, en al helemaal niet wat hij nu moet. */
-const BESTAND_UITLEG='Een GridLife-back-up heet <b>gridlife-backup-…json</b>. Die staat meestal in de map Documenten/GridLife op je telefoon, of in de mail waar je hem naartoe hebt gestuurd.';
+const BESTAND_UITLEG='Een GridLife-back-up heet <b>gridlife-backup-…json</b>. Die staat meestal in de map Documenten/GridLife op je telefoon, of in de mail waar je hem naartoe hebt gestuurd. Er is niets veranderd aan je gegevens.';
 function onbFout(kop){
   const el=document.getElementById('onbFout');if(!el)return;
   el.innerHTML=`<b>${kop}</b><br>${BESTAND_UITLEG}<br>Tik hierboven nog eens om een ander bestand te kiezen.`;
@@ -3826,7 +3832,7 @@ function renderMeer(){
   if(moduleOn('loon')){const nx=nextPaydayEff();html+=row('loon','Loon',nx?('Volgende loon: '+nx.getDate()+' '+MND[nx.getMonth()].slice(0,3)+' '+nx.getFullYear()):'Loondag instellen',"go('loon')");}
   if(featOn('documenten')){const nd=(db.documenten||[]).length;html+=row('doc','Documenten',nd?(nd+' document'+(nd===1?'':'en')+' · verloopdatums'):'Verloopdatums van je passen en ID',"go('documenten')");}
   if(featOn('pdf'))html+=row('pdf','PDF-overzicht','Je uren, potjes en betalingen als PDF','exportOverzichtPDF()');
-  html+=row('recept','Uitleg','Antwoord op alle vragen, met voorbeelden','openGuide()');
+  html+=row('uitleg','Uitleg','Antwoord op alle vragen, met voorbeelden','openGuide()');
   html+=`<button class="primary" style="width:100%;margin-top:14px" onclick="go('instellingen')">${ico('gear','width:18px;height:18px;vertical-align:-3.5px;margin-right:8px;color:var(--on-accent)')}Instellingen</button>`;
   c.innerHTML=html;
 }
@@ -3899,8 +3905,8 @@ function renderInstellingen(){
   show('profielCard',featOn('profiel'));
   const pn=document.getElementById('profNaam');pn.value=db.naam||'';pn.onchange=()=>{db.naam=pn.value.trim();save();toast('Opgeslagen');};
   document.querySelectorAll('#themeChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.t===(db.theme||'system')));
-  const uit=FEATS.filter(f=>featShow(f)&&!featOn(f.k)).length;const modUit=MODULES.filter(m=>!moduleOn(m.k)).length;
-  document.getElementById('featSamenvatting').textContent=(uit||modUit)?`${uit} functie${uit===1?'':'s'}${modUit?` en ${modUit} onderdeel${modUit===1?'':'en'}`:''} staan uit.`:'Alles staat aan.';
+  const uitL=FEATS.filter(f=>featShow(f)&&!featOn(f.k)).map(f=>f.label).concat(MODULES.filter(m=>!moduleOn(m.k)).map(m=>m.naam));
+  document.getElementById('featSamenvatting').textContent=uitL.length?('Uit: '+(uitL.length>3?uitL.slice(0,3).join(', ')+' en '+(uitL.length-3)+' andere':lijstTekst(uitL))+'.'):'Alles staat aan.';
   const lt=document.getElementById('lockToggle');lt.classList.toggle('on',!!(db.lock&&db.lock.on));lt.textContent=(db.lock&&db.lock.on)?'✓':'';document.getElementById('pinChangeBtn').style.display=(db.lock&&db.lock.on)?'block':'none';
   const bioRow=document.getElementById('bioRow');bioRow.style.display='none';
   if(db.lock&&db.lock.on){bioAvailable().then(av=>{if(av||db.lock.bio){bioRow.style.display='flex';const bt=document.getElementById('bioToggle');bt.classList.toggle('on',!!db.lock.bio);bt.textContent=db.lock.bio?'✓':'';}});}
@@ -3919,7 +3925,7 @@ function renderInstellingen(){
     const B=db.backup||{on:true,dir:'DOCUMENTS',freq:'change'};const bt=document.getElementById('backupToggle');bt.classList.toggle('on',B.on!==false);bt.textContent=B.on!==false?'✓':'';document.getElementById('backupOpts').style.display=B.on!==false?'block':'none';
     const bd=document.getElementById('backupDir');bd.value=B.dir||'DOCUMENTS';bd.onchange=()=>{db.backup.dir=bd.value;save();toast('Opgeslagen');};
     const bf=document.getElementById('backupFreq');bf.value=B.freq||'change';bf.onchange=()=>{db.backup.freq=bf.value;save();toast('Opgeslagen');};
-    const bi=document.getElementById('autoBackupInfo');if(NATIVE){const lb=db.lastBackup;bi.innerHTML=lb?`Laatste back-up: ${new Date(lb.t).toLocaleString('nl-NL')} (${lb.dir==='DOCUMENTS'?'Documenten/GridLife':'app-map'})`:'Nog geen back-up gemaakt.';}else bi.textContent='Automatische back-up werkt alleen in de app.';
+    const bi=document.getElementById('autoBackupInfo');if(NATIVE){const lb=db.lastBackup;bi.innerHTML=lb?`Laatste back-up: ${new Date(lb.t).toLocaleString('nl-NL')} (${lb.dir==='DOCUMENTS'?'Documenten/GridLife':'app-map'})`:'Nog geen back-up gemaakt.';}else bi.textContent='Automatisch opslaan werkt alleen in de geïnstalleerde app op je telefoon. Hier kun je wel zelf een kopie opslaan met de knop hieronder.';
   }
 }
 
@@ -3978,7 +3984,7 @@ function bhAdd(){const v=val('bhNew').trim();if(!v)return;const b=BEHEER.find(x=
   document.getElementById('bhNew').value='';haptic();save();renderBhList();if(isNew&&window._bk==='werkgevers')openWerkCfg(v,'beheer');}
 function bhDel(i){
   const b=BEHEER.find(x=>x.k===window._bk);const list=b.get();const c=list[i];if(c==null)return;
-  const msg=(window._bk==='werkgevers'&&db.shifts.some(s=>s.werk===c))?`"${c}" heeft nog diensten. Toch verwijderen?`:(window._bk==='doctypes'&&(db.documenten||[]).some(d=>d.type===c))?`"${c}" wordt nog gebruikt door een document. Toch verwijderen?`:`"${c}" wordt verwijderd.`;
+  const msg=(window._bk==='werkgevers'&&db.shifts.some(s=>s.werk===c))?`Bij "${c}" staan nog ${db.shifts.filter(x=>x.werk===c).length} diensten. Die blijven gewoon staan, maar je kunt er geen nieuwe meer voor invoeren.`:(window._bk==='doctypes'&&(db.documenten||[]).some(d=>d.type===c))?`"${c}" wordt nog gebruikt door een document. Toch verwijderen?`:`"${c}" wordt verwijderd.`;
   confirmSheet('Verwijderen',msg,'Verwijderen',()=>{list.splice(i,1);if(window._bk==='werkgevers'&&db.werkCfg)delete db.werkCfg[c];save();renderBhList();});
 }
 /* Eén instellingenscherm per werkgever: dienstverband (in dienst + contract-uren), loon (loondag/frequentie)
@@ -4137,14 +4143,35 @@ function wcSaveDoen(){
 }
 
 function toggleModule(k){db.modules[k]=!moduleOn(k);if(!MODULES.some(m=>moduleOn(m.k)))db.modules[k]=true;save();applyModules();renderInstellingen();}
-function toggleBackup(){db.backup=db.backup||{dir:'DOCUMENTS',freq:'change'};db.backup.on=db.backup.on===false;save();renderInstellingen();toast(db.backup.on?'Automatische back-up aan':'Uit');}
-function wisData(){openSheet(`<h2>Alles wissen</h2><p class="muted">Dit verwijdert <b>alle gegevens</b> en kan niet ongedaan worden gemaakt. Maak eerst een back-up!</p><label>Typ <b>WISSEN</b> om te bevestigen</label><input id="wis_in" placeholder="WISSEN" autocapitalize="characters" autocomplete="off"><button class="danger" style="width:100%;margin-top:14px" onclick="doWis()">Definitief wissen</button>`);}
+function toggleBackup(){db.backup=db.backup||{dir:'DOCUMENTS',freq:'change'};db.backup.on=db.backup.on===false;save();renderInstellingen();toast(db.backup.on?'Automatisch opslaan staat aan':'Automatisch opslaan uit — je maakt vanaf nu zelf kopieën');}
+/* "Maak eerst een back-up!" stond er wel, maar er was geen knop om dat te doen - je moest het scherm
+   sluiten, de kopie maken en terugkomen. De knop staat er nu bij, met de datum van je laatste kopie
+   erboven zodat je ziet of dat nog nodig is. */
+function wisData(){
+  const lb=db.lastBackup;
+  const wanneer=lb&&lb.t?`Je laatste kopie is van ${new Date(lb.t).toLocaleString('nl-NL')}.`:'Je hebt nog geen kopie opgeslagen.';
+  openSheet(`<h2>Alles wissen</h2>
+    <p class="muted">Dit verwijdert <b>al je gegevens</b> en kan niet ongedaan worden gemaakt.</p>
+    <div class="mini" style="margin-top:0"><div class="mini-h">Eerst een kopie?</div>
+      <div class="muted" style="font-size:12.5px;padding:2px 0 8px">${wanneer}</div>
+      <button class="ghost" style="width:100%" onclick="armNoLock();exportData()">Kopie opslaan</button></div>
+    <label style="margin-top:14px">Typ <b>WISSEN</b> om te bevestigen</label>
+    <input id="wis_in" placeholder="WISSEN" autocapitalize="characters" autocomplete="off">
+    <button class="danger" style="width:100%;margin-top:14px" onclick="doWis()">Definitief wissen</button>`);
+}
 function doWis(){if(val('wis_in').trim().toUpperCase()!=='WISSEN'){toast('Typ WISSEN om te bevestigen');return;}localStorage.removeItem(KEY);location.reload();}
 
 /* ===== APP-SLOT ===== */
 let pinBuf='',pinMode='check',pinTemp='';
 function toggleLock(){
-  if(db.lock.on){db.lock.on=false;db.lock.pin='';db.lock.bio=false;save();renderInstellingen();toast('App-slot uit');return;}
+  /* Uitzetten wiste in één tik je pincode zonder iets te vragen. Dat is een beveiliging weghalen;
+     daar hoort een moment van nadenken bij, net als bij het aanzetten. */
+  if(db.lock.on){
+    confirmSheet('App-slot uitzetten?','Iedereen die je telefoon openheeft kan daarna bij je gegevens. Je pincode wordt gewist; wil je het slot later weer, dan kies je een nieuwe.','Slot uitzetten',()=>{
+      db.lock.on=false;db.lock.pin='';db.lock.bio=false;save();renderInstellingen();toast('App-slot uit');
+    },'danger');
+    return;
+  }
   /* Waarschuwen vóór het instellen, niet pas als je ervoor staat: de code staat nergens anders en er
      is geen herstelweg. Dat hoor je te weten voordat je hem kiest. */
   confirmSheet('App-slot aanzetten','Je pincode staat alleen op deze telefoon en komt niet mee in een back-up. Raak je hem kwijt, dan kun je alleen opnieuw beginnen met een opgeslagen kopie. Zorg dus dat je er een hebt.','Pincode kiezen',setPin);
@@ -4196,12 +4223,13 @@ function maybeLock(){
 async function autoBackup(){if(!(NATIVE&&P.Filesystem))return;if(!featOn('backup')||!featOn('autobackup'))return;const B=db.backup||{};if(B.on===false)return;const lb=db.lastBackup;if(B.freq==='day'&&lb&&Date.now()-lb.t<86400000)return;if(B.freq==='week'&&lb&&Date.now()-lb.t<7*86400000)return;const data=JSON.stringify(db);const dirs=B.dir==='EXTERNAL'?['EXTERNAL','DOCUMENTS']:['DOCUMENTS','EXTERNAL'];for(const dir of dirs){try{await P.Filesystem.writeFile({path:'GridLife/gridlife-backup.json',data,directory:dir,encoding:'utf8',recursive:true});db.lastBackup={t:Date.now(),dir};saveQuiet();if(cur==='instellingen')renderInstellingen();return;}catch(e){}}}
 /* Wat zit er in de back-up die je net hebt weggeschreven. Zelfde gedachte als het import-verslag: je
    wilt zien dat je administratie er echt in zit voordat je erop vertrouwt. */
-function toonExportVerslag(waar){
+function toonExportVerslag(waar,naam){
   const n=(a)=>Array.isArray(a)?a.length:0;
   const rij=(lbl,v)=>v?`<div class=\"kv\"><span class=\"k\">${lbl}</span><span class=\"v\">${v}</span></div>`:'';
   const logs=(db.potjes||[]).reduce((a,q)=>a+n(q.log),0);
   openSheet(`<h2>Back-up gemaakt</h2>
     <div class=\"statusbadge ok\" style=\"display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:14px\">● ${esc(waar)}</div>
+    ${naam?`<div class=\"muted\" style=\"font-size:12.5px;text-align:center;margin:-6px 0 14px\">${esc(naam)}<br>Bewaar dit bestand ergens buiten je telefoon.</div>`:''}
     <div class=\"mini\"><div class=\"mini-h\">Hierin bewaard</div>
     ${rij('Diensten',n(db.shifts))}${rij('Potjes',n(db.potjes))}${rij('Uitgaven en ontvangsten',logs)}
     ${rij('Werkgevers',n(db.werkgevers))}${rij('Loon-ontvangsten',n(db.loonLog))}${rij('Recepten',n(db.recepten))}
@@ -4209,7 +4237,7 @@ function toonExportVerslag(waar){
     <div class=\"muted\" style=\"font-size:12.5px;margin-top:12px\">Je instellingen en welke functies aan staan zitten er ook in. Je pincode bewust niet - die hoort niet in een bestand dat je deelt.</div>
     <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
 }
-async function exportData(){if(!featOn('backup')||!featOn('export')){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld');return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife');return;}catch(e2){toast('Export mislukt: '+(e2&&e2.message||e2));return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload');}
+async function exportData(){if(!featOn('backup')||!featOn('export')){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld',name);return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife',name);return;}catch(e2){toast('Opslaan is niet gelukt. Er is niets veranderd aan je gegevens — probeer het nog eens of kies een andere plek.');return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload',name);}
 async function exportOverzichtPDF(){
   if(!featOn('pdf')){toast('PDF-overzicht staat uit');return;}
   const J=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
@@ -4320,9 +4348,9 @@ async function exportOverzichtPDF(){
     const name='GridLife-overzicht-'+isoDate(now)+'.pdf';
     if(NATIVE&&P.Filesystem&&P.Share){
       const b64=doc.output('datauristring').split(',')[1];
-      try{await P.Filesystem.writeFile({path:name,data:b64,directory:'CACHE'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife overzicht',files:[uri.uri],dialogTitle:'Overzicht opslaan of delen'});}catch(e){if(!String(e&&e.message||e).toLowerCase().includes('cancel'))toast('PDF delen mislukt: '+(e&&e.message||e));}
+      try{await P.Filesystem.writeFile({path:name,data:b64,directory:'CACHE'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife overzicht',files:[uri.uri],dialogTitle:'Overzicht opslaan of delen'});}catch(e){if(!String(e&&e.message||e).toLowerCase().includes('cancel'))toast('Het delen van de PDF is niet gelukt. Probeer het nog eens.');}
     }else{doc.save(name);toast('PDF gedownload');}
-  }catch(e){toast('PDF mislukt: '+(e&&e.message||e));}
+  }catch(e){toast('Het maken van de PDF is niet gelukt. Er is niets veranderd aan je gegevens.');}
 }
 /* Een bestand dat geen back-up is, is geen foutje maar een moment van paniek: je bent je gegevens aan
    het redden. Daarom een scherm met uitleg en een weg vooruit, geen toast van twee woorden. */
@@ -4431,9 +4459,9 @@ function toonImportVerslag(r,vanOnb){
   const toegevoegd=[
     rij('Diensten',r.diensten,r.dienstenDubbel),rij('Potjes',r.potjes,r.potjesDubbel),
     rij('Werkgevers',r.werkgevers),rij('Recepten',r.recepten,r.receptenDubbel),
-    rij('Receptcategorieën',r.categorieen),rij('Loon-ontvangsten',r.loon,r.loonDubbel),
-    rij('Documenten',r.documenten,r.documentenDubbel),rij('Documentsoorten',r.docTypes),
-    rij('Rekeningen',r.rekeningen),rij('Openstaande afwijkingen',r.tegoed)
+    rij('Groepjes recepten',r.categorieen),rij('Loon-ontvangsten',r.loon,r.loonDubbel),
+    rij('Documenten',r.documenten,r.documentenDubbel),rij('Soorten documenten',r.docTypes),
+    rij('Rekeningen',r.rekeningen),rij('Uren die nog rechtgezet moeten worden',r.tegoed)
   ].join('');
   const dubbelTot=r.dienstenDubbel+r.potjesDubbel+r.receptenDubbel+r.loonDubbel+r.documentenDubbel;
   const niets=!toegevoegd&&!r.naam&&!r.functiesAan.length&&!r.functiesUit.length&&!r.instellingen.length;
@@ -4441,7 +4469,7 @@ function toonImportVerslag(r,vanOnb){
     <div class="statusbadge ok" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:14px">● Gelukt${dubbelTot?` · ${dubbelTot} regel${dubbelTot===1?'':'s'} overgeslagen`:''}</div>
     ${toegevoegd?`<div class="mini"><div class="mini-h">Toegevoegd</div>${toegevoegd}</div>`:''}
     ${r.functiesAan.length?`<div class="mini"><div class="mini-h">Weer aangezet</div><div class="muted" style="font-size:12.5px;padding:2px 0 6px">Hier stonden gegevens van in de back-up, dus deze functies zijn weer zichtbaar gemaakt.</div>${r.functiesAan.map(k=>`<div class="kv"><span class="k">${lbl(k)}</span><span class="v" style="color:var(--ok-tx)">aan</span></div>`).join('')}</div>`:''}
-    ${r.functiesUit.length?`<div class="mini"><div class="mini-h">Uitgezet</div><div class="muted" style="font-size:12.5px;padding:2px 0 6px">In de back-up stonden deze functies uit. Je kunt ze bij Functies weer aanzetten.</div>${r.functiesUit.map(k=>`<div class="kv"><span class="k">${lbl(k)}</span><span class="v" style="color:var(--muted)">uit</span></div>`).join('')}</div>`:''}
+    ${r.functiesUit.length?`<div class="mini"><div class="mini-h">Uitgezet</div><div class="muted" style="font-size:12.5px;padding:2px 0 6px">In de back-up stonden deze functies uit. Er is niets verwijderd — deze onderdelen zijn alleen verborgen. Zet je ze bij Functies weer aan, dan staat alles er nog.</div>${r.functiesUit.map(k=>`<div class="kv"><span class="k">${lbl(k)}</span><span class="v" style="color:var(--muted)">uit</span></div>`).join('')}</div>`:''}
     ${(r.naam||r.instellingen.length)?`<div class="mini"><div class="mini-h">Overgenomen uit de back-up</div>${r.naam?`<div class="kv"><span class="k">Je naam</span><span class="v">${esc(r.naam)}</span></div>`:''}${r.instellingen.map(n=>`<div class="kv"><span class="k">${n}</span><span class="v">bijgewerkt</span></div>`).join('')}</div>`:''}
     ${niets?'<div class="muted">Alles uit deze back-up stond al in de app. Er is niets veranderd.</div>':''}
     <div class="muted" style="font-size:12.5px;margin-top:12px">Je bestaande gegevens zijn nooit overschreven: wat er al stond is blijven staan, alleen wat ontbrak is toegevoegd. Je pincode komt bewust niet uit een back-up mee.</div>

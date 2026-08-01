@@ -129,7 +129,7 @@ input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webki
 .weekhdr b{color:var(--text)}
 .tegoed{background:var(--bad-bg);border-radius:18px;padding:14px 16px;margin-bottom:12px;cursor:pointer}
 .tegoed b{color:var(--bad-tx)}
-.tinytag{font-size:9.5px;font-weight:800;letter-spacing:.6px;color:var(--accent);background:var(--card2);border-radius:6px;padding:2px 7px;vertical-align:middle}
+.tinytag{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--accent);background:var(--card2);border-radius:6px;padding:3px 8px;vertical-align:middle}
 
 .pot{border:1px solid var(--line);border-radius:22px;margin-bottom:12px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
 .pot .ph{display:flex;justify-content:space-between;align-items:center;padding:15px 16px 4px;cursor:pointer}
@@ -183,8 +183,9 @@ input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webki
 .ed.open>.eb{display:block;animation:fade .2s ease}
 .subed{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;background:var(--bg);padding:12px;margin-top:10px}
 .adv{font-size:13.5px;font-weight:700;color:var(--accent);cursor:pointer;margin-top:12px;display:inline-block}
+.adv::after{content:' ⌄';font-weight:400}
 .xrow{align-items:center}
-.draghandle{padding:8px 10px;cursor:grab;color:var(--muted);touch-action:none;font-size:16px;user-select:none;-webkit-user-select:none}
+.draghandle{padding:13px 14px;margin:-13px -4px -13px -14px;cursor:grab;color:var(--muted);touch-action:none;font-size:16px;user-select:none;-webkit-user-select:none}
 .ed.dragging{opacity:.7;box-shadow:0 12px 28px rgba(0,0,0,.3);position:relative;z-index:5}
 
 /* kalender */
@@ -240,7 +241,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .confirmCard p{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.5}
 .confirmCard .cbody{margin:0 0 16px;color:var(--muted);font-size:13.5px;line-height:1.5;max-height:56vh;overflow:auto}
 .confirmCard .cbody .kv{padding:6px 0}
-.confirmCard .cwarn{background:var(--wait-bg);color:var(--wait-tx);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.45}
+.cwarn{background:var(--wait-bg);color:var(--wait-tx);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.45}
 .confirmCard .cnote{background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.45}
 .lock{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:calc(40px + var(--safe-t)) 24px}
 .lock.show{display:flex}
@@ -382,7 +383,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
   <button data-tab="potjes" onclick="go('potjes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h16v8H4z"/><path d="M4 10V7a2 2 0 012-2h9l5 5"/><circle cx="16" cy="14" r="1.3"/></svg>Potjes</button>
   <button data-tab="betalingen" onclick="go('betalingen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 15l3-3 2 2 4-4"/><path d="M3 5h18v14H3z"/></svg>Betalingen</button>
   <button data-tab="recept" onclick="go('recept')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v7a3 3 0 006 0V3M9 3v18M18 3c-1.5 1-2 3-2 6s.5 4 2 4v8"/></svg>Recepten</button>
-  <button data-tab="meer" onclick="go('meer')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg>Meer</button>
+  <button data-tab="meer" onclick="go('meer')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Meer</button>
 </nav>
 
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeSheet()"><div class="sheet" id="sheet"></div></div>
@@ -390,7 +391,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
 <div class="confirmOverlay" id="confirmOverlay"><div class="confirmCard" id="confirmCard"></div></div>
 <div class="undobar" id="undobar"><span id="undomsg"></span><button onclick="doUndo()">Herstel</button></div>
 <div class="onb" id="onb"><div class="inner" id="onbInner"></div></div>
-<div class="lock" id="lock"><div style="font-size:15px;color:var(--muted)">Voer je pincode in</div><div class="pindots" id="pindots"></div><div class="pinpad" id="pinpad"></div><button class="biobtn" id="bioBtn" style="display:none" onclick="tryBio()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 11v3M8.5 9.5A4.5 4.5 0 0117 11v3.5M5.5 8A7.5 7.5 0 0119.5 11v3M12 17.5v.5M15.5 15.5c0 2-1 4-2 5.5M8.5 14.5c0 2.5.5 4.5 1.5 6"/></svg>Vingerafdruk</button><div id="pinHelp" class="muted" style="display:none;font-size:12.5px;text-align:center;max-width:280px;line-height:1.5;margin-top:18px">Pincode vergeten? De code staat nergens anders opgeslagen, ook niet in een back-up. Je kunt de app dan alleen opnieuw installeren en je kopie terugzetten.</div></div>
+<div class="lock" id="lock"><div style="font-size:15px;color:var(--muted)">Voer je pincode in</div><div class="pindots" id="pindots"></div><div class="pinpad" id="pinpad"></div><button class="biobtn" id="bioBtn" style="display:none" onclick="tryBio()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 11v3M8.5 9.5A4.5 4.5 0 0117 11v3.5M5.5 8A7.5 7.5 0 0119.5 11v3M12 17.5v.5M15.5 15.5c0 2-1 4-2 5.5M8.5 14.5c0 2.5.5 4.5 1.5 6"/></svg>Vingerafdruk</button><div id="pinHelp" class="muted" style="display:none;font-size:12.5px;text-align:center;max-width:280px;line-height:1.5;margin-top:18px">Pincode vergeten? De code staat nergens anders opgeslagen, ook niet in een back-up.</div><button class="ghost" id="pinResetBtn" style="display:none;margin-top:12px" onclick="showPinReset()">Pincode kwijt? Opnieuw beginnen</button><div id="pinResetBox" style="display:none;margin-top:14px;max-width:280px;text-align:center"><div class="muted" style="font-size:12.5px;line-height:1.5;margin-bottom:8px">Dit wist al je gegevens op dit toestel, alsof je de app opnieuw installeert. Heb je een kopie opgeslagen? Zet die na het wissen terug via Instellingen.</div><input id="pinResetIn" placeholder="Typ WISSEN" autocapitalize="characters" autocomplete="off" style="text-align:center"><button class="danger" style="width:100%;margin-top:10px" onclick="doPinReset()">Wissen en opnieuw beginnen</button></div></div>
 
 <script src="jspdf.umd.min.js"></script>
 <script src="jspdf.plugin.autotable.min.js"></script>
@@ -752,6 +753,12 @@ function starSvg(fav){return '<svg class="ico" style="margin:0;width:21px;height
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
 function haptic(ms){try{if(navigator.vibrate)navigator.vibrate(ms||8);}catch(e){}}
 function parseDuur(txt){if(!txt&&txt!==0)return null;const s=String(txt).toLowerCase().replace(',','.');let min=0,hit=false;const hu=s.match(/(\d+(?:\.\d+)?)\s*(?:uur|u\b)/);if(hu){min+=parseFloat(hu[1])*60;hit=true;}const mm=s.match(/(\d+)\s*(?:minuten|minuut|min\b|m\b)/);if(mm){min+=parseInt(mm[1]);hit=true;}if(!hit){const only=s.match(/^\s*(\d+(?:\.\d+)?)\s*$/);if(only){min=parseFloat(only[1]);hit=true;}}return hit?Math.round(min):null;}
+/* Losse uren/minuten-velden i.p.v. vrije tekst — voorkomt dat "1.5 uur" of "90" verkeerd wordt gelezen. */
+function urenMinInput(id,totalMin,readonly){
+  const min=Math.max(0,+totalMin||0),u=Math.floor(min/60),m=min%60,ro=readonly?' readonly':'';
+  return `<div class="grid2"><div><label>Uren</label><input type="number" min="0" inputmode="numeric" id="${id}_u" value="${u||''}" placeholder="0"${ro}></div><div><label>Minuten</label><input type="number" min="0" max="59" inputmode="numeric" id="${id}_m" value="${m||''}" placeholder="0"${ro}></div></div>`;
+}
+function urenMinVal(id){const u=parseFloat(val(id+'_u'))||0,m=parseFloat(val(id+'_m'))||0;return Math.max(0,Math.round(u*60+m));}
 
 /* ===== NAVIGATIE ===== */
 let cur='start';
@@ -777,13 +784,13 @@ const FEATS=[
  {k:'comp',grp:'uren',label:'Uren controleren',oms:'Elke dienst afvinken als Klopt of Klopt niet, en afwijkingen rechtzetten',mod:'uren'},
  {k:'stats',grp:'uren',label:'Statistieken',oms:'Uren-grafieken per dag, week en maand',mod:'uren'},
  /* Potjes */
- {k:'buffers',grp:'potjes',label:'Buffers',oms:'Sparen voor onvoorspelbare kosten, met maandadvies',mod:'potjes'},
- {k:'opzijtel',grp:'potjes',label:'Bijhouden of je echt overmaakt',oms:'Bij potjes waar je voor spaart zie je hoe vaak je het geld de laatste 12 loondagen echt hebt overgemaakt',mod:'potjes'},
- {k:'toeslag',grp:'potjes',label:'Toeslagen & vergoedingen',oms:'Zorgtoeslag e.d. verrekenen en volgen',mod:'potjes'},
+ {k:'buffers',grp:'potjes',label:'Buffers',oms:'Sparen voor onvoorspelbare kosten, met een advies per maand',mod:'potjes'},
+ {k:'opzijtel',grp:'potjes',label:'Bijhouden of je echt overmaakt',oms:'Bij een potje waar je voor spaart zie je hoe vaak je in de laatste 12 loondagen het geld ook echt hebt overgemaakt',mod:'potjes'},
+ {k:'toeslag',grp:'potjes',label:'Toeslagen & vergoedingen',oms:'Zorgtoeslag en andere vergoedingen verrekenen en volgen',mod:'potjes'},
  {k:'ontvangst',grp:'potjes',label:'Losse ontvangsten',oms:'Geld-erbij los kunnen loggen op een potje',mod:'potjes'},
  {k:'fuel',grp:'potjes',label:'Brandstof-potjes',oms:'Tankbeurten met liters en literprijs',mod:'potjes'},
  {k:'once',grp:'potjes',label:'Losse, ongewone uitgave',oms:'Die ene dure reparatie telt dan niet mee als je normale maandbedrag',mod:'potjes'},
- {k:'hints',grp:'potjes',label:'Vooruitblik bij een betaling',oms:'De app onthoudt wanneer een rekening echt afgeschreven wordt en voor hoeveel, en zegt dat erbij',mod:'potjes'},
+ {k:'hints',grp:'potjes',label:'Vooruitblik bij een betaling',oms:'De app onthoudt wanneer een vaste last echt afgeschreven wordt en voor hoeveel, en zegt dat erbij',mod:'potjes'},
  /* Loon */
  {k:'loonlog',grp:'loon',label:'Loon loggen',oms:'Netto inkomen bijhouden en zien wat je overhoudt',mod:'loon'},
  /* Recepten */
@@ -913,7 +920,7 @@ function obNext(){
 /* Eén verhaal voor een bestand dat geen back-up blijkt. "Ongeldig bestand" in een balkje van twee
    seconden liet iemand die zijn gegevens probeert te redden met lege handen staan: hij weet niet of
    hij het verkeerde bestand pakte of dat zijn back-up stuk is, en al helemaal niet wat hij nu moet. */
-const BESTAND_UITLEG='Een GridLife-back-up heet <b>gridlife-backup-…json</b>. Die staat meestal in de map Documenten/GridLife op je telefoon, of in de mail waar je hem naartoe hebt gestuurd. Er is niets veranderd aan je gegevens.';
+const BESTAND_UITLEG='Een GridLife-back-up is een bestand dat begint met <b>gridlife-backup</b>. Die staat meestal in de map Documenten/GridLife op je telefoon, of in de mail waar je hem naartoe hebt gestuurd. Er is niets veranderd aan je gegevens.';
 function onbFout(kop){
   const el=document.getElementById('onbFout');if(!el)return;
   el.innerHTML=`<b>${kop}</b><br>${BESTAND_UITLEG}<br>Tik hierboven nog eens om een ander bestand te kiezen.`;
@@ -986,8 +993,8 @@ const GUIDE=[
  t:gt(`Werkgevers maken fouten met urenregistratie. Zodra jouw werkgever de uren klaarzet, vergelijk je ze met wat er in de app staat en tik je <b>Klopt</b> of <b>Klopt niet</b>. Zo weet je altijd zeker dat je krijgt betaald voor wat je gewerkt hebt — en zie je bovenaan het Uren-scherm in één oogopslag wat er nog open staat.`)
   +gt(`Klopt het niet, dan vul je in hoeveel tijd je miste (bijvoorbeeld "45 min") en kies je hoe dat rechtgezet wordt: op een <b>latere dienst</b>, <b>apart nabetaald</b>, of <b>zelf geregeld</b>. Onder elke knop staat wat er dan gebeurt. Een "apart nabetaald"-correctie blijft meetellen als openstaand tot je 'm afvinkt als ontvangen; klopt iets niet, dan kun je een rechtgezette afwijking altijd weer heropenen.`)},
 {s:'Uren',mod:'uren',q:'Wat stel ik allemaal in per werkgever?',a:{lbl:'Naar Instellingen → Werkgevers',fn:"gaNaarBlok('instellingen','beheerCard');setTimeout(()=>openBeheerSheet('werkgevers'),260)"},
- v:gv(`<div class="mini" style="margin-bottom:8px"><div class="mini-h">Dienstverband</div>${GCHIPS(['In dienst','Uit dienst'],'In dienst')}<div class="muted" style="font-size:12.5px;margin-top:5px">Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.</div>${GLBL('Contract-uren per week')}${GINP('32','bijv. 32')}</div><div class="mini" style="margin-bottom:0"><div class="mini-h">Loon</div>${GLBL('Hoe vaak krijg je loon?')}${GCHIPS(['Maandelijks','2× per maand','Per aantal weken','Wisselend'],'Maandelijks')}${GLBL('Dag van de maand')}${GINP('25e van de maand')}</div>`),
- t:gt(`Ga naar <b>Instellingen → Lijsten &amp; categorieën → Werkgevers</b> en tik op <b>Instellingen</b> bij een werkgever. Daar staat alles bij elkaar: of je er nog in dienst bent, je contract-uren per week, wanneer je loon krijgt, en hoe deze werkgever met uren en correcties omgaat.`)
+ v:gv(`<div class="mini" style="margin-bottom:8px"><div class="mini-h">Dienstverband</div>${GCHIPS(['In dienst','Uit dienst'],'In dienst')}<div class="muted" style="font-size:12.5px;margin-top:5px">Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.</div>${GLBL('Vast aantal uur per week')}${GINP('32','bijv. 32')}</div><div class="mini" style="margin-bottom:0"><div class="mini-h">Loon</div>${GLBL('Hoe vaak krijg je loon?')}${GCHIPS(['Maandelijks','2× per maand','Per aantal weken','Wisselend'],'Maandelijks')}${GLBL('Dag van de maand')}${GINP('25e van de maand')}</div>`),
+ t:gt(`Ga naar <b>Instellingen → Lijsten &amp; categorieën → Werkgevers</b> en tik op <b>Instellingen</b> bij een werkgever. Daar staat alles bij elkaar: of je er nog in dienst bent, je vaste aantal uur per week, wanneer je loon krijgt, en hoe deze werkgever met uren en correcties omgaat.`)
   +gt(`Onderaan staat een blokje <b>"Je eerstvolgende loondagen"</b> met je eerstvolgende vijf loondagen, inclusief de reden als er eentje verschoven is. Zo controleer je een instelling aan de uitkomst in plaats van aan de knoppen.`)
   +gt(`Als je op Opslaan tikt krijg je eerst een <b>bevestiging</b> met wat er daarna geldt. Verandert er iets ingrijpends — een andere werkgever gaat uit dienst, je loondag verschuift, of er ontbreekt een datum waardoor de app niets kan berekenen — dan staat dat er expliciet bij. Is er niks bijzonders, dan is het gewoon een korte samenvatting.`)
   +gt(`Je kunt zoveel werkgevers toevoegen als je wilt, maar er kan er maar <b>één tegelijk op "in dienst"</b> staan — die bepaalt je loondag. Wissel je van baan, dan zet je de nieuwe op "in dienst"; de oude gaat automatisch uit dienst en al zijn diensten en historie blijven gewoon staan.`)},
@@ -997,8 +1004,8 @@ const GUIDE=[
 {s:'Potjes & sparen',mod:'potjes',q:'Wat betekent "per maand opzij"?',
  v:gv(`<div class="card" style="margin-bottom:0"><div class="muted">Opzij zetten deze maand</div><div class="big">${eur(208.7)}</div><div class="bar" style="margin-top:14px"><div style="width:64%"></div></div>${GKV('Overgemaakt',eur(133.5),'var(--green)')}<div class="muted" style="margin-top:2px;font-size:12.5px">reset bij loon (25 jul 2026)</div></div>`),
  t:gt(`Dat is de optelsom van al je vaste lasten, omgerekend naar één maand. Een jaarabonnement van ${eur(120)} telt dus als ${eur(10)} per maand. Het is het bedrag dat je op je loondag opzij zet <b>voor de maand die eraan komt</b>.`)},
-{s:'Potjes & sparen',mod:'potjes',feat:'buffers',q:'Wat is een buffer en wat is dat maandadvies?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
- v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm"><span class="tinytag">BUFFER</span> Auto-onderhoud</span><span class="itamt">${eur(25)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div><div class="ln" style="margin-top:8px">Aanbevolen: <b style="color:var(--text)">${eur(33)}/mnd</b></div></div><div class="row between" style="margin-top:8px;align-items:center;gap:10px"><span class="muted">Op basis van je echte uitgaven</span><button class="tiny primary">Overnemen</button></div>`),
+{s:'Potjes & sparen',mod:'potjes',feat:'buffers',q:'Wat is een buffer en wat is dat advies per maand?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
+ v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm"><span class="tinytag">BUFFER</span> Auto-onderhoud</span><span class="itamt">${eur(25)}<span class="muted" style="font-weight:400"> per maand</span></span></div><div class="ln" style="margin-top:8px">Aanbevolen: <b style="color:var(--text)">${eur(33)} per maand</b></div></div><div class="row between" style="margin-top:8px;align-items:center;gap:10px"><span class="muted">Op basis van je echte uitgaven</span><button class="tiny primary">Overnemen</button></div>`),
  t:gt(`Een buffer is voor kosten die je <b>niet kunt plannen</b>: autoreparaties, tandarts, kapotte apparaten. Er is geen vaste datum, alleen een bedrag dat je maandelijks opzijzet. De app kijkt naar wat je er het afgelopen jaar echt uit betaald hebt en adviseert een realistischer maandbedrag — met één tik neem je dat over.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'opzijtel',q:'Wat betekent "5 van 7 keer overgemaakt"?',
  v:gv(`<div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Auto</b></div><div class="check"></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(44.17)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(96)}</div><div style="margin-top:8px"><span class="statusbadge warn">&#9679; 5 van 7 keer overgemaakt</span><div style="font-size:13px;margin-top:4px;color:var(--amber)">2 keer overgeslagen &middot; <b>${eur(88.34)}</b> minder opzij gezet</div></div></div></div></div>`),
@@ -1006,7 +1013,7 @@ const GUIDE=[
  +gt(`Bij maandelijkse vaste lasten leest de app dat gewoon van je saldo af. Bij een <b>buffer</b> of <b>jaarpost</b> kan dat niet — daar hoort je saldo juist op te lopen naar één grote afschrijving, en gebruiken is geen fout maar de bedoeling. Daarom telt de app hier <b>wat jij zelf overmaakte</b>, niet je saldo: uitgaven tellen niet mee, dus een dure reparatie laat de teller gewoon op groen staan.`)
  +gt(`Het tellen begint pas bij je <b>eerste afvinking</b> (geen verzonnen achterstand met terugwerkende kracht) en kijkt maximaal <b>12 loondagen</b> terug (een gemiste maand rolt vanzelf weer uit beeld). Vergat je alleen het vinkje maar had je wél overgemaakt? Tik op <b>Toch overgemaakt?</b> onder de teller om het alsnog goed te zetten — je saldo blijft daarbij ongemoeid.`)},
 {s:'Potjes & sparen',mod:'potjes',feat:'fuel',q:'Hoe werkt een brandstofpotje?',a:{lbl:'Naar Potjes beheren',fn:"go('potjes');setTimeout(openPotEdit,200)"},
- v:gv(`<div class="mini" style="margin-bottom:0"><div class="mini-h">Tanken · laatste 12 maanden</div>${GKV('Gemiddeld per maand',eur(54.94))}${GKV('Gemiddeld per tankbeurt',eur(68.68))}${GKV('Getankt','126,4 L')}${GKV('Gemiddelde literprijs',eur(2.18))}${GKV('Tankbeurten','4')}<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(55)}/mnd</b></span><button class="tiny primary">Overnemen</button></div></div>`),
+ v:gv(`<div class="mini" style="margin-bottom:0"><div class="mini-h">Tanken · laatste 12 maanden</div>${GKV('Gemiddeld per maand',eur(54.94))}${GKV('Gemiddeld per tankbeurt',eur(68.68))}${GKV('Getankt','126,4 L')}${GKV('Gemiddelde literprijs',eur(2.18))}${GKV('Tankbeurten','4')}<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(55)} per maand</b></span><button class="tiny primary">Overnemen</button></div></div>`),
  t:gt(`Zet bij een potje het brandstof-vlaggetje aan (Potje bewerken → Geavanceerde opties). Bij elke tankbeurt kun je dan ook <b>liters en literprijs</b> invullen — het bedrag wordt automatisch berekend. De app houdt je gemiddelde per maand én per tankbeurt bij en adviseert wat je maandelijks opzij kunt zetten.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Hoe noteer ik een uitgave?',a:{lbl:'Uitgave toevoegen',fn:"go('potjes');setTimeout(openUitgave,200)"},
  v:gv(`<div style="margin-bottom:8px">${GLBL('Bedrag')}<div class="money"><span>€</span><input value="52,50" readonly style="cursor:default"></div>${GLBL('Potje')}${GINP('Vaste Lasten')}${GLBL('Vaste last')}${GINP('Internet')}</div><div class="statusbadge ok" style="margin-bottom:0">● Dekt de betaling van 10 mrt 2026 af · 5 dagen eerder betaald</div>`),
@@ -1014,9 +1021,9 @@ const GUIDE=[
   +gt(`Ook handig om je historie bij te werken: zet de datum op wanneer er écht is afgeschreven, ook jaren terug. De app zoekt zelf de betaling die daar het dichtst bij ligt. Boek je iets uit een <b>eerdere maand</b>, dan staat het vinkje "Saldo van het potje bijwerken" automatisch uit — dat geld ging toen al van je rekening en zit al in je huidige saldo, dus nog een keer afboeken zou dubbel tellen. Je kunt dat altijd zelf omzetten.`)},
 {s:'Betalingen',mod:'potjes',q:'Hoe vink ik een betaling af?',a:{lbl:'Naar Betalingen',fn:"go('betalingen')"},
  v:gv(`<div class="shift" style="margin-bottom:0"><div class="head"><div><b><span class="dot" style="background:var(--wait-tx)"></span>Zorgverzekering</b><div class="muted">za 1 augustus 2026 · Vaste Lasten</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:var(--bad-tx)">− ${eur(148.2)}</div>${GBADGE('b-bad','Te laat')}</div></div><div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(47)}</div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check"></div><span class="muted">Tik om betaald te zetten</span></div></div>`),
- t:gt(`Tik op de kaart of op het vierkantje. De app vraagt om het <b>echte bedrag</b> en de datum — die mag afwijken van wat er gepland stond. Het saldo van het bijbehorende potje wordt bijgewerkt en de betaling verhuist naar Afgerond. Per ongeluk afgevinkt? Tik 'm opnieuw aan en bevestig. Was het saldo meeveranderd, dan komt het bedrag terug; boekte je iets uit een eerdere maand met het saldo-vinkje uit, dan blijft je saldo ook nu ongemoeid.<br><br>Is een betaling blijven staan omdat hij nog niet af is, dan krijgt hij het label <b>Te laat</b> en blijft hij openstaan tot je hem afvinkt. Komt een afschrijving een keer gewoon niet? Kies dan in datzelfde scherm <b>Deze betaling komt niet</b>. Er gaat dan niets van je saldo af en de betaling verdwijnt uit je openstaande lijst — je vindt hem doorgestreept terug onder Afgerond, en met één tik zet je hem weer op openstaand.<br><br>Op je loondag staat je <b>loon</b> net zo tussen de regels: vink het af en vul in wat er echt is binnengekomen. Dat bedrag telt meteen mee in je gemiddelde inkomen en in "hou ik over".`)},
+ t:gt(`Tik op de kaart of op het vierkantje. De app vraagt om het <b>echte bedrag</b> en de datum — die mag afwijken van wat er gepland stond. Het saldo van het bijbehorende potje wordt bijgewerkt en de betaling verhuist naar Afgerond. Per ongeluk afgevinkt? Tik 'm opnieuw aan en bevestig. Was het saldo meeveranderd, dan komt het bedrag terug; boekte je iets uit een eerdere maand met het saldo-vinkje uit, dan blijft je saldo ook nu ongemoeid.<br><br>Is een betaling blijven staan omdat hij nog niet af is, dan krijgt hij het label <b>Te laat</b> en blijft hij openstaan tot je hem afvinkt. Komt een afschrijving een keer gewoon niet? Kies dan in datzelfde scherm <b>Deze betaling komt niet</b>. Er gaat dan niets van je saldo af en de betaling verdwijnt uit je openstaande lijst — je vindt hem doorgestreept terug onder Afgerond, en met één tik zet je hem weer op openstaand.<br><br>Op je loondag staat je <b>loon</b> gewoon als rij tussen je andere betalingen: vink het af en vul in wat er echt is binnengekomen. Dat bedrag telt meteen mee in je gemiddelde inkomen en in "hou ik over".`)},
 {s:'Betalingen',mod:'potjes',feat:'toeslag',q:'Wat is een toeslag en wat is mijn "eigen deel"?',
- v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> p/mnd</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
+ v:gv(`<div class="potitem" style="margin-bottom:0"><div class="row between" style="align-items:flex-start"><span class="nm">Zorgverzekering</span><span class="itamt">${eur(101.2)}<span class="muted" style="font-weight:400"> per maand</span></span></div>${GKV('Bedrag',eur(148.2)+' per maand')}${GKV('Zorgtoeslag terug','+ '+eur(47)+' per maand','var(--ok-tx)')}${GKV('Eigen deel',eur(101.2)+' per maand')}</div>`),
  t:gt(`Krijg je een deel van een vaste last terug — zorgtoeslag, huurtoeslag, een vergoeding van je werk? Koppel dat bedrag aan de vaste last. De app trekt het eraf voor de berekening van wat je <b>echt</b> per maand kwijt bent (je eigen deel), maar houdt de volledige afschrijving én de binnenkomende toeslag apart bij op de Betalingen-pagina.<br><br>Komt er bij één vaste last <b>meer dan één</b> bedrag terug — bijvoorbeeld zorgtoeslag én een vergoeding van je werk? Dan zet je ze allebei bij die vaste last neer (Potje bewerken → vaste last → Toeslag toevoegen). Elke toeslag heeft zijn eigen bedrag, ritme en datums, en krijgt een eigen regel op de Betalingen-pagina; voor je eigen deel worden ze bij elkaar opgeteld.`)
  +gt(`Een toeslag <b>ontvangen</b>? Zet het ＋-scherm op Ontvangst en kies de toeslag — die staat in de lijst met de vaste last erachter (bijv. "Zorgtoeslag — bij Menzis"). De app koppelt daarbij aan de datum van de toeslag zelf, niet aan die van de afschrijving.`)},
 {s:'Loon',mod:'loon',q:'Waar stel ik in wanneer ik loon krijg?',a:{lbl:'Naar Loon',fn:"go('loon')"},
@@ -1031,7 +1038,7 @@ const GUIDE=[
  t:gt(`Vul bij je nieuwe werkgever de <b>eerste loondag</b> in. Zonder die datum pakt de app gewoon de eerstvolgende dag uit het nieuwe ritme — vaak veel te vroeg, waardoor je een melding krijgt en er een loonregel op Betalingen verschijnt die er niet hoort.`)
   +gt(`Je potjes-checklist raak je bij zo'n wissel niet kwijt: die blijft staan tot je volgende loondag echt voorbij is.`)},
 {s:'Loon',mod:'loon',feat:'loonlog',q:'Wat betekent "hou ik over"?',a:{lbl:'Naar Loon',fn:"go('loon')"},
- v:gv(`<div class="card" style="margin-bottom:0">${GKV('Gemiddeld inkomen',eur(1780)+' p/mnd')}${GKV('Naar potjes','− '+eur(208.7))}${GKV('Hou je over',eur(1571.3)+' p/mnd','var(--ok-tx)')}</div>`),
+ v:gv(`<div class="card" style="margin-bottom:0">${GKV('Gemiddeld inkomen',eur(1780)+' per maand')}${GKV('Naar potjes','− '+eur(208.7))}${GKV('Hou je over (gemiddeld)',eur(1571.3)+' per maand','var(--ok-tx)')}</div>`),
  t:gt(`Dit is je gemiddelde netto inkomen (over het <b>laatste jaar</b>) min alles wat je maandelijks opzij zet voor je potjes. Wat overblijft is je <b>vrije ruimte</b>: boodschappen, uitjes, sparen. Het is geen uitgaven-app — de app rekent niet mee wat je daarvan uitgeeft.`)
   +gt(`Waarom een heel jaar? Zo tellen je <b>vakantiegeld</b>, een eventuele 13e maand en drukke of rustige maanden allemaal mee in één stabiel cijfer, in plaats van dat één uitschieter je gemiddelde even flink laat springen. Nadeel: begin je bij een nieuwe, beter betaalde baan, dan trekt het oude loon het gemiddelde nog even omlaag totdat er genoeg nieuwe maanden zijn.`)},
 {s:'Loon',mod:'loon',q:'Waarom springt "volgende loon" ineens door naar de maand erna?',
@@ -1049,7 +1056,7 @@ const GUIDE=[
  t:gt(`Per soort melding (loon, betalingen, toeslagen, documenten, uren-controle) stel je zelf in of je 'm wilt, op welk <b>tijdstip</b>, en hoeveel <b>herinner-momenten</b> ervoor — bijvoorbeeld een week vooraf én op de dag zelf. Je vindt het bij Instellingen → Meldingen.`)},
 {s:'Back-up & veiligheid',q:'Hoe zet ik een back-up veilig en hoe zet ik hem terug?',a:{lbl:'Naar Instellingen → Back-up',fn:"gaNaarBlok('instellingen','backupCard')"},
  v:gv(`<div class="card" style="margin-bottom:0"><h2 style="font-size:15px">Back-up &amp; herstel</h2><div class="row between" style="align-items:center;padding-top:8px;border-top:1px solid var(--line)"><div style="flex:1"><b>Automatisch</b><div class="muted" style="font-size:12.5px">De app schrijft zelf een back-upbestand weg.</div></div><div class="check on">✓</div></div>${GLBL('Hoe vaak?')}${GINP('Meteen na elke aanpassing')}<div class="grid2" style="margin-top:12px"><button class="ghost">Kopie opslaan</button><button class="ghost">Kopie terugzetten</button></div></div>`),
- t:gt(`Terugzetten in drie stappen: <b>1.</b> Tik op <b>Kopie terugzetten</b> en kies je bestand — het heet <b>gridlife-backup-…json</b>. <b>2.</b> Je ziet eerst wat erin staat, zodat je weet of je het juiste bestand te pakken hebt; er gebeurt nog niets. <b>3.</b> Pas na Terugzetten voegt de app het samen, en krijg je een verslag van precies wat is toegevoegd.`)
+ t:gt(`Terugzetten in drie stappen:<br><b>1.</b> Tik op <b>Kopie terugzetten</b> en kies je bestand — het begint met <b>gridlife-backup</b>.<br><b>2.</b> Je ziet eerst wat erin staat, zodat je weet of je het juiste bestand te pakken hebt; er gebeurt nog niets.<br><b>3.</b> Pas na Terugzetten voegt de app het samen, en krijg je een verslag van precies wat is toegevoegd.`)
   +gt(`Terugzetten <u>voegt samen</u>: wat je al hebt blijft staan, alleen wat ontbreekt komt erbij. Je overschrijft dus nooit per ongeluk je huidige gegevens. Je <b>instellingen</b> komen wel mee zoals ze in de back-up stonden — loondag, thema, je naam en welke functies aanstaan. Je pincode blijft er bewust buiten: een back-up hoort je niet uit je eigen app te kunnen sluiten.`)
   +gt(`<b>Kopie opslaan</b> maakt een bestand dat je kunt delen of in de cloud kunt zetten — doe dat af en toe, want een back-up op dezelfde telefoon helpt niet als die telefoon weg is. Zet <b>Automatisch</b> aan en de app doet dit zelf, in de map Documenten/GridLife.`)},
 {s:'Back-up & veiligheid',q:'Hoe zet ik een pincode of vingerafdruk op de app?',a:{lbl:'Naar Instellingen',fn:"gaNaarBlok('instellingen','slotCard')"},
@@ -1278,7 +1285,7 @@ function loonNaDatumWijziging(ctx){
 /* De velden die bij de gekozen frequentie horen. */
 function loonWanneerHTML(L,ctx){
   const zet=k=>`loonSet('${ctx}','${k}',`;
-  if(L.mode==='weeks')return `<div class="grid2"><div><label>Interval</label><select id="${ctx}_loonIv" onchange="${zet('intervalWeeks')}+this.value)">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${+L.intervalWeeks===n?'selected':''}>elke ${n} ${n===1?'week':'weken'}</option>`).join('')}</select></div><div><label>Een datum waarop je loon kreeg</label><input type="date" id="${ctx}_loonStart" value="${L.start||''}" onchange="${zet('start')}this.value)"></div></div>
+  if(L.mode==='weeks')return `<div class="grid2"><div><label>Ritme</label><select id="${ctx}_loonIv" onchange="${zet('intervalWeeks')}+this.value)">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${+L.intervalWeeks===n?'selected':''}>elke ${n} ${n===1?'week':'weken'}</option>`).join('')}</select></div><div><label>Een datum waarop je loon kreeg</label><input type="date" id="${ctx}_loonStart" value="${L.start||''}" onchange="${zet('start')}this.value)"></div></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Eén datum waarop je loon kreeg — daarvandaan rekent de app alle volgende loondagen uit.${L.start?'':` <b style="color:var(--bad-tx)">Zonder deze datum kan de app geen enkele loondag berekenen.</b>`}</div>`;
   if(L.mode==='twice')return `<div class="grid2"><div><label>Eerste loondag</label><select id="${ctx}_loonDag" onchange="${zet('dag')}+this.value)">${dagOpties(L.dag)}</select></div><div><label>Tweede loondag</label><select id="${ctx}_loonDag2" onchange="${zet('dag2')}+this.value)">${dagOpties(L.dag2)}</select></div></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Bijvoorbeeld de 15e en de laatste dag van de maand. Dat zijn 24 loondagen per jaar.${(+L.dag>28&&+L.dag<31)||(+L.dag2>28&&+L.dag2<31)?' In kortere maanden (februari) schuift een dag na de 28e automatisch naar de laatste dag.':''}${+L.dag===+L.dag2?' <b style="color:var(--wait-tx)">Twee keer dezelfde dag telt als één loondag — kies twee verschillende dagen.</b>':''}</div>`;
@@ -1390,10 +1397,10 @@ function renderUren(){
      en het duwt de knop waar je wél moet zijn uit beeld. */
   if(featOn('comp')&&db.shifts.length){
     const openAfw=afwOpenShifts(filt).length,minOpen=afwMinOpen(filt),todo=teCheckShifts(filt).length,nabW=nabWachtShifts(filt).length,nabWMin=nabWachtMin(filt);
-    if(openAfw)tc.innerHTML=`<div class="tegoed" onclick="openControle()"><b>${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' · '+fmtDur(minOpen/60):''}</b><div class="muted" style="margin-top:3px">Tik om recht te zetten</div></div>`;
-    else if(todo)tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${todo} dienst${todo===1?'':'en'} te controleren</b><div class="muted" style="margin-top:3px">Tik om te controleren</div></div>`;
-    else if(nabW)tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${nabW} nabetaling${nabW===1?'':'en'} verwacht${nabWMin?' · '+fmtDur(nabWMin/60):''}</b><div class="muted" style="margin-top:3px">Tik om af te vinken als ontvangen</div></div>`;
-    else tc.innerHTML=`<div class="tegoed" onclick="openControle()" style="background:var(--ok-bg)"><b style="color:var(--ok-tx)">Alle uren gecontroleerd</b><div class="muted" style="margin-top:3px">Tik voor het overzicht</div></div>`;
+    if(openAfw)tc.innerHTML=`<div class="tegoed" onclick="openControle('${esc(filt)}')"><b>${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' · '+fmtDur(minOpen/60):''}</b><div class="muted" style="margin-top:3px">Tik om recht te zetten</div></div>`;
+    else if(todo)tc.innerHTML=`<div class="tegoed" onclick="openControle('${esc(filt)}')" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${todo} dienst${todo===1?'':'en'} te controleren</b><div class="muted" style="margin-top:3px">Tik om te controleren</div></div>`;
+    else if(nabW)tc.innerHTML=`<div class="tegoed" onclick="openControle('${esc(filt)}')" style="background:var(--wait-bg)"><b style="color:var(--wait-tx)">${nabW} nabetaling${nabW===1?'':'en'} verwacht${nabWMin?' · '+fmtDur(nabWMin/60):''}</b><div class="muted" style="margin-top:3px">Tik om af te vinken als ontvangen</div></div>`;
+    else tc.innerHTML=`<div class="tegoed" onclick="openControle('${esc(filt)}')" style="background:var(--ok-bg)"><b style="color:var(--ok-tx)">Alle uren gecontroleerd</b><div class="muted" style="margin-top:3px">Tik voor het overzicht</div></div>`;
   }else tc.innerHTML='';
   document.getElementById('statusChips').innerHTML=[['','Alles'],['todo','Te controleren'],['afw','Klopt niet']].map(([k,l])=>`<span class="chip ${urenStatusFilter===k?'on':''}" onclick="urenStatusFilter='${k}';renderUren()">${l}</span>`).join('');
   const now=new Date();let maandMin=0;
@@ -1479,13 +1486,18 @@ function openShift(id,preset){
   openSheet(`<div class="row between"><h2 style="margin:0">${id?'Dienst bewerken':'Nieuwe dienst'}</h2>${id?`<button class="tiny ghost" onclick="dupShift('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Kopie</button>`:''}</div>
     <label>Werkgever</label>${werkVeld}
     <label>Datum</label><input type="date" id="f_date" value="${s.date}">
-    <div class="grid2"><div><label>Begin</label><input type="time" id="f_start" value="${s.start}"></div><div><label>Einde</label><input type="time" id="f_end" value="${s.end}"></div></div>
-    <label>Pauze (bijv. "15 min" of "1 uur 10 min")</label><input id="f_pauze" value="${esc(fmtPauze(s.pauze))}" placeholder="bijv. 30 min">
-    <div class="muted" style="margin-top:8px">Gewerkt: <b style="color:var(--text)">${fmtDur(hoursOf(s))}</b></div>
+    <div class="grid2"><div><label>Begin</label><input type="time" id="f_start" value="${s.start}" oninput="updateShiftDur()"></div><div><label>Einde</label><input type="time" id="f_end" value="${s.end}" oninput="updateShiftDur()"></div></div>
+    <label>Pauze (bijv. "15 min" of "1 uur 10 min")</label><input id="f_pauze" value="${esc(fmtPauze(s.pauze))}" placeholder="bijv. 30 min" oninput="updateShiftDur()">
+    <div class="muted" style="margin-top:8px">Gewerkt: <b id="f_gewerkt" style="color:var(--text)">${fmtDur(hoursOf(s))}</b></div>
     ${featOn('comp')?controlePanel(s,id):''}
     <label>Notitie (optioneel)</label><textarea id="f_note" placeholder="Bijv. cursus, kassa...">${esc(s.note||'')}</textarea>
     <div class="row" style="margin-top:16px">${id?`<button class="danger" onclick="delShift('${id}')">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveShift('${id||''}')">Opslaan</button></div>`);
   window._ctrlSt=ctrlOf(s).st;window._ctrlTouched=false;
+}
+function updateShiftDur(){
+  const el=document.getElementById('f_gewerkt');if(!el)return;
+  const start=val('f_start'),end=val('f_end');if(!start||!end)return;
+  el.textContent=fmtDur(hoursOf({start,end,pauze:parseDuur(val('f_pauze'))||0}));
 }
 function controlePanel(s,id){
   const c=ctrlOf(s);
@@ -1505,11 +1517,11 @@ function controlePanel(s,id){
     <div class="row" style="flex-wrap:wrap;gap:8px" id="ctrlPick">${chips}</div>
     <div id="afwWrap" style="display:${c.st==='afw'?'block':'none'}">
       <label>Hoeveel tijd miste je?</label>
-      <input id="f_afw"${resolved?' readonly':''} value="${c.min?esc(fmtDur(c.min/60)):''}" placeholder="bijv. 30 min of 1 uur 15 min">
+      ${urenMinInput('f_afw',c.min,resolved)}
       ${resBlock}
     </div>`;
 }
-function pickCtrl(el){if(!el.dataset.st)return;window._ctrlTouched=true;document.querySelectorAll('#ctrlPick .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');window._ctrlSt=el.dataset.st;const aw=document.getElementById('afwWrap');if(aw)aw.style.display=window._ctrlSt==='afw'?'block':'none';const fa=document.getElementById('f_afw');if(fa&&window._ctrlSt==='afw'){fa.removeAttribute('readonly');fa.style.background='';fa.style.color='';fa.style.cursor='';}const rb=document.getElementById('ctrlResBlock');if(rb)rb.style.display='none';}
+function pickCtrl(el){if(!el.dataset.st)return;window._ctrlTouched=true;document.querySelectorAll('#ctrlPick .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');window._ctrlSt=el.dataset.st;const aw=document.getElementById('afwWrap');if(aw)aw.style.display=window._ctrlSt==='afw'?'block':'none';if(window._ctrlSt==='afw')['f_afw_u','f_afw_m'].forEach(id=>{const fa=document.getElementById(id);if(fa){fa.removeAttribute('readonly');fa.style.background='';fa.style.color='';fa.style.cursor='';}});const rb=document.getElementById('ctrlResBlock');if(rb)rb.style.display='none';}
 function dupShift(id){const s=db.shifts.find(x=>x.id===id);if(!s)return;openShift(null,{...s,id:null,date:isoDate(new Date()),ctrl:{st:'todo',min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''},note:s.note});toast('Kopie — pas de datum aan');}
 function saveShift(id){
   /* Typ je hier een werkgever die al bestaat maar anders geschreven ("jumbo"), dan hoort de dienst bij
@@ -1528,7 +1540,7 @@ function saveShift(id){
     if(stt==='afw'){
       // Bij handmatig opnieuw op "Klopt niet" tikken (aangeraakt) laten we een eerdere oplossing los, zodat de dienst weer open komt.
       const keep=prev&&prev.st==='afw'&&!window._ctrlTouched;
-      s.ctrl={st:'afw',min:parseDuur(val('f_afw'))||0,opgelost:keep?!!prev.opgelost:false,via:keep?prev.via:'',corrShiftId:keep?prev.corrShiftId:'',nabetaalDatum:keep?prev.nabetaalDatum:'',nabOntvangen:keep?!!prev.nabOntvangen:false,note:keep?prev.note:''};
+      s.ctrl={st:'afw',min:urenMinVal('f_afw'),opgelost:keep?!!prev.opgelost:false,via:keep?prev.via:'',corrShiftId:keep?prev.corrShiftId:'',nabetaalDatum:keep?prev.nabetaalDatum:'',nabOntvangen:keep?!!prev.nabOntvangen:false,note:keep?prev.note:''};
     }else s.ctrl={st:stt,min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''};
   }else s.ctrl=old&&old.ctrl?old.ctrl:{st:'todo',min:0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:''};
   /* Zelfde werkgever op dezelfde dag met dezelfde tijden: vrijwel altijd per ongeluk twee keer
@@ -1545,16 +1557,22 @@ function saveShift(id){
   leg();
 }
 /* ===== UREN-CONTROLE (per dienst: te controleren / klopt / afwijking, met rechtzetten) ===== */
-function openControle(){
-  openSheet(`<h2>Uren controleren</h2><div class="muted" style="margin-bottom:8px">Ging er een uur af dat je wél gewerkt hebt? Vink hier per dienst af of het klopt.</div><div id="ctrlBody"></div>`);
+window._ctrlWerk=window._ctrlWerk||'';
+/* De Uren-pagina heeft een werkgeverfilter; dit scherm liet daarna toch weer alles door elkaar zien.
+   Onthoudt daarom welke werkgever je koos (of "Alles" als je vanaf Start komt) en filtert overal mee. */
+function openControle(werk){
+  if(werk!==undefined)window._ctrlWerk=werk||'';
+  const kies=db.werkgevers.length>1?`<select id="ctrlWerkSel" style="margin-bottom:10px" onchange="window._ctrlWerk=this.value;renderControle()"><option value="">Alle werkgevers</option>${db.werkgevers.map(w=>`<option ${w===window._ctrlWerk?'selected':''}>${esc(w)}</option>`).join('')}</select>`:'';
+  openSheet(`<h2>Uren controleren</h2><div class="muted" style="margin-bottom:8px">Ging er een uur af dat je wél gewerkt hebt? Vink hier per dienst af of het klopt.</div>${kies}<div id="ctrlBody"></div>`);
   renderControle();
 }
 function ctrlHead(t){return `<div class="muted" style="font-weight:700;color:var(--text);margin:16px 0 6px;font-size:13.5px">${t}</div>`;}
 function renderControle(){
   const body=document.getElementById('ctrlBody');if(!body)return;
-  const todo=[...teCheckShifts()].sort((a,b)=>b.date.localeCompare(a.date));
-  const afwO=afwOpenShifts().sort((a,b)=>b.date.localeCompare(a.date));
-  const done=afwShifts().filter(s=>ctrlOf(s).opgelost).sort((a,b)=>b.date.localeCompare(a.date));
+  const werk=window._ctrlWerk||'';
+  const todo=[...teCheckShifts(werk)].sort((a,b)=>b.date.localeCompare(a.date));
+  const afwO=afwOpenShifts(werk).sort((a,b)=>b.date.localeCompare(a.date));
+  const done=afwShifts(werk).filter(s=>ctrlOf(s).opgelost).sort((a,b)=>b.date.localeCompare(a.date));
   const nabG={};done.forEach(s=>{const c=ctrlOf(s);if(c.via==='nabetaald'&&c.nabetaalDatum&&!c.nabOntvangen){const g=nabG[c.nabetaalDatum]=nabG[c.nabetaalDatum]||{min:0,n:0};g.min+=+c.min||0;g.n++;}});
   const nabKeys=Object.keys(nabG).sort();
   let h=ctrlHead('Open afwijkingen'+(afwO.length?' ('+afwO.length+')':''));
@@ -1615,14 +1633,14 @@ function markNabOntvangenShift(id){
 function openAfwEntry(id){
   const s=db.shifts.find(x=>x.id===id);if(!s)return;const c=ctrlOf(s);const d=new Date(s.date);
   openSheet(`<h2>Afwijking noteren</h2><div class="muted" style="margin-bottom:8px">${esc(s.werk)} · ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} · ${fmtDur(hoursOf(s))} gewerkt</div>
-    <label>Hoeveel tijd miste je?</label><input id="ae_min" value="${c.st==='afw'&&c.min?esc(fmtDur(c.min/60)):''}" placeholder="bijv. 30 min of 1 uur 15 min">
+    <label>Hoeveel tijd miste je?</label>${urenMinInput('ae_min',c.st==='afw'?c.min:0,false)}
     <label>Notitie (optioneel)</label><input id="ae_note" value="${c.st==='afw'?esc(c.note||''):''}" placeholder="bijv. pauze niet meegeteld">
     <button class="primary" style="width:100%;margin-top:14px" onclick="saveAfwEntry('${id}')">Opslaan</button>`,openControle);
-  setTimeout(()=>{const el=document.getElementById('ae_min');if(el){el.focus();el.select&&el.select();}},100);
+  setTimeout(()=>{const el=document.getElementById('ae_min_u');if(el){el.focus();el.select&&el.select();}},100);
 }
 function saveAfwEntry(id){
   const s=db.shifts.find(x=>x.id===id);if(!s)return;
-  s.ctrl={st:'afw',min:parseDuur(val('ae_min'))||0,opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:val('ae_note').trim()};
+  s.ctrl={st:'afw',min:urenMinVal('ae_min'),opgelost:false,via:'',corrShiftId:'',nabetaalDatum:'',note:val('ae_note').trim()};
   haptic();save();closeSheet();openControle();render();toast('Afwijking genoteerd');
 }
 function resolveAfw(id,via){
@@ -2071,7 +2089,7 @@ function openMarkPaidSheet(pi,itemId,iso){
     <label>Bedrag</label>${mInput('id="mp_amt"',it.v,'0,00')}
     <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="mp_saldoUitleg"></div></div><div class="check" id="mp_saldo" onclick="tgl(this);markSaldoInfo('mp')"></div></div>
     <label>Notitie (optioneel)</label><input id="mp_note" placeholder="bijv. iets later afgeschreven">
-    <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">${document.getElementById('mp_saldo')&&!document.getElementById('mp_saldo').classList.contains('on')?'Betaald — mijn saldo blijft gelijk':'Betaald — haal dit van het potje af'}</button>
+    <button class="primary" id="mp_saldoBtn" style="width:100%;margin-top:14px" onclick="confirmMarkPaid(${pi},'${itemId}','${iso}')">Betaald — mijn saldo blijft gelijk</button>
     <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','uitgave')">Deze betaling komt niet</button>
     <div class="muted" style="font-size:12px;margin-top:6px">Wordt deze afschrijving een keer overgeslagen? Dan verdwijnt hij uit je openstaande lijst zonder dat er iets van je saldo af gaat. Je kunt dat altijd terugdraaien.</div>`);
   markSaldoStand('mp');
@@ -2089,6 +2107,7 @@ function markSaldoInfo(pre){
   const c=document.getElementById(pre+'_saldo'),i=document.getElementById(pre+'_saldoUitleg');if(!c||!i)return;
   const aan=c.classList.contains('on'),oud=!saldoStandaard(val(pre+'_date'));
   i.textContent=(aan&&oud)?'Let op: dit bedrag is al eerder van je rekening gegaan. Je saldo verandert nu alsnog.':'';
+  const b=document.getElementById(pre+'_saldoBtn');if(b)b.textContent=aan?'Betaald — haal dit van het potje af':'Betaald — mijn saldo blijft gelijk';
 }
 function confirmMarkPaid(pi,itemId,iso){
   const amt=moneyNum(val('mp_amt'));const date=val('mp_date')||iso;const note=val('mp_note')||'';
@@ -2138,14 +2157,19 @@ function confirmMarkReceived(pi,itemId,iso,toeId){
 function potMonthStatus(pi){
   const p=db.potjes[pi];if(!p)return null;
   const now=new Date();now.setHours(0,0,0,0);const mFrom=monthStart(now),to=monthEnd(now);
-  const pay=paymentRows(mFrom,to).filter(x=>x.pi===pi&&!x.paid);
+  /* Een termijn die vorige maand al openstond en nooit is afgevinkt, valt buiten dit kalendermaand-venster
+     en verdween daardoor stilletjes uit "nog nodig" — terwijl hij wél nog moet worden betaald. Onbetaalde
+     termijnen daarom een jaar terugkijken; ontvangsten blijven op deze maand, dat zijn geen schulden. */
+  const pay=paymentRows(addMonths(now,-12),to).filter(x=>x.pi===pi&&!x.paid&&!x.skipped);
   const rec=receiptRows(mFrom,to).filter(x=>x.pi===pi&&!x.received);
   const brutoUnpaid=round2(pay.reduce((a,x)=>a+(+x.bruto||0),0));
-  const netUnpaid=round2(pay.reduce((a,x)=>a+((+x.bruto||0)-(+x.toeslag||0)),0));
   const recSum=round2(rec.reduce((a,x)=>a+(+x.amount||0),0));
   const nodig=round2(brutoUnpaid-recSum);
   const need=Math.max(0,round2(nodig-(+p.saldo||0)));
-  return {has:!!(pay.length||rec.length),paySum:brutoUnpaid,netUnpaid,recSum,nodig,short:need>0.005,tekort:need};
+  /* nodig kan negatief zijn (deze maand komt er meer aan toeslag/ontvangst binnen dan er nog te betalen
+     staat) — dat mag nooit als bedrag in een "klopt"-melding verschijnen, dus apart klemmen op 0 voor
+     weergave. De rekenkundige nodig (met min-teken) blijft beschikbaar voor wie 'm nodig heeft. */
+  return {has:!!(pay.length||rec.length),paySum:brutoUnpaid,recSum,nodig,nodigWeergave:Math.max(0,nodig),krijgtNog:nodig<-0.005?round2(-nodig):0,short:need>0.005,tekort:need};
 }
 /* Alleen bij potjes waar élke geplande kostenpost maandelijks is, hoort er precies één maand klaar te staan.
    Bij kwartaal- of jaarposten loopt het saldo juist op richting die ene grote afschrijving. */
@@ -2173,6 +2197,10 @@ function projectieRegel(pi,klein){
      1e nog geld af of bij gaat. Bij een bufferpot zonder geplande betalingen herhaalt het alleen je saldo. */
   if(!pr.maandelijks&&!pr.uit&&!pr.inn)return '';
   const d=pr.datum;const dtxt=d.getDate()+' '+MND[d.getMonth()].slice(0,3);
+  /* "Volgende maand" is dubbelzinnig zodra de datum ernaast ('1 sep') zelf al de volgende maand is —
+     dan lijkt het net of het over de maand daarná gaat. Voortaan de maand waar het over gaat gewoon
+     bij naam noemen (die begint op deze datum). */
+  const maandnaam=MND[d.getMonth()];
   const fs=klein?'12.5px':'13px';
   /* Een negatief eindsaldo als "€ -50,00" laten zien leest als een typefout. Zeg gewoon wat het is. */
   if(!pr.maandelijks)return pr.eind<0
@@ -2183,9 +2211,9 @@ function projectieRegel(pi,klein){
   /* Eerst stond hier de hele rekensom: eindsaldo, streefbedrag én het verschil, alle drie als bedrag.
      Drie getallen om één ja-of-nee-vraag te beantwoorden. Nu het oordeel voorop, en een bedrag alleen
      waar je er iets mee kunt - namelijk als je tekortkomt. */
-  const tekst=ok?`Op ${dtxt} staat er genoeg klaar voor volgende maand`
-    :(pr.verschil<0?`Op ${dtxt} kom je <b>${eur(-pr.verschil)}</b> tekort voor volgende maand`
-    :`Op ${dtxt} staat er ${eur(pr.verschil)} meer klaar dan nodig`);
+  const tekst=ok?`Op ${dtxt} staat er genoeg klaar voor ${maandnaam}`
+    :(pr.verschil<0?`Op ${dtxt} kom je <b>${eur(-pr.verschil)}</b> tekort voor ${maandnaam}`
+    :`Op ${dtxt} staat er ${eur(pr.verschil)} meer klaar dan nodig voor ${maandnaam}`);
   return `<div style="font-size:${fs};margin-top:4px;color:${kleur}">${tekst}</div>`;
 }
 /* ===== OVERMAAK-TELLER =====
@@ -2441,18 +2469,25 @@ function renderPotjes(){
         :(alBetaald?`<div class="kv"><span class="k">Volgende betaaldatum</span><span class="v" style="color:var(--ok-tx)">${termijnDatumTekst(alBetaald,itemSpan(it),true)} · al afgevinkt</span></div>`
         :(it.due&&!it.buffer?`<div class="kv"><span class="k">Status</span><span class="v" style="color:var(--ok-tx)">Alles afgevinkt</span></div>`:''));
       const noteRow=it.note?`<div class="muted" style="margin-top:8px;font-style:italic;font-size:13px">${esc(it.note)}</div>`:'';
-      return `<div class="potitem"><div class="row between" style="align-items:flex-start"><span class="nm">${it.buffer?'<span class="tinytag">BUFFER</span> ':''}${esc(it.n)}</span><span class="itamt">${eur(itMnd(it))}<span class="muted" style="font-weight:400"> p/mnd</span></span></div><div class="kv"><span class="k">Bedrag</span><span class="v">${eur(it.v)} ${freqTxt(it.fn,it.fu)}</span></div>${toeRow}${dueRow}${noteRow}</div>`;
+      return `<div class="potitem"><div class="row between" style="align-items:flex-start"><span class="nm">${it.buffer?'<span class="tinytag">BUFFER</span> ':''}${esc(it.n)}</span><span class="itamt">${eur(itMnd(it))}<span class="muted" style="font-weight:400"> per maand</span></span></div><div class="kv"><span class="k">Bedrag</span><span class="v">${eur(it.v)} ${freqTxt(it.fn,it.fu)}</span></div>${toeRow}${dueRow}${noteRow}</div>`;
     }).join('');
-    // buffer-aanbeveling (jaarkost van de vaste last / 12)
-    let advies='';const bufItem=p.items.find(it=>it.buffer);const recAvg=(bufItem&&featOn('buffers'))?itemAvg(p,bufItem):null;
-    if(bufItem&&recAvg!=null&&Math.round(recAvg)!==Math.round(bufItem.v)){const rec=Math.round(recAvg);advies=`<div class="ln" style="margin-top:8px">Aanbevolen: <b style="color:var(--text)">${eur(rec)}/mnd</b></div>`;}
+    // buffer-aanbeveling (jaarkost van de vaste last / 12) — elk buffer-item in dit potje apart, niet alleen de eerste
+    let advies='';
+    if(featOn('buffers')){
+      advies=p.items.filter(it=>it.buffer).map(it=>{
+        const recAvg=itemAvg(p,it);
+        if(recAvg==null||Math.round(recAvg)===Math.round(it.v))return '';
+        return `<div class="ln" style="margin-top:8px">Aanbevolen voor ${esc(it.n)}: <b style="color:var(--text)">${eur(Math.round(recAvg))} per maand</b></div>`;
+      }).join('');
+    }
     const ms=spaar?null:potMonthStatus(i);
     // statusbadge = "red ik deze maand nog?" (alleen bij potjes met vaste lasten)
     let badge='';
     if(!spaar&&p.items.length){
       if(!ms||!ms.has)badge=`<span class="statusbadge none">Geen betalingen deze maand</span>`;
       else if(ms.short)badge=`<span class="statusbadge short">● Er staat ${eur(ms.tekort)} te weinig in dit potje</span>`;
-      else badge=`<span class="statusbadge ok">● Er gaat nog ${eur(ms.nodig)} af · dat staat klaar</span>`;
+      else if(ms.krijgtNog>0.005)badge=`<span class="statusbadge ok">● Je krijgt deze maand per saldo geld bij dit potje</span>`;
+      else badge=`<span class="statusbadge ok">● Er gaat nog ${eur(ms.nodigWeergave)} af · dat staat klaar</span>`;
     }
     // Brandstof-paneel (alleen bij potjes met het brandstof-vlaggetje)
     let fuelPanel='';
@@ -2464,7 +2499,7 @@ function renderPotjes(){
         (fs.liters?`<div class="kv"><span class="k">Getankt</span><span class="v">${fs.liters.toLocaleString('nl-NL',{maximumFractionDigits:1})} L</span></div>`:'')+
         (fs.avgPpl?`<div class="kv"><span class="k">Gemiddelde literprijs</span><span class="v">${eur(fs.avgPpl)}</span></div>`:'')+
         `<div class="kv"><span class="k">Tankbeurten</span><span class="v">${fs.count}</span></div>`+
-        (showRec?`<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(rec)}/mnd</b></span><button class="tiny primary" onclick="event.stopPropagation();confirmSheet('Maandbedrag aanpassen','Maandbedrag voor benzine aanpassen naar ${eur(rec)}?','Aanpassen',()=>applyFuelAdvies(${i}))">Overnemen</button></div>`:'')+
+        (showRec?`<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(rec)} per maand</b></span><button class="tiny primary" onclick="event.stopPropagation();confirmSheet('Maandbedrag aanpassen','Maandbedrag voor benzine aanpassen naar ${eur(rec)}?','Aanpassen',()=>applyFuelAdvies(${i}))">Overnemen</button></div>`:'')+
         `</div>`;
     }}
     /* "Waar is je saldo voor?" — alleen waar het iets toevoegt. Bij een potje met louter maandelijkse
@@ -2490,9 +2525,9 @@ function renderPotjes(){
     const tog=`onclick="document.getElementById('pot${i}').classList.toggle('open')"`;
     // Eén duidelijk hoofdbedrag + één rustige tweede regel (i.p.v. saldo in de subtitel dat concurreert).
     const primaryLbl=spaar?'Saldo':'Opzij zetten deze maand';const primaryAmt=spaar?eur(p.saldo):eur(t);
-    const secondary=spaar?(p.fuel?'Brandstofpotje':'Spaarpotje'):((p.fuel?'Brandstofpotje · ':'')+'saldo '+eur(p.saldo));
+    const secondary=spaar?(p.fuel?'Brandstofpotje':'Spaarpotje'):((p.fuel?'Brandstofpotje · ':'')+'saldo <b style="color:var(--text)">'+eur(p.saldo)+'</b>');
     // Twee vragen onder elkaar: red ik deze maand (badge) en staat er straks een maand klaar (projectie)?
-    const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}${spaar?'':opzijRegel(i)}`;
+    const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:13px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}${spaar?'':opzijRegel(i)}`;
     return `<div class="pot" id="pot${i}"><div class="ph"><div ${tog} style="flex:1"><b>${esc(p.n)}</b>${p.note?`<div class="muted" style="margin-top:2px;font-style:italic">${esc(p.note)}</div>`:''}</div>${t>0?`<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleOverboek(${i})">${on?'✓':''}</div>`:''}</div>
       <div class="pot-sum" ${tog}><div style="flex:1;min-width:0">${potSumInner}</div><span class="cvx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;display:block"><path d="M6 9.5l6 6 6-6"/></svg></span></div>
       <div class="sub">${resPanel}${fuelPanel}${monthPanel}${items}${advies}
@@ -2500,7 +2535,7 @@ function renderPotjes(){
       </div></div>`;
   }).join(''):`<div class="empty">Je hebt nog geen potjes.<br><span style="font-size:12.5px">Een potje is een doel om geld voor apart te zetten — bijvoorbeeld "Vaste lasten" of "Vakantie".</span><button class="primary" style="width:100%;max-width:260px;margin:16px auto 0;display:block" onclick="openPotEdit();setTimeout(newPot,120)">Maak je eerste potje</button></div>`;
 }
-function applyBufferAdvies(i){const p=db.potjes[i];const bufItem=p.items.find(it=>it.buffer);const avg=bufItem?itemAvg(p,bufItem):null;if(!bufItem||avg==null)return;bufItem.v=Math.round(avg);haptic();save();render();toast('Maandbedrag aangepast naar '+eur(bufItem.v));}
+function applyBufferAdvies(i,itemId){const p=db.potjes[i];const bufItem=p.items.find(it=>it.id===itemId);const avg=bufItem?itemAvg(p,bufItem):null;if(!bufItem||avg==null)return;bufItem.v=Math.round(avg);haptic();save();render();toast('Maandbedrag van '+bufItem.n+' aangepast naar '+eur(bufItem.v));}
 function applyFuelAdvies(i){const p=db.potjes[i];const fs=fuelStats(p);if(fs.perMonth==null)return;p.maand=Math.round(fs.perMonth);haptic();save();render();toast('Maandbedrag aangepast naar '+eur(p.maand));}
 /* Afvinken 'overgemaakt' = geld daadwerkelijk naar de pot → saldo vullen. Altijd via een bevestiging met het
    bedrag vooraf ingevuld (= maandbedrag opzij), zodat je het kunt bijstellen. db.overboek bewaart nu het
@@ -2582,7 +2617,10 @@ function renderBetalingen(){
   const paidThis=thisMonthRows.filter(x=>x.paid);
   const openReceipts=thisMonthReceipts.filter(x=>!x.received);
   const doneReceipts=thisMonthReceipts.filter(x=>x.received);
-  const openNet=openThis.reduce((a,x)=>a+x.net,0),openToe=openThis.reduce((a,x)=>a+x.toeslag,0),openBruto=openThis.reduce((a,x)=>a+x.bruto,0);
+  /* "Nog te betalen deze maand" moet ook een termijn meetellen die vorige maand al openstond en nooit is
+     afgevinkt — anders lijkt het bedrag bovenaan lager dan wat er werkelijk nog moet gebeuren. */
+  const openTotNu=payments.filter(x=>!x.paid&&!x.skipped&&(x.dispDate||x.date)<=monthEnd(now));
+  const openNet=openTotNu.reduce((a,x)=>a+x.net,0),openToe=openTotNu.reduce((a,x)=>a+x.toeslag,0),openBruto=openTotNu.reduce((a,x)=>a+x.bruto,0);
   document.getElementById('betOpenTotaal').textContent=eur(openNet);
   const doneCnt=paidThis.length+doneReceipts.length+thisMonthLoon.filter(x=>x.received).length,totCnt=thisMonthRows.length+thisMonthReceipts.length+thisMonthLoon.length;
   const doneBadge=document.getElementById('betDoneBadge');
@@ -2702,7 +2740,7 @@ function openUitgave(pre,itemId){
     <label>Bedrag</label>${mInput('id="u_amt"',selIt?selIt.v:'','bijv. 405')}
     <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:12.5px" id="u_saldoUitleg"></div></div><div class="check on" id="u_saldo" onclick="tgl(this);uitgaveSaldoInfo()">✓</div></div>
     <label>Datum</label><input id="u_date" type="date" value="${isoDate(new Date())}" onchange="uitgaveLinkToggle()">
-    <label>Omschrijving (optioneel)</label><input id="u_note" placeholder="bijv. keerring vervangen">
+    <label>Omschrijving (optioneel)</label><input id="u_note" placeholder="bijv. onderhoudsbeurt">
     ${featOn('once')?`<span class="adv" onclick="var a=document.getElementById('u_adv');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd</span>
     <div id="u_adv" style="display:none"><div class="row between" style="margin-top:8px;align-items:center"><div><b>Eenmalige uitgave</b><div class="muted" style="font-size:12.5px">Telt niet mee in gemiddelden en buffer-advies</div></div><div class="check" id="u_once" onclick="tgl(this)"></div></div></div>`:''}
     <button class="primary" style="width:100%;margin-top:14px" onclick="saveUitgave()">Opslaan</button>`);
@@ -3025,14 +3063,20 @@ function renderOvTabs(){
 function renderOvPot(){
   document.getElementById('ovWrap').innerHTML=db.potjes.map((p,i)=>{
     const tot12=(p.log||[]).filter(x=>x.kind!=='ontvangst'&&new Date(x.date)>=new Date(Date.now()-365*86400000)).reduce((a,x)=>a+(+x.amount||0),0);
-    const avg=potAvg(p);const bufItem=p.items.find(it=>it.buffer);const recAvg=(bufItem&&featOn('buffers'))?itemAvg(p,bufItem):null;
+    const avg=potAvg(p);
+    // Elk buffer-item in dit potje apart adviseren — een potje kan er meer dan één hebben.
+    const bufAdviesRows=featOn('buffers')?p.items.filter(it=>it.buffer).map(it=>{
+      const recAvg=itemAvg(p,it);
+      if(recAvg==null||Math.round(recAvg)===Math.round(it.v))return '';
+      return `<div class="row between" style="margin-top:12px;align-items:center;gap:10px"><span class="muted">Aanbevolen voor ${esc(it.n)}: <b style="color:var(--text)">${eur(Math.round(recAvg))} per maand</b></span><button class="tiny primary" onclick="confirmSheet('Maandbedrag aanpassen','Maandbedrag van ${esc(it.n)} aanpassen naar ${eur(Math.round(recAvg))}?','Aanpassen',()=>{applyBufferAdvies(${i},'${it.id}');renderOvPot();})">Overnemen</button></div>`;
+    }).join(''):'';
     const recent=[...(p.log||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,3);
     const spaar=!p.items.length;const fs=p.fuel?fuelStats(p):null;const heeftLog=(p.log||[]).length>0;const avgShow=fs?fs.perMonth:avg;
     // "Uitgegeven" en "Gemiddeld per maand" alleen tonen waar het informeert (buffer- en brandstofpotjes);
     // bij vaste-lasten/beleggingspotjes is dat gemiddelde misleidend (het herhaalt slechts wat je toch al betaalt).
     const toonSpend=!!(p.fuel||p.items.some(it=>it.buffer));
     const ms=spaar?null:potMonthStatus(i);
-    const dezeMaand=(ms&&ms.has)?`<div class="row between" style="margin-top:4px"><span class="muted">Deze maand nog nodig</span><span style="font-weight:700;color:${ms.short?'var(--bad-tx)':'var(--ok-tx)'}">${eur(ms.nodig)}${ms.short?' · '+eur(ms.tekort)+' te weinig':''}</span></div>`:'';
+    const dezeMaand=(ms&&ms.has)?(ms.krijgtNog>0.005?`<div class="row between" style="margin-top:4px"><span class="muted">Deze maand nog nodig</span><span style="font-weight:700;color:var(--ok-tx)">Je krijgt geld bij</span></div>`:`<div class="row between" style="margin-top:4px"><span class="muted">Deze maand nog nodig</span><span style="font-weight:700;color:${ms.short?'var(--bad-tx)':'var(--ok-tx)'}">${eur(ms.nodigWeergave)}${ms.short?' · '+eur(ms.tekort)+' te weinig':''}</span></div>`):'';
         /* Een kaal vetgedrukt bedrag naast een potjesnaam zegt niet wat het is. Klein label erboven, net
        zoals de potjeskaart dat met "Per maand opzij" doet. */
 return `<div class="card" style="background:var(--bg)"><div class="row between" style="align-items:flex-start"><b>${esc(p.n)}</b><div style="text-align:right;flex-shrink:0"><div class="muted" style="font-size:11.5px;line-height:1.2">saldo</div><b>${eur(p.saldo)}</b></div></div>
@@ -3044,8 +3088,8 @@ return `<div class="card" style="background:var(--bg)"><div class="row between" 
       ${(fs&&fs.liters)?`<div class="row between" style="margin-top:4px"><span class="muted">Getankt (12 maanden)</span><span style="font-weight:700">${fs.liters.toLocaleString('nl-NL',{maximumFractionDigits:1})} L</span></div>`:''}
       ${(fs&&fs.avgPpl)?`<div class="row between" style="margin-top:4px"><span class="muted">Gemiddelde literprijs</span><span style="font-weight:700">${eur(fs.avgPpl)}</span></div>`:''}
       ${(fs&&fs.count)?`<div class="row between" style="margin-top:4px"><span class="muted">Tankbeurten (12 maanden)</span><span style="font-weight:700">${fs.count}</span></div>`:''}
-      ${(bufItem&&recAvg!=null&&Math.round(recAvg)!==Math.round(bufItem.v))?`<div class="row between" style="margin-top:12px;align-items:center;gap:10px"><span class="muted">Aanbevolen: <b style="color:var(--text)">${eur(Math.round(recAvg))}/mnd</b></span><button class="tiny primary" onclick="confirmSheet('Maandbedrag aanpassen','Maandbedrag van ${esc(bufItem.n)} aanpassen naar ${eur(Math.round(recAvg))}?','Aanpassen',()=>{applyBufferAdvies(${i});renderOvPot();})">Overnemen</button></div>`:''}
-      ${(fs&&fs.perMonth!=null&&Math.round(fs.perMonth)!==Math.round(+p.maand||0))?`<div class="row between" style="margin-top:12px;align-items:center;gap:10px"><span class="muted">Aanbevolen opzij: <b style="color:var(--text)">${eur(Math.round(fs.perMonth))}/mnd</b></span><button class="tiny primary" onclick="confirmSheet('Maandbedrag aanpassen','Maandbedrag voor benzine aanpassen naar ${eur(Math.round(fs.perMonth))}?','Aanpassen',()=>{applyFuelAdvies(${i});renderOvPot();})">Overnemen</button></div>`:''}
+      ${bufAdviesRows}
+      ${(fs&&fs.perMonth!=null&&Math.round(fs.perMonth)!==Math.round(+p.maand||0))?`<div class="row between" style="margin-top:12px;align-items:center;gap:10px"><span class="muted">Aanbevolen opzij: <b style="color:var(--text)">${eur(Math.round(fs.perMonth))} per maand</b></span><button class="tiny primary" onclick="confirmSheet('Maandbedrag aanpassen','Maandbedrag voor benzine aanpassen naar ${eur(Math.round(fs.perMonth))}?','Aanpassen',()=>{applyFuelAdvies(${i});renderOvPot();})">Overnemen</button></div>`:''}
       ${recent.length?`<div class="muted" style="margin-top:12px;font-weight:800">Laatste transacties</div>${recent.map(x=>{const idx=p.log.indexOf(x);const isRec=x.kind==='ontvangst';const amtTxt=(isRec?'+ ':'')+eur(x.amount);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer;gap:10px" onclick="openUitgaveEdit(${i},${idx},'pot')"><span style="font-weight:700;flex:1;min-width:0;color:${isRec?'var(--ok-tx)':'var(--text)'}">${amtTxt}${x.item?' <span class=muted>· '+esc(x.item)+'</span>':''}</span><span class="muted">${new Date(x.date).toLocaleDateString('nl-NL')}</span><button class="tiny ghost" onclick="event.stopPropagation();openUitgaveEdit(${i},${idx},'pot')">Bewerk</button></div>`;}).join('')}`:''}
     </div>`;
   }).join('')||'<div class="empty">Nog geen potjes.</div>';
@@ -3061,7 +3105,7 @@ function openPotEdit(){
 }
 function renderPotBeheer(){
   const c=document.getElementById('potBeheer');if(!c)return;
-  c.innerHTML=db.potjes.length?db.potjes.map((p,i)=>`<div class="mrow" data-pi="${i}"><span class="draghandle" onpointerdown="startPotDrag(event,this)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px;display:block"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><div style="flex:1" onclick="openPotDetailEdit(${i},'beheer')"><b>${esc(p.n)}</b><div class="muted">${p.items.length?p.items.length+' vaste last'+(p.items.length===1?'':'en'):'spaarpotje'} · ${eur(p.saldo)}</div></div><span class="muted" onclick="openPotDetailEdit(${i},'beheer')" style="padding:0 8px;font-size:18px">›</span></div>`).join(''):'<div class="empty">Nog geen potjes.</div>';
+  c.innerHTML=db.potjes.length?db.potjes.map((p,i)=>`<div class="mrow" data-pi="${i}"><span class="draghandle" onpointerdown="startPotDrag(event,this)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px;display:block"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><div style="flex:1" onclick="openPotDetailEdit(${i},'beheer')"><b>${esc(p.n)}</b><div class="muted">${p.items.length?p.items.length+' vaste last'+(p.items.length===1?'':'en'):'spaarpotje'} · ${eur(p.saldo)}</div></div><span class="muted" onclick="openPotDetailEdit(${i},'beheer')" style="padding:0 8px;font-size:18px">›</span></div>`).join(''):'<div class="empty">Nog geen potjes.</div>';
 }
 /* Twee keer op "Nieuw potje" tikken gaf twee potjes met exact dezelfde naam. De app nummert nu door,
    zodat je ze uit elkaar houdt tot je zelf een naam kiest. */
@@ -3192,7 +3236,7 @@ function openItemEdit(pi,ii){
   openSheet(`<h2>${ii>=0?'Vaste last bewerken':'Nieuwe vaste last'}</h2>
     <label>Naam</label><input id="ie_naam" value="${esc(it.n||'')}" placeholder="bijv. Zorgverzekering">
     <label style="margin-top:14px">Notitie (optioneel)</label><textarea id="ie_note" placeholder="Korte notitie...">${esc(it.note||'')}</textarea>
-    <div class="row between" style="margin-top:16px;display:${(featOn('buffers')||buf)?'flex':'none'}"><div><b>Buffer</b><div class="muted" style="font-size:12.5px">Voor kosten die je niet kunt plannen — tandarts, autoreparatie. Je weet niet wannéér, dus je zet er elke maand een vast bedrag voor opzij.</div></div><div class="check ${buf?'on':''}" id="ie_buf" onclick="ieBufToggle(this)">${buf?'✓':''}</div></div>
+    <div class="row between" style="margin-top:16px;display:${(featOn('buffers')||buf)?'flex':'none'}"><div><b>Buffer</b><div class="muted" style="font-size:12.5px">Voor kosten die je niet kunt plannen — tandarts, autoreparatie. Je weet niet <b>wanneer</b>, dus je zet er elke maand een vast bedrag voor opzij.</div></div><div class="check ${buf?'on':''}" id="ie_buf" onclick="ieBufToggle(this)">${buf?'✓':''}</div></div>
     <div id="ie_vast" style="display:${buf?'none':'block'}">
       <div class="grid2" style="margin-top:4px"><div><label>Bedrag</label>${mInput('id="ie_v"',it.v,'47,50')}</div><div><label>Hoe vaak</label>${freqControl('f',it.fn,it.fu)}</div></div>
       <div class="grid2" style="margin-top:4px"><div><label>Wanneer wordt het afgeschreven?</label><input id="ie_due" type="date" value="${it.due||''}"></div><div><label>Uiterlijk op (optioneel)</label><input id="ie_dueTot" type="date" value="${it.dueTot||''}"></div></div>
@@ -3244,7 +3288,7 @@ function openToeEdit(pi,ii,ti){
     <div class="grid2" style="margin-top:4px"><div><label>Ontvangstdatum</label><input id="te_d" type="date" value="${D.date||''}"></div><div><label>Uiterlijk op (optioneel)</label><input id="te_dt" type="date" value="${D.dateTot||''}"></div></div>
     <div class="muted" style="font-size:12.5px;margin-top:4px">Komt het bedrag niet op een vaste dag maar bijvoorbeeld tussen de 4e en de 8e? Vul dan ook de laatste dag in — alles daartussen geldt als op tijd.</div>
     <label style="margin-top:14px">Loopt tot (optioneel)</label><input id="te_t" type="date" value="${D.tot||''}">
-    <div class="muted" style="font-size:12.5px;margin-top:4px">De ontvangstdatum bepaalt het schema op de Betalingen-pagina; die staat los van de afschrijving van de vaste last. Vul "loopt tot" in als de toeslag helemaal stopt — daarna telt hij niet meer mee.</div>
+    <div class="muted" style="font-size:12.5px;margin-top:4px">De ontvangstdatum bepaalt het schema op de Betalingen-pagina. Die staat los van de afschrijving van de vaste last.<br>Vul "loopt tot" in als de toeslag helemaal stopt — daarna telt hij niet meer mee.</div>
     <div class="row" style="margin-top:20px">${ti>=0?`<button class="danger" onclick="delToeEdit(${pi},${ii},${ti})">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveToeEdit(${pi},${ii},${ti})">Opslaan</button></div>`,()=>openItemEdit(pi,ii));
 }
 function saveToeEdit(pi,ii,ti,door){
@@ -3384,7 +3428,7 @@ function renderLoonLog(){
   const inc=avgIncome();const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));
   lc.innerHTML=`<div class="row between"><h2 style="margin:0">Netto ontvangen</h2><button class="tiny primary" onclick="openLoonLog()">＋ Loon</button></div>
     <div class="muted" style="margin:6px 0 4px">Vul elke keer in wat er op je rekening kwam. Na een paar keer weet de app wat je gemiddeld per maand verdient.</div>
-    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld per maand</span><span class="v">${eur(inc)}</span></div><div class="muted" style="font-size:12px;margin:-2px 0 6px">Over je laatste 12 maanden · nu ${logs.length} keer loon ingevuld</div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} p/mnd</span></div>`:''}
+    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld per maand</span><span class="v">${eur(inc)}</span></div><div class="muted" style="font-size:12px;margin:-2px 0 6px">Over je laatste 12 maanden · nu ${logs.length} keer loon ingevuld</div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over (gemiddeld)</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} per maand</span></div>`:''}
     ${logs.length?`<div class="muted" style="margin-top:12px;font-weight:800">Laatste ontvangsten · tik om te bewerken</div>`+logs.slice(0,6).map(x=>{const d=new Date(x.date);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer" onclick="openLoonLog('${x.id}')"><span class="muted">${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}${x.note?' · '+esc(x.note):''}</span><b>${eur(x.amount)}</b></div>`;}).join(''):`<div class="muted" style="margin-top:10px">Nog geen loon gelogd.</div>`}`;
 }
 function openLoonLog(id){
@@ -3707,7 +3751,7 @@ function renderMeldTypes(){
 function openMeldSheet(k){
   const t=MELD_TYPES.find(x=>x.k===k);if(!t)return;
   window._msK=k;window._msCfg=meldCfgOf(k);const cfg=window._msCfg;
-  openSheet(`<h2>${t.label}-meldingen</h2>
+  openSheet(`<h2>Meldingen: ${t.label}</h2>
     <div class="row between" style="margin-top:6px;align-items:center"><div><b>Actief</b><div class="muted" style="font-size:12.5px">${t.oms}</div></div><div class="check ${cfg.on?'on':''}" id="ms_on" onclick="tgl(this)">${cfg.on?'✓':''}</div></div>
     <label style="margin-top:16px">Tijdstip</label>
     <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip ${!cfg.tijd?'on':''}" id="ms_tvast" onclick="msTijd(false)">Vast tijdstip (${db.meldTijd||'08:00'})</span><span class="chip ${cfg.tijd?'on':''}" id="ms_teigen" onclick="msTijd(true)">Eigen tijdstip</span></div>
@@ -3715,11 +3759,11 @@ function openMeldSheet(k){
     <label style="margin-top:16px">Herinneringen</label>
     <div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Op welke momenten wil je een melding?</div>
     <div id="ms_rems"></div>
-    <div class="row" style="margin-top:10px;align-items:center"><input id="ms_rn" inputmode="numeric" placeholder="3" style="flex:.7"><select id="ms_ru" style="flex:1.4"><option value="d">dagen vooraf</option><option value="w">weken vooraf</option><option value="m">maanden vooraf</option><option value="j">jaar vooraf</option><option value="0">op de dag zelf</option></select><button class="primary tiny" style="padding:11px 16px" onclick="msAddRem()">＋</button></div>
+    <div class="row" style="margin-top:10px;align-items:center"><input id="ms_rn" inputmode="numeric" placeholder="3" style="flex:.7"><select id="ms_ru" style="flex:1.4"><option value="d">dagen vooraf</option><option value="w">weken vooraf</option><option value="m">maanden vooraf</option><option value="j">jaar vooraf</option><option value="0">op de dag zelf</option></select><button class="primary tiny" style="padding:11px 16px;white-space:nowrap" onclick="msAddRem()">＋ Toevoegen</button></div>
     <label style="margin-top:16px">Meldingstekst (optioneel)</label>
     <textarea id="ms_tekst" style="min-height:64px" placeholder="Eigen tekst...">${esc(cfg.tekst||'')}</textarea>
     <div class="muted" style="font-size:12px;margin-top:6px">Leeg = standaard: <i>"${esc(MELD_DEFTEKST[k]||'')}"</i></div>
-    <div class="muted" style="font-size:12px;margin-top:3px">Bouwstenen: {naam}, {bedrag}, {datum}, {wanneer}.</div>
+    <div class="muted" style="font-size:12px;margin-top:3px">Typ {naam}, {bedrag}, {datum} of {wanneer} — de app vult dat vanzelf in.</div>
     <button class="primary" style="width:100%;margin-top:18px" onclick="saveMeldSheet()">Opslaan</button>`,null,
     /* De herinner-momenten staan in window._msCfg en niet in een invoerveld: zonder deze tussenstand
        merkt de app niet dat je er een toevoegt of weghaalt. */
@@ -3744,7 +3788,7 @@ function saveMeldSheet(){
   db.meldCfg=db.meldCfg||{};db.meldCfg[window._msK]=c;
   haptic();save();scheduleLoonMeldingen();closeSheet();render();toast('Opgeslagen');
 }
-async function testMelding(){if(!(NATIVE&&P.LocalNotifications)){toast('Meldingen werken alleen in de geinstalleerde app, niet in de browser');return;}try{const perm=await P.LocalNotifications.requestPermissions();if(perm.display!=='granted'){toast('Geen toestemming — zet meldingen aan bij telefooninstellingen → Apps → GridLife');return;}await P.LocalNotifications.schedule({notifications:[{id:999,title:'Testmelding',body:'Zo ziet je loon-melding eruit.',schedule:{at:new Date(Date.now()+5000).toISOString(),allowWhileIdle:true}}]});toast('Melding volgt over ± 5 sec');}catch(e){toast('Mislukt: '+(e&&e.message||e));}}
+async function testMelding(){if(!(NATIVE&&P.LocalNotifications)){toast('Meldingen werken alleen in de geïnstalleerde app, niet in de browser');return;}try{const perm=await P.LocalNotifications.requestPermissions();if(perm.display!=='granted'){toast('Geen toestemming — zet meldingen aan bij telefooninstellingen → Apps → GridLife');return;}await P.LocalNotifications.schedule({notifications:[{id:999,title:'Testmelding',body:'Zo ziet je loon-melding eruit.',schedule:{at:new Date(Date.now()+5000).toISOString(),allowWhileIdle:true}}]});toast('Melding volgt over ± 5 sec');}catch(e){toast('Testmelding is niet gelukt. Probeer het later nog eens.');}}
 
 /* ===== RECEPTEN ===== */
 let receptFilter='';
@@ -3901,7 +3945,7 @@ function renderInstellingen(){
 
 /* Centraal lijst-/categoriebeheer via popups (werkgevers, recept-categorieën, documenttypes). */
 const BEHEER=[
-  {k:'werkgevers',label:'Werkgevers',mod:'uren',oms:'Voor je diensten en contract-uren',get:()=>db.werkgevers},
+  {k:'werkgevers',label:'Werkgevers',mod:'uren',oms:'Voor je diensten en je vaste aantal uur per week',get:()=>db.werkgevers},
   {k:'receptcat',label:'Recept-categorieën',mod:'recept',oms:'Voor je recepten',get:()=>db.receptCategorieen},
   {k:'doctypes',label:'Documenttypes',mod:null,oms:'Voor je documenten en passen',get:()=>db.docTypes}
 ];
@@ -3985,7 +4029,7 @@ function renderWerkCfg(){
     <div class="muted" style="font-size:12.5px;margin-top:4px">${act
       ? (ander?`Bij opslaan gaat <b>${esc(ander)}</b> uit dienst — de app rekent met één loon tegelijk.`:'Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.')
       : `Geen controle-meldingen meer voor ${esc(w)}. Je diensten, uren en historie blijven gewoon staan.${ander?` <b>${esc(ander)}</b> blijft je loon leveren.`:' Er is dan niemand in dienst; de app rekent door met de laatst ingestelde loondag.'}`}</div>
-    ${featOn('contract')?`<label style="margin-top:10px">Contract-uren per week</label><input id="wc_contract" value="${esc(window._wcContract||'')}" inputmode="decimal" placeholder="bijv. 32" onchange="wcSet('__c',0,true)"><div class="muted" style="font-size:12px;margin-top:4px">Leeg laten = nulurencontract. Hiermee zie je per week of je boven of onder je contract zit.</div>`:''}</div>`;
+    ${featOn('contract')?`<label style="margin-top:10px">Vast aantal uur per week</label><input id="wc_contract" value="${esc(window._wcContract||'')}" inputmode="decimal" placeholder="bijv. 32" onchange="wcSet('__c',0,true)"><div class="muted" style="font-size:12px;margin-top:4px">Leeg laten = nulurencontract. Hiermee zie je per week of je meer of minder hebt gewerkt dan afgesproken.</div>`:''}</div>`;
   /* ---- 2. Loon ---- */
   /* Wissel je van baan zonder eerste loondag in te vullen, dan verwacht de app al loon op de eerstvolgende
      dag uit het nieuwe raster - vaak veel te vroeg. Die datum tonen we als waarschuwing. */
@@ -3998,7 +4042,8 @@ function renderWerkCfg(){
     ${loonWeekendHTML(L,'wc')}
     <label style="margin-top:12px">Eerste loondag hier (optioneel)</label>
     <input type="date" id="wc_loonVanaf" value="${L.vanaf||''}" onchange="wcLoonSet('vanaf',this.value)">
-    <div class="muted" style="font-size:12px;margin-top:4px">Vul dit in als je hier net begint. De app verwacht dan geen loon van vóór die datum — anders denkt hij dat je meteen al betaald wordt.${(act&&ander&&!L.vanaf&&eersteZonderVanaf)?` <b style="color:var(--bad-tx)">Nu verwacht de app je eerste loon van ${esc(w)} al op ${eersteZonderVanaf}.</b>`:''}</div>
+    <div class="muted" style="font-size:12px;margin-top:4px">Vul dit in als je hier net begint. De app verwacht dan geen loon van vóór die datum — anders denkt hij dat je meteen al betaald wordt.</div>
+    ${(act&&ander&&!L.vanaf&&eersteZonderVanaf)?`<div class="cwarn" style="margin-top:8px">Nu verwacht de app je eerste loon van ${esc(w)} al op ${eersteZonderVanaf}.</div>`:''}
     <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Je eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,5)}</div>
     <div class="muted" style="font-size:12.5px;margin-top:8px">${act?`Dit is de loondag waar de hele app mee rekent: meldingen, de potjes-checklist en "volgende loon".`:'Wordt pas gebruikt zodra je hier weer in dienst gaat.'}</div></div>`;
   /* ---- 3. Uren controleren ---- */
@@ -4029,7 +4074,7 @@ function renderWerkCfg(){
   const nabId='wc_nabAdv';
   const nabBlok=`<span class="adv" style="margin-top:6px" onclick="var a=document.getElementById('${nabId}');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd — wanneer precies?</span>
     <div id="${nabId}" style="display:${nabAnders?'block':'none'}">
-    <label style="margin-top:10px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast interval'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}
+    <label style="margin-top:10px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast ritme'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}
     </div>`;
   const ctrlBlok=!featOn('comp')?'':`<div class="mini"><div class="mini-h">Uren controleren</div>
     ${ritmeBlok}
@@ -4101,7 +4146,11 @@ function wcSave(){
   }
 
   const kv=(k,v)=>`<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
-  let body=waarschuw.map(t=>`<div class="cwarn">${t}</div>`).join('')+notities.map(t=>`<div class="cnote">${t}</div>`).join('');
+  const totAandacht=waarschuw.length+notities.length;
+  /* Bij veel gelijktijdige waarschuwingen/notities eerst een korte samenvatting, anders leest het als
+     een tekstmuur en tikt iemand alles weg zonder te lezen. */
+  let body=(totAandacht>=3?`<div class="muted" style="font-weight:700;color:var(--text);margin-bottom:8px">${totAandacht} dingen veranderen hierdoor</div>`:'')
+    +waarschuw.map(t=>`<div class="cwarn">${t}</div>`).join('')+notities.map(t=>`<div class="cnote">${t}</div>`).join('');
   body+=`<div style="margin-top:${(waarschuw.length||notities.length)?'10px':'0'}">${kv('Dienstverband',act?'In dienst':'Uit dienst')}`;
   if(moduleOn('loon')){
     body+=kv('Hoe vaak',loonFreqTekst(L))+kv('Loondag',loonDagTekst(L));
@@ -4109,7 +4158,7 @@ function wcSave(){
     const ruw=rawNextPayday(L);
     body+=kv('Eerstvolgend loon',act?(ruw?loonDatumUitleg(L,ruw):'kan niet berekend worden'):'niet in dienst');
   }
-  if(featOn('contract')){const cv0=String(window._wcContract||'').trim();body+=kv('Contract-uren',cv0?cv0+' u/week':'nulurencontract');}
+  if(featOn('contract')){const cv0=String(window._wcContract||'').trim();body+=kv('Vast aantal uur per week',cv0?cv0+' u/week':'nulurencontract');}
   body+='</div>';
 
   const titel=waarschuw.length?'Let op — dit verandert er':'Opslaan?';
@@ -4196,7 +4245,11 @@ function pinPress(k){haptic(6);if(k==='⌫'){pinBuf=pinBuf.slice(0,-1);renderPin
 /* Na een misser verschijnt de uitleg onder het pinpad. Er was geen enkele weg terug en ook geen
    waarschuwing vooraf: wie zijn code kwijt was, was zijn hele administratie kwijt zonder dat de app
    dat ooit had gezegd. */
-function pinComplete(){if(pinMode==='check'){if(pinBuf===db.lock.pin)hideLock();else{toast('Onjuiste code');pinBuf='';renderPinpad();const h=document.getElementById('pinHelp');if(h)h.style.display='block';navigator.vibrate&&navigator.vibrate([40,40,40]);}return;}if(pinMode==='new'){pinTemp=pinBuf;pinMode='confirm';showLock('Herhaal je pincode');return;}if(pinMode==='confirm'){if(pinBuf===pinTemp){db.lock.on=true;db.lock.pin=pinBuf;save();hideLock();pinMode='check';renderInstellingen();toast('App-slot aan');}else{toast('Codes verschillen — opnieuw');pinMode='new';pinTemp='';showLock('Kies een pincode (4 cijfers)');}return;}}
+function pinComplete(){if(pinMode==='check'){if(pinBuf===db.lock.pin)hideLock();else{toast('Onjuiste code');pinBuf='';renderPinpad();const h=document.getElementById('pinHelp');if(h)h.style.display='block';const rb=document.getElementById('pinResetBtn');if(rb)rb.style.display='block';navigator.vibrate&&navigator.vibrate([40,40,40]);}return;}if(pinMode==='new'){pinTemp=pinBuf;pinMode='confirm';showLock('Herhaal je pincode');return;}if(pinMode==='confirm'){if(pinBuf===pinTemp){db.lock.on=true;db.lock.pin=pinBuf;save();hideLock();pinMode='check';renderInstellingen();toast('App-slot aan');}else{toast('Codes verschillen — opnieuw');pinMode='new';pinTemp='';showLock('Kies een pincode (4 cijfers)');}return;}}
+function showPinReset(){document.getElementById('pinResetBtn').style.display='none';document.getElementById('pinResetBox').style.display='block';}
+/* Zelfde bevestiging (typ WISSEN) als "Alles wissen" in Instellingen — die is hier niet bereikbaar
+   omdat het slot er zelf voor staat. Dit is de enige weg terug als je je pincode echt kwijt bent. */
+function doPinReset(){if(val('pinResetIn').trim().toUpperCase()!=='WISSEN'){toast('Typ WISSEN om te bevestigen');return;}localStorage.removeItem(KEY);location.reload();}
 function maybeLock(){
   if(_noLock)return; // terugkeer uit deel-popup/bestandskiezer die de app zelf opende
   if(_bioBusy)return; // vingerafdruk-prompt is (net) open — resume-event komt dáárvandaan
@@ -4227,7 +4280,7 @@ async function exportData(){const json=JSON.stringify(db,null,2);const name='gri
 async function exportOverzichtPDF(){
   if(!true){toast('PDF-overzicht staat uit');return;}
   const J=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
-  if(!J){toast('PDF-bibliotheek niet geladen');return;}
+  if(!J){toast('Het overzicht kon nu niet gemaakt worden. Sluit de app en probeer het nog eens.');return;}
   armNoLock();
   toast('PDF wordt gemaakt…');
   try{
@@ -4323,6 +4376,8 @@ async function exportOverzichtPDF(){
     }
     // Uitgaven laatste 12 mnd
     const allLog=[];db.potjes.forEach(p=>(p.log||[]).forEach(x=>allLog.push({pot:p.n,x})));
+    // Loon-ontvangsten (aparte bak db.loonLog) ook meenemen, zoals in "Alle uitgaven" op het scherm.
+    if(moduleOn('loon')&&featOn('loonlog'))(db.loonLog||[]).forEach(e=>allLog.push({pot:'Loon',x:{date:e.date,amount:e.amount,kind:'ontvangst',item:'Netto loon',note:e.note}}));
     const cut=new Date();cut.setFullYear(cut.getFullYear()-1);
     const recent=allLog.filter(u=>new Date(u.x.date)>=cut).sort((a,b)=>(b.x.date||'').localeCompare(a.x.date||''));
     if(recent.length){
@@ -4434,7 +4489,7 @@ function mergeImport(d){
   const uitNa=FEATS.map(f=>f.k).filter(k=>!featOn(k));
   r.functiesAan=uitVoor.filter(k=>!uitNa.includes(k));
   r.functiesUit=uitNa.filter(k=>!uitVoor.includes(k));
-  const namen={loon:'je loondag',modules:'welke onderdelen aan staan',contract:'contract-uren',meldCfg:'meldingen',meldTijd:'meldingen',meldingen:'meldingen',overboek:'afgevinkte overboekingen',werkCfg:'werkgever-instellingen',backup:'back-up-voorkeuren',theme:'thema'};
+  const namen={loon:'je loondag',modules:'welke onderdelen aan staan',contract:'je vaste aantal uur per week',meldCfg:'meldingen',meldTijd:'meldingen',meldingen:'meldingen',overboek:'afgevinkte overboekingen',werkCfg:'werkgever-instellingen',backup:'back-up-voorkeuren',theme:'thema'};
   Object.keys(namen).forEach(k=>{if(was[k]!==snap(k)&&!r.instellingen.includes(namen[k]))r.instellingen.push(namen[k]);});
   return r;
 }

@@ -48,7 +48,7 @@ Allemaal gedaan, inclusief het tabblad zelf dat nu "Betalingen" heet (4.2).
 
 ## 5. Uren-pagina — 4/4 ✅
 
-## 6. Uren-controle — 6/7
+## 6. Uren-controle — 7/7 ✅
 
 | # | Punt | Status |
 |---|---|---|
@@ -57,7 +57,7 @@ Allemaal gedaan, inclusief het tabblad zelf dat nu "Betalingen" heet (4.2).
 | 6.3 | "Heropenen" + vaktermen | ✅ — de bevestiging zelf was eerder al gedaan, maar de twee knoppen die 'm openen heetten nog "Heropenen"; dat viel op tijdens het opstellen van dit overzicht en is rechtgezet |
 | 6.4 | Label "standaard" | ✅ |
 | 6.5 | "· niet je loondag" las als fout | ✅ |
-| 6.6 | Tijdveld accepteert vrije tekst | 🔲 **nog te doen.** Het veld "Hoeveel tijd miste je?" (bijv. "30 min" of "1 uur 15") is ongewijzigd. De aanbeveling uit het rapport was twee losse velden (uren/minuten) — dat is een echte formulierwijziging, geen tekstfix, en ik heb 'm bewust laten liggen om niet halverwege een sessie vol tekstwijzigingen een nieuw invoercomponent te bouwen zonder er goed voor te kunnen testen. |
+| 6.6 | Tijdveld accepteert vrije tekst | ✅ — "Hoeveel tijd miste je?" is nu twee losse velden (Uren / Minuten) op beide plekken waar afwijkingen worden ingevoerd, i.p.v. vrije tekst als "30 min" of "1 uur 15". |
 | 6.7 | "Nabetaald verwacht" | ✅ |
 
 ## 7. Loon-pagina — 7/7 ✅
@@ -130,10 +130,27 @@ Dingen die niet uit de gebruikerstest kwamen, maar wel onderweg zijn gedaan:
   klappen automatisch open als je zelf al iets anders had ingesteld.
 - **De Uitleg-pagina van 49 naar 22 vragen**, met de inhoud van wat wegviel
   waar nodig kort verwerkt in de vraag die overbleef.
+- **"Gewerkt" in het dienst-scherm werkt nu live bij.** Begin, einde en pauze
+  aanpassen liet het "Gewerkt: 3u 45m"-regeltje eerder pas bijwerken nadat je
+  het scherm sloot en weer opende.
+- **Pincode-terugkeerknop.** Bij een foute pincode staat er nu naast de
+  bestaande uitleg ook een knop "Pincode kwijt? Opnieuw beginnen", die (na
+  het typen van WISSEN) de app leeg opnieuw laat beginnen zonder opnieuw te
+  installeren.
+- **Bug: loon ontbrak in het PDF-overzicht "Uitgaven & ontvangsten".** Op het
+  scherm zelf ("Alle uitgaven") stond loon er al tussen; in de PDF nog niet.
+- **Bug: een negatief bedrag kon in een groen "klopt"-vinkje verschijnen.**
+  Bij een potje waar de verwachte toeslag/ontvangst deze maand groter is dan
+  wat er nog te betalen staat, toonde de app bijv. "€ -120,00" als
+  geruststellend groen bedrag. Nu een aparte, positieve boodschap ("Je krijgt
+  deze maand per saldo geld bij dit potje").
+- **Bug: "Nog te betalen deze maand" negeerde een openstaande betaling van
+  een vorige maand.** Een vaste last die nooit is afgevinkt viel buiten het
+  kalendermaand-venster van het kopbedrag en de "dekt mijn potje dit"-check,
+  terwijl hij wel nog moest gebeuren.
 
 ## Nog open
 
-- **6.6** — het tijdveld bij een uren-afwijking (zie boven).
 - **Naar GitHub pushen** — alles staat lokaal klaar, nog niet gepusht.
 - **Testen op een echte telefoon** — alles is geverifieerd in de
   browser-preview; een APK-build en een testlijst volgen aan het einde.

@@ -507,13 +507,19 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
 }
 // 35b. een venster dat nu loopt: begonnen maar nog niet afgelopen = niet te laat
 {
-  /* De tests draaien op 29 juli 2026. Venster 27-31 juli is dus bezig; een vaste datum van 27 juli
-     is al voorbij. Precies het geval waar het om gaat: geen valse "Te laat" tijdens het venster. */
+  /* Vroeger stonden hier vaste datums in juli 2026 met de aanname "de tests draaien op 29 juli". Op
+     1 augustus was dat venster verstreken en faalde de test zonder dat er iets kapot was. Nu wordt
+     alles om vandaag heen gebouwd: het venster begon twee dagen terug en loopt over twee dagen af,
+     de vaste datum ligt twee dagen achter ons. */
+  const nu=new Date();nu.setHours(0,0,0,0);
+  const schuif=n=>{const x=new Date(nu);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
   const d=basis({potjes:[{n:'P',saldo:0,log:[],items:[
-    {id:'a',n:'Loopt nu',v:100,fn:1,fu:'j',due:'2026-07-27',dueTot:'2026-07-31',paidDates:{}},
-    {id:'b',n:'Vast',v:100,fn:1,fu:'j',due:'2026-07-27',paidDates:{}},
+    {id:'a',n:'Loopt nu',v:100,fn:1,fu:'j',due:schuif(-2),dueTot:schuif(2),paidDates:{}},
+    {id:'b',n:'Vast',v:100,fn:1,fu:'j',due:schuif(-2),paidDates:{}},
   ]}]});
-  const r=run(d,a=>a.paymentRows(new Date(2026,6,1),new Date(2026,6,31)).map(x=>x.it.n+' '+(x.telaat?'telaat':'op tijd')));
+  const van=new Date(nu);van.setDate(van.getDate()-10);
+  const tot=new Date(nu);tot.setDate(tot.getDate()+10);
+  const r=run(d,a=>a.paymentRows(van,tot).map(x=>x.it.n+' '+(x.telaat?'telaat':'op tijd')));
   meld('venster dat vandaag nog loopt is niet te laat, een verstreken vaste datum wel',
     !r.fout&&JSON.stringify(r.extra)==='["Loopt nu op tijd","Vast telaat"]', JSON.stringify(r.extra||r.fout));
 }

@@ -1764,7 +1764,7 @@ function renderStats(){
   const keys=Object.keys(by).sort().reverse().slice(0,lim);const max=Math.max(...keys.map(k=>by[k]),1);const tot=keys.reduce((a,k)=>a+by[k],0);
   const lbl=k=>{if(sp==='d'){const d=new Date(k);return d.getDate()+' '+MND[d.getMonth()].slice(0,3);}if(sp==='w')return 'wk '+parseInt(k.split('-W')[1]);if(sp==='m'){const[y,m]=k.split('-');return MND[+m-1].slice(0,3)+" '"+y.slice(2);}return k;};
   const PL={d:'dagen',w:'weken',m:'maanden',j:'jaren'};
-  document.getElementById('statsWrap').innerHTML=`<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">${[['d','Dag'],['w','Week'],['m','Maand'],['j','Jaar']].map(([k,l])=>`<span class="chip ${sp===k?'on':''}" onclick="window._sp='${k}';renderStats()">${l}</span>`).join('')}</div><select style="margin-bottom:12px" onchange="window._sw=this.value;renderStats()"><option value="">Alles</option>${db.werkgevers.map(w=>`<option ${w===sw?'selected':''}>${esc(w)}</option>`).join('')}</select><div class="card" style="background:var(--card)"><div class="row between"><span class="muted">Gewerkt (laatste ${keys.length} ${PL[sp]})</span><b>${fmtDur(tot)}</b></div><div class="row between" style="margin-top:6px"><span class="muted">Gemiddeld</span><b>${keys.length?fmtDur(tot/keys.length):'—'}</b></div></div><div class="muted" style="margin:4px 0 2px">Uren gewerkt</div>${keys.length?keys.map(k=>`<div class="statrow"><span class="lbl">${lbl(k)}</span><div class="bbar"><div style="width:${Math.round(by[k]/max*100)}%"></div></div><span class="val">${fmtDur(by[k])}</span></div>`).join(''):'<div class="empty">Geen gegevens.</div>'}`;
+  document.getElementById('statsWrap').innerHTML=`<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">${[['d','Dag'],['w','Week'],['m','Maand'],['j','Jaar']].map(([k,l])=>`<span class="chip ${sp===k?'on':''}" onclick="window._sp='${k}';renderStats()">${l}</span>`).join('')}</div><select style="margin-bottom:12px" onchange="window._sw=this.value;renderStats()"><option value="">Alles</option>${db.werkgevers.map(w=>`<option ${w===sw?'selected':''}>${esc(w)}</option>`).join('')}</select><div class="card" style="background:var(--card)"><div class="row between"><span class="muted">Gewerkt (laatste ${keys.length} ${PL[sp]})</span><b>${fmtDur(tot)}</b></div><div class="row between" style="margin-top:6px"><span class="muted">Gemiddeld</span><b>${keys.length?fmtDur(tot/keys.length):'—'}</b></div></div><div class="muted" style="margin:4px 0 2px">Uren gewerkt</div>${keys.length?keys.map(k=>`<div class="statrow"><span class="lbl">${lbl(k)}</span><div class="bbar"><div style="width:${Math.round(by[k]/max*100)}%"></div></div><span class="val">${fmtDur(by[k])}</span></div>`).join(''):'<div class="empty">Zodra je een gewerkte dag invult, zie je hier je uren per week en maand.<button class="primary" style="width:100%;max-width:260px;margin:16px auto 0;display:block" onclick="closeSheet();go(\'uren\')">Naar Uren</button></div>'}`;
 }
 
 /* ===== POTJES ===== */
@@ -3855,8 +3855,10 @@ function renderDocumenten(){
     if(x.days<0)badge='<span class="statusbadge short">● Verlopen</span>';
     else if(x.days===0)badge='<span class="statusbadge short">● Verloopt vandaag</span>';
     else if(x.days<=x.warn)badge=`<span class="statusbadge short">● Nog ${x.days} dag${x.days===1?'':'en'}</span>`;
+    /* Drie eenheden door elkaar op één pagina ("Nog 3 maanden" naast "Nog 47 dagen") maakt vergelijken
+       onmogelijk. Overal dagen; alleen de kleur zegt hoe dringend het is. */
     else if(x.days<60)badge=`<span class="statusbadge none">Nog ${x.days} dagen</span>`;
-    else badge=`<span class="statusbadge ok">Nog ${Math.round(x.days/30.44)} maanden</span>`;
+    else badge=`<span class="statusbadge ok">Nog ${x.days} dagen</span>`;
     return `<div class="shift" onclick="openDocEdit('${d.id}')" style="cursor:pointer"><div class="head"><div style="min-width:0"><b>${esc(d.n||d.type||'Document')}</b><div class="muted">${esc(d.type||'')}${d.type?' · ':''}verloopt ${x.exp.getDate()} ${MND[x.exp.getMonth()]} ${x.exp.getFullYear()}</div>${d.note?`<div class="muted" style="font-style:italic;margin-top:2px">${esc(d.note)}</div>`:''}</div><div style="text-align:right;flex-shrink:0">${badge}</div></div></div>`;
   }).join('');
   c.innerHTML=`<button class="backpill" onclick="go('meer')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M14.5 6l-6 6 6 6"/></svg>Terug</button>
@@ -3874,7 +3876,7 @@ function openDocEdit(id){
     <label>Verloopdatum</label><input type="date" id="dc_verloopt" value="${d.verloopt||''}">
     <label>Eerste waarschuwing vooraf</label>
     <div class="row" style="align-items:center"><input id="dc_wn" inputmode="numeric" value="${d.warnN!=null?d.warnN:3}" style="flex:.7"><select id="dc_wu" style="flex:1.4"><option value="d" ${d.warnU==='d'?'selected':''}>dagen</option><option value="w" ${d.warnU==='w'?'selected':''}>weken</option><option value="m" ${(d.warnU||'m')==='m'?'selected':''}>maanden</option><option value="j" ${d.warnU==='j'?'selected':''}>jaar</option></select></div>
-    <div class="muted" style="font-size:12px;margin-top:4px">Daarna volgen ook de algemene document-herinneringen (instelbaar bij Meldingen).</div>
+    <div class="muted" style="font-size:12px;margin-top:4px">Dit is de eerste melding. Daarna krijg je ook de vaste herinneringen voor documenten; die stel je in bij Instellingen → Meldingen.</div>
     <label>Notitie (optioneel)</label><input id="dc_note" value="${esc(d.note||'')}" placeholder="bijv. documentnummer">
     <div class="row" style="margin-top:16px">${id?`<button class="danger" onclick="delDoc('${id}')">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveDoc('${id||''}')">Opslaan</button></div>`);
 }
@@ -4312,7 +4314,11 @@ async function exportOverzichtPDF(){
       const afwMin=afwMinOpen(),afwCnt=afwOpenShifts().length,todoCnt=teCheckShifts().length;
       const nabMin=(db.shifts||[]).reduce((n,s)=>{const c=ctrlOf(s);return n+((c.via==='nabetaald'&&c.opgelost&&!c.nabOntvangen)?(+c.min||0):0);},0);
       doc.setTextColor(...MUT);doc.setFont('helvetica','normal');doc.setFontSize(9.5);
-      doc.text(`Totaal (laatste ${mk.length} mnd): ${fmtDur(totH)}    ·    Gem. per maand: ${fmtDur(avgM)}    ·    per week: ${fmtDur(avgM/4.348)}`+(afwCnt?`    ·    Afwijkingen open: ${afwCnt}${afwMin?' ('+fmtDur(afwMin/60)+')':''}`:'')+(todoCnt?`    ·    Nog te controleren: ${todoCnt}`:'')+(nabMin?`    ·    Nabetaald verwacht: ${fmtDur(nabMin/60)}`:''),40,y);y+=15;
+      const samen=[`Totaal over de laatste ${mk.length} maanden: ${fmtDur(totH)}`,`Gemiddeld per maand: ${fmtDur(avgM)}`,`Gemiddeld per week: ${fmtDur(avgM/4.348)}`];
+      if(afwCnt)samen.push(`Nog recht te zetten: ${afwCnt}${afwMin?' ('+fmtDur(afwMin/60)+')':''}`);
+      if(todoCnt)samen.push(`Nog te controleren: ${todoCnt}`);
+      if(nabMin)samen.push(`Krijg je nog: ${fmtDur(nabMin/60)}`);
+      samen.forEach(regel=>{doc.text(regel,40,y);y+=12;});y+=4;
       tabel(['Maand','Gewerkt'],mk.slice().reverse().map(k=>{const[yy,mm]=k.split('-');return[MND[+mm-1]+' '+yy,fmtDur(byM[k])];}),{columnStyles:{1:{halign:'right'}}});
       if(featOn('comp')){const afwList=afwShifts().filter(s=>!ctrlOf(s).opgelost).sort((a,b)=>b.date.localeCompare(a.date));if(afwList.length){ensure(60);tabel(['Datum','Werkgever','Tekort','Status'],afwList.map(s=>{const c=ctrlOf(s);const d=new Date(s.date);return[d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear(),s.werk,c.min?fmtDur(c.min/60):'—','Open'];}),{columnStyles:{2:{halign:'right'}}});}}
     }
@@ -4321,14 +4327,14 @@ async function exportOverzichtPDF(){
       sectie('Potjes & sparen');
       const body=db.potjes.map((p,pi)=>{const budget=p.fuel?(+p.maand||0):0;const spaar=!p.items.length&&!budget;const ms=p.items.length?potMonthStatus(pi):null;const status=p.fuel?'Brandstofpotje':(spaar?'Spaarpotje':(!ms||!ms.has?'—':(ms.short?'Nog '+eur(ms.tekort)+' nodig':'Saldo genoeg')));const uit12=sumLast12(p.log);const naamCell=p.note?(p.n+'\n'+p.note):p.n;return[naamCell,eur(p.saldo),potTot(p)>0?eur(potTot(p)):'—',uit12==null?'—':eur(uit12),status];});
       body.push([{content:'Totaal',styles:{fontStyle:'bold'}},{content:eur(totalSaldo()),styles:{fontStyle:'bold',halign:'right'}},{content:eur(opzij),styles:{fontStyle:'bold',halign:'right'}},'','']);
-      tabel(['Potje','Saldo','Opzij/mnd','Uitg. 12mnd','Status deze maand'],body,{columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}}});
+      tabel(['Waarvoor','Wat er nu op staat','Elke maand opzij','Uitgegeven afgelopen jaar','Deze maand'],body,{columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}}});
     }
     // Betalingen deze maand
     if(moduleOn('potjes')){
       const rows=paymentRows(monthStart(now),monthEnd(now));
       if(rows.length){
         sectie('Betalingen deze maand ('+MND[now.getMonth()]+')');
-        tabel(['Post','Datum','Bedrag','Eigen deel','Status'],rows.map(x=>[x.it.note?(x.it.n+'\n'+x.it.note):x.it.n,termijnDatumTekst(x.date,x.span||0,true),eur(x.bruto),x.toeslag>0?eur(x.bruto-x.toeslag):eur(x.bruto),x.paid?'Betaald':'Open']),{columnStyles:{2:{halign:'right'},3:{halign:'right'}}});
+        tabel(['Vaste last','Datum','Bedrag','Betaal je zelf','Status'],rows.map(x=>[x.it.note?(x.it.n+'\n'+x.it.note):x.it.n,termijnDatumTekst(x.date,x.span||0,true),eur(x.bruto),x.toeslag>0?eur(x.bruto-x.toeslag):eur(x.bruto),x.paid?'Betaald':'Open']),{columnStyles:{2:{halign:'right'},3:{halign:'right'}}});
       }
     }
     // Uitgaven laatste 12 mnd
@@ -4558,8 +4564,28 @@ function sheetStandTekst(){
   const f=window._sheetStand;if(typeof f!=='function')return '';
   try{return JSON.stringify(f())||'';}catch(e){return '';}
 }
+/* De vraag bood alleen Annuleren en Weggooien. Precies de uitweg die je op dat moment wilt - gewoon
+   opslaan - ontbrak, dus moest je terug, de opslaanknop zoeken en opnieuw sluiten. Nu alle drie, met
+   Opslaan bovenaan omdat dat in verreweg de meeste gevallen de bedoeling is. */
 function vraagWeggooien(daarna){
-  confirmSheet('Niet opgeslagen','Je hebt hier iets gewijzigd zonder op te slaan. Wil je die wijziging weggooien?','Weggooien',daarna);
+  window._weggooiNa=daarna;window._confirmCb=null;
+  document.getElementById('confirmCard').innerHTML=`<h2>Niet opgeslagen</h2>
+    <p>Je hebt hier iets gewijzigd zonder op te slaan.</p>
+    <button class="primary" style="width:100%" onclick="weggooiKeuze('opslaan')">Opslaan</button>
+    <button class="danger" style="width:100%;margin-top:8px" onclick="weggooiKeuze('weg')">Weggooien</button>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="closeConfirm()">Terug naar het formulier</button>`;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+function weggooiKeuze(wat){
+  const na=window._weggooiNa;window._weggooiNa=null;
+  document.getElementById('confirmOverlay').classList.remove('show');
+  if(wat==='weg'){if(na)na();return;}
+  /* Opslaan = de knop indrukken die dit formulier zelf al heeft. De laatste primary-knop in het
+     venster is in deze app steeds de opslaan- of bevestigknop onderaan. */
+  const knoppen=document.querySelectorAll('#sheet .primary');
+  const btn=knoppen.length?knoppen[knoppen.length-1]:null;
+  if(btn){markSheetSaved();btn.click();}
+  else if(na)na();
 }
 /* naam: alleen nodig voor schermen die zichzelf opnieuw tekenen terwijl je ze invult. De werkgever-
    pagina bouwt na elke keuze het hele scherm opnieuw op; dat is geen nieuw scherm, dus de

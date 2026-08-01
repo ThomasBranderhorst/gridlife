@@ -762,6 +762,75 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   meld('loondag: maandritme verandert niet door kort',
     !m.fout&&m.extra[0]==='de 25e van de maand'&&m.extra[0]===m.extra[1], JSON.stringify(m.fout||m.extra));
 }
+/* ===== WAAR IS JE SALDO VOOR? =====
+   Alles relatief aan vandaag, zodat deze controles niet over een maand bederven. */
+{
+  const J=new Date().getFullYear();
+  const post=(n,v,fn,fu,due)=>({id:n,n,v,fn,fu,due,toeslagen:[]});
+  const buf=(n,v)=>({id:n,n,v,fn:1,fu:'m',buffer:true,toeslagen:[]});
+  const mkPot=(saldo,items)=>({n:'P',saldo,log:[],items});
+  const res=(saldo,items)=>{
+    const r=run(basis({potjes:[mkPot(saldo,items)]}),a=>({
+      res:a.potReservering(0),maandelijks:a.potIsMaandelijks(a.db.potjes[0])}));
+    return r.fout?{fout:r.fout}:r.extra;
+  };
+  // 54. een potje zonder gedateerde vaste lasten heeft niets te verdelen
+  {
+    const a=res(500,[buf('Onvoorzien',50)]),b=res(4000,[]);
+    meld('reservering: buffer-only en spaarpotje krijgen geen verdeling',
+      a.res===null&&b.res===null, JSON.stringify({a:a.res,b:b.res}));
+  }
+  // 55. de rest heet alleen "vrij" als er geen buffer op wacht
+  {
+    const a=res(96,[post('APK',50,1,'j',(J+1)+'-07-01'),buf('Onderhoud',40)]);
+    const b=res(96,[post('APK',50,1,'j',(J+1)+'-07-01')]);
+    meld('reservering: potje met buffer markeert de rest niet als vrij besteedbaar',
+      a.res.heeftBuffer===true&&b.res.heeftBuffer===false, JSON.stringify({a:a.res.heeftBuffer,b:b.res.heeftBuffer}));
+  }
+  // 56. meerdere gedateerde posten: op volgorde van vervaldatum, en alles telt op tot het saldo
+  {
+    const e=res(300,[post('APK',50,1,'j',(J+1)+'-07-01'),post('Verz',180,3,'m',(J)+'-09-01'),post('Weg',90,3,'m',(J)+'-08-15')]);
+    const namen=e.res.rijen.map(x=>x.n);
+    const som=Math.round((e.res.bezet+e.res.vrij)*100)/100;
+    meld('reservering: drie posten op volgorde van vervaldatum, samen precies het saldo',
+      JSON.stringify(namen)===JSON.stringify(['Weg','Verz','APK'])&&som===300&&e.res.tekort===0, JSON.stringify({namen,som,tekort:e.res.tekort}));
+  }
+  // 57. te weinig saldo: wie het eerst vervalt krijgt het geld, de rest wordt tekort
+  {
+    const e=res(40,[post('Weg',90,3,'m',(J)+'-08-15'),post('Verz',180,3,'m',(J)+'-09-01')]);
+    const r0=e.res.rijen[0],r1=e.res.rijen[1];
+    meld('reservering: bij te weinig saldo krijgt de eerstvolgende betaling voorrang',
+      r0.n==='Weg'&&r0.bezet===40&&r1.bezet===0&&e.res.vrij===0&&e.res.tekort>0, JSON.stringify(e.res));
+  }
+  // 58. saldo nul: niets bezet, alles tekort, geen negatieve bedragen
+  {
+    const e=res(0,[post('APK',50,1,'j',(J+1)+'-07-01')]);
+    meld('reservering: leeg potje geeft nul bezet en geen negatieve bedragen',
+      e.res.bezet===0&&e.res.vrij===0&&e.res.tekort>0, JSON.stringify(e.res));
+  }
+  // 59. de reservering loopt nooit boven het bedrag van de vaste last uit
+  {
+    const nu=new Date();const bijna=new Date(nu);bijna.setDate(bijna.getDate()+2);
+    const iso=bijna.toISOString().slice(0,10);
+    const e=res(1000,[post('Opstal',400,1,'j',iso)]);
+    meld('reservering: vlak voor de vervaldatum staat er hooguit het hele bedrag',
+      e.res.rijen[0].nodig<=400&&e.res.rijen[0].nodig>380, JSON.stringify(e.res.rijen[0]));
+  }
+  // 60. een verre vervaldatum reserveert bijna niets
+  {
+    const nu=new Date();const ver=new Date(nu);ver.setDate(ver.getDate()+350);
+    const iso=ver.toISOString().slice(0,10);
+    const e=res(1000,[post('Opstal',400,1,'j',iso)]);
+    meld('reservering: een jaarpost die net betaald is reserveert bijna niets',
+      e.res.rijen[0].nodig<25, JSON.stringify(e.res.rijen[0]));
+  }
+  // 61. maandpotje: het paneel wordt daar niet getoond, want de badge zegt het al
+  {
+    const e=res(900,[post('Huur',800,1,'m',(J)+'-08-05')]);
+    meld('reservering: potje met alleen maandposten wordt als maandelijks herkend',
+      e.maandelijks===true, JSON.stringify({maandelijks:e.maandelijks}));
+  }
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

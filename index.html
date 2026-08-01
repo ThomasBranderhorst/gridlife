@@ -2251,7 +2251,10 @@ function projectieRegel(pi,klein){
   if(!pr.maandelijks&&!pr.uit&&!pr.inn)return '';
   const d=pr.datum;const dtxt=d.getDate()+' '+MND[d.getMonth()].slice(0,3);
   const fs=klein?'12.5px':'13px';
-  if(!pr.maandelijks)return `<div class="muted" style="font-size:${fs};margin-top:4px">Op ${dtxt} staat hier ${eur(pr.eind)}</div>`;
+  /* Een negatief eindsaldo als "€ -50,00" laten zien leest als een typefout. Zeg gewoon wat het is. */
+  if(!pr.maandelijks)return pr.eind<0
+    ? `<div style="font-size:${fs};margin-top:4px;color:var(--bad-tx)">Op ${dtxt} kom je hier ${eur(-pr.eind)} tekort</div>`
+    : `<div class="muted" style="font-size:${fs};margin-top:4px">Op ${dtxt} staat hier ${eur(pr.eind)}</div>`;
   const ok=Math.abs(pr.verschil)<0.005;
   const kleur=ok?'var(--ok-tx)':(pr.verschil<0?'var(--bad-tx)':'var(--muted)');
   /* Eerst stond hier de hele rekensom: eindsaldo, streefbedrag én het verschil, alle drie als bedrag.
@@ -2369,6 +2372,42 @@ function inhaalTgl(el,pi,k){
   if(aan)db.overboek[k][pi]={done:true,amt:round2(potTot(p)),inhaal:true};
   else delete db.overboek[k][pi];
   haptic();save();render();
+}
+/* ===== WAAR IS JE SALDO VOOR? =====
+   Eén potje kan meerdere gedateerde vaste lasten bevatten plus een buffer. De app zag daar één hoop
+   geld: betaal je in mei een reparatie uit je autopotje, dan is je APK-geld stilletjes mee weg en
+   merk je dat pas in juli.
+   Een vaste last mét datum verraadt zichzelf: kost de APK 50 euro per jaar en vervalt hij in juli,
+   dan hoort er in januari ongeveer de helft klaar te staan. Dat is puur rekenwerk - hoe ver ben je in
+   de cyclus maal het bedrag - dus er hoeft niets extra's opgeslagen te worden.
+   Een buffer krijgt geen reservering: die heeft geen datum, en alles wat niet bezet is ís de buffer. */
+function itemGereserveerd(it,nu){
+  if(!it||!it.due||it.buffer)return 0;
+  const occ=itemNextOcc(it);if(!occ)return 0;
+  const cyclusDagen=Math.max(1,monthsPer(it.fu||'m',+it.fn||1)*30.44);
+  const teGaan=(occ-nu)/86400000;
+  /* Voorbij de vervaldatum (nog niet afgevinkt) hoort het hele bedrag klaar te staan, vandaar de klem
+     op 1. En vlak na een betaling begint de opbouw weer bij nul. */
+  const fractie=Math.min(1,Math.max(0,1-teGaan/cyclusDagen));
+  return round2(fractie*(+it.v||0));
+}
+/* null = niets te verdelen (geen enkele gedateerde vaste last in dit potje). */
+function potReservering(pi){
+  const p=db.potjes[pi];if(!p)return null;
+  const nu=new Date();nu.setHours(0,0,0,0);
+  const rijen=(p.items||[]).filter(it=>it&&it.due&&!it.buffer)
+    .map(it=>({n:it.n,datum:itemNextOcc(it),nodig:itemGereserveerd(it,nu)}))
+    .filter(x=>x.datum);
+  if(!rijen.length)return null;
+  /* Wie het eerst vervalt, krijgt het geld het eerst - zo werkt het in het echt ook: die afschrijving
+     komt langs voordat de volgende aan de beurt is. */
+  rijen.sort((a,b)=>a.datum-b.datum);
+  let over=Math.max(0,round2(+p.saldo||0)),tekort=0;
+  rijen.forEach(r=>{const k=Math.min(over,r.nodig);r.bezet=round2(k);over=round2(over-k);tekort=round2(tekort+(r.nodig-k));});
+  /* Wat overblijft heet alleen "vrij te besteden" als er niets anders op wacht. Zit er een buffer in
+     het potje, dan is de rest juist die buffer - dat geld "vrij" noemen zou uitnodigen het op te maken. */
+  const heeftBuffer=(p.items||[]).some(it=>it&&it.buffer);
+  return {rijen,bezet:round2(rijen.reduce((a,r)=>a+r.bezet,0)),vrij:round2(over),tekort:round2(tekort),heeftBuffer};
 }
 function potNeed(pi){const ms=potMonthStatus(pi);return ms?ms.tekort:0;}
 function totalSaldo(){return db.potjes.reduce((a,p)=>a+(+p.saldo||0),0);}
@@ -2501,6 +2540,18 @@ function renderPotjes(){
         (showRec?`<div class="row between" style="margin-top:10px;align-items:center;gap:10px"><span style="color:var(--muted);font-size:13.5px">Aanbevolen opzij: <b style="color:var(--text)">${eur(rec)}/mnd</b></span><button class="tiny primary" onclick="event.stopPropagation();confirmSheet('Maandbedrag aanpassen','Maandbedrag voor benzine aanpassen naar ${eur(rec)}?','Aanpassen',()=>applyFuelAdvies(${i}))">Overnemen</button></div>`:'')+
         `</div>`;
     }}
+    /* "Waar is je saldo voor?" — alleen waar het iets toevoegt. Bij een potje met louter maandelijkse
+       vaste lasten zegt de badge hierboven het al, en zou dit paneel dezelfde vraag nog eens stellen. */
+    let resPanel='';
+    const res=(!spaar&&!potIsMaandelijks(p))?potReservering(i):null;
+    if(res){
+      const rest=res.heeftBuffer?'Rest — voor je buffer':'Vrij te besteden';
+      resPanel=`<div class="mini"><div class="mini-h">Waar is je saldo voor?</div>`
+        +res.rijen.map(r=>`<div class="kv"><span class="k">${esc(r.n)} <span class="muted" style="font-size:11.5px">· ${r.datum.getDate()} ${MND[r.datum.getMonth()].slice(0,3)}</span></span><span class="v">${eur(r.bezet)}</span></div>`).join('')
+        +`<div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k">${rest}</span><span class="v" style="color:var(--ok-tx)">${eur(res.vrij)}</span></div>`
+        +(res.tekort>0.005?`<div style="font-size:12.5px;margin-top:8px;color:var(--amber)">Er staat <b>${eur(res.tekort)}</b> minder klaar dan nodig voor wat eraan komt.</div>`:'')
+        +`</div>`;
+    }
     // "Deze maand"-paneel (in het uitgeklapte deel)
     let monthPanel='';
     if(ms&&ms.has){
@@ -2517,7 +2568,7 @@ function renderPotjes(){
     const potSumInner=`<div class="pot-opzij"><span class="lbl">${primaryLbl}</span><span class="amt">${primaryAmt}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">${secondary}</div>${(!spaar&&badge)?`<div style="margin-top:8px">${badge}</div>`:''}${projectieRegel(i)}${spaar?'':opzijRegel(i)}`;
     return `<div class="pot" id="pot${i}"><div class="ph"><div ${tog} style="flex:1"><b>${esc(p.n)}</b>${p.note?`<div class="muted" style="margin-top:2px;font-style:italic">${esc(p.note)}</div>`:''}</div>${t>0?`<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleOverboek(${i})">${on?'✓':''}</div>`:''}</div>
       <div class="pot-sum" ${tog}><div style="flex:1;min-width:0">${potSumInner}</div><span class="cvx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;display:block"><path d="M6 9.5l6 6 6-6"/></svg></span></div>
-      <div class="sub">${fuelPanel}${monthPanel}${items}${advies}
+      <div class="sub">${resPanel}${fuelPanel}${monthPanel}${items}${advies}
       <button class="ghost" style="width:100%;margin-top:12px" onclick="openPotDetailEdit(${i},'potjes')">Potje bewerken</button>
       </div></div>`;
   }).join(''):`<div class="empty">Je hebt nog geen potjes.<br><span style="font-size:12.5px">Een potje is een doel om geld voor apart te zetten — bijvoorbeeld "Vaste lasten" of "Vakantie".</span><button class="primary" style="width:100%;max-width:260px;margin:16px auto 0;display:block" onclick="openPotEdit();setTimeout(newPot,120)">Maak je eerste potje</button></div>`;

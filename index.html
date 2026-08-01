@@ -1493,7 +1493,7 @@ function controlePanel(s,id){
   const nab=c.via==='nabetaald'&&c.nabetaalDatum;const nd=nab?new Date(c.nabetaalDatum):null;
   const ndtxt=nd?(nd.getDate()+' '+MND[nd.getMonth()].slice(0,3)+' '+nd.getFullYear()):'';
   const resBlock=resolved
-    ?`<div class="potitem" id="ctrlResBlock" style="margin-top:10px">${c.min?ctrlKv('Gemiste tijd',fmtDur(c.min/60)):''}${ctrlKv('Rechtgezet',capFirst(resolveShort(c)),'var(--ok-tx)',corrLinkId(c))}${nab?ctrlKv(c.nabOntvangen?'Ontvangen op':'Wordt nabetaald op',ndtxt,c.nabOntvangen?'var(--ok-tx)':'var(--muted)'):''}<div class="row" style="gap:8px;margin-top:10px">${(nab&&!c.nabOntvangen)?`<button class="tiny line" style="flex:1" onclick="markNabOntvangenShift('${id}')">Markeer ontvangen</button>`:''}<button class="tiny line" style="flex:1" onclick="reopenAfw('${id}')">Heropenen</button></div></div>`
+    ?`<div class="potitem" id="ctrlResBlock" style="margin-top:10px">${c.min?ctrlKv('Gemiste tijd',fmtDur(c.min/60)):''}${ctrlKv('Rechtgezet',capFirst(resolveShort(c)),'var(--ok-tx)',corrLinkId(c))}${nab?ctrlKv(c.nabOntvangen?'Ontvangen op':'Wordt nabetaald op',ndtxt,c.nabOntvangen?'var(--ok-tx)':'var(--muted)'):''}<div class="row" style="gap:8px;margin-top:10px">${(nab&&!c.nabOntvangen)?`<button class="tiny line" style="flex:1" onclick="markNabOntvangenShift('${id}')">Markeer ontvangen</button>`:''}<button class="tiny line" style="flex:1" onclick="reopenAfw('${id}')">Toch niet opgelost</button></div></div>`
     /* Bij een nieuwe dienst valt er nog niets te controleren: je loonstrook bestaat nog niet. De
        uitleg over dubbeltellen ging bovendien over de boekhouding van de app, niet over wat je moet
        doen. Alleen bij bewerken tonen, en dan als vraag. */
@@ -1571,7 +1571,7 @@ function renderControle(){
   }
   if(done.length){
     h+=ctrlHead('Rechtgezet ('+done.length+')');
-    h+=done.map(s=>{const c=ctrlOf(s);const d=new Date(s.date);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);gap:10px;cursor:pointer" onclick="openShift('${s.id}')"><div style="flex:1;min-width:0"><b>${esc(s.werk)} · ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</b><div class="muted" style="font-size:12px">${c.min?fmtDur(c.min/60)+' — ':''}${resolveDetail(c)}</div></div><button class="tiny line" style="flex-shrink:0" onclick="event.stopPropagation();reopenAfw('${s.id}')">Heropenen</button></div>`;}).join('');
+    h+=done.map(s=>{const c=ctrlOf(s);const d=new Date(s.date);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);gap:10px;cursor:pointer" onclick="openShift('${s.id}')"><div style="flex:1;min-width:0"><b>${esc(s.werk)} · ${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}</b><div class="muted" style="font-size:12px">${c.min?fmtDur(c.min/60)+' — ':''}${resolveDetail(c)}</div></div><button class="tiny line" style="flex-shrink:0" onclick="event.stopPropagation();reopenAfw('${s.id}')">Toch niet opgelost</button></div>`;}).join('');
   }
   body.innerHTML=h;
 }

@@ -1391,14 +1391,25 @@ function loonWanneerHTML(L,ctx){
          <div class="muted" style="font-size:12px;margin-top:6px">Bijvoorbeeld "laatste vrijdag van de maand". Bestaat de vijfde niet in een maand, dan pakt de app de laatste.</div>`
       : `<label>Dag van de maand</label><select id="${ctx}_loonDag" onchange="${zet('dag')}+this.value)">${dagOpties(L.dag)}</select>${+L.dag>28&&+L.dag<31?`<div class="muted" style="font-size:12px;margin-top:4px">In kortere maanden (februari) wordt het automatisch de laatste dag.</div>`:''}`}`;
 }
-/* Wat er gebeurt als de loondag geen werkdag is — plus de feestdagen-schakelaar. */
+/* Wat er gebeurt als de loondag geen werkdag is — plus de feestdagen-schakelaar.
+   Voor de meeste mensen is dit ruis: de bank regelt het toch, en je ziet de echte uitkomst al in het
+   lijstje "Je eerstvolgende loondagen" eronder. Daarom achter Geavanceerd, tenzij je het al had
+   ingesteld — dan blijft het meteen zichtbaar, net als bij het brandstof-vlaggetje van een potje. */
 function loonWeekendHTML(L,ctx){
   if(L.mode==='manual')return '';
-  return `<label style="margin-top:12px">Valt je loondag niet op een werkdag?</label>
+  /* Alleen L.weekend telt als "al ingesteld": schoonLoonCfg zet L.feest standaard op true, ook als
+     de weekendverschuiving zelf nog nooit is aangeraakt (de feestdagen-toggle wordt trouwens pas
+     zichtbaar zodra L.weekend aanstaat), dus L.feest alleen zegt niets over een bewuste keuze. */
+  const open=!!L.weekend;
+  const id=ctx+'_weekendAdv';
+  return `<span class="adv" style="margin-top:10px;display:inline-block" onclick="var a=document.getElementById('${id}');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd — weekend en feestdagen</span>
+    <div id="${id}" style="display:${open?'block':'none'}">
+    <label style="margin-top:12px">Valt je loondag niet op een werkdag?</label>
     <div class="row" style="gap:8px;flex-wrap:wrap">${[['','Gewoon die dag'],['voor','Werkdag ervoor'],['na','Werkdag erna']].map(([k,l])=>`<span class="chip ${(L.weekend||'')===k?'on':''}" onclick="loonSet('${ctx}','weekend','${k}')">${l}</span>`).join('')}</div>
     <div class="muted" style="font-size:12px;margin-top:4px">Veel werkgevers betalen eerder uit als de loondag op zaterdag of zondag valt. De app rekent dan met die echte dag — ook voor je meldingen en de potjes-reset.</div>
     ${L.weekend?`<div class="row between" style="align-items:center;gap:10px;padding:10px 0 2px;margin-top:6px;border-top:1px solid var(--line)"><div style="flex:1"><b style="font-size:14px">Nederlandse feestdagen meetellen</b><div class="muted" style="font-size:12px;margin-top:2px">Banken verwerken op een feestdag geen betalingen. Staat dit aan, dan schuift je loondag ook op bij Kerst, Pasen, Koningsdag enzovoort.</div></div><div class="check ${L.feest?'on':''}" onclick="loonSet('${ctx}','feest',${L.feest?'false':'true'})">${L.feest?'✓':''}</div></div>
-    ${(L.feest&&ctx!=='ob')?`<div class="muted" style="font-size:12px;margin-top:2px"><span style="color:var(--accent);text-decoration:underline" onclick="openFeestSheet('${ctx}')">Welke feestdagen zijn dat?</span></div>`:''}`:''}`;
+    ${(L.feest&&ctx!=='ob')?`<div class="muted" style="font-size:12px;margin-top:2px"><span style="color:var(--accent);text-decoration:underline" onclick="openFeestSheet('${ctx}')">Welke feestdagen zijn dat?</span></div>`:''}`:''}
+    </div>`;
 }
 /* Een voorbeeld met de ECHTE eerstvolgende loondagen. Dit is de snelste manier om te zien of een
    instelling klopt: je leest de uitkomst in plaats van dat je hem uit de instellingen moet afleiden. */
@@ -4090,14 +4101,30 @@ function renderWerkCfg(){
     : c.nabetaalMode==='datum'
     ? `<input type="date" id="wc_nabD" value="${c.nabetaalDatum||''}" onchange="wcSet('nabetaalDatum',this.value)" style="margin-top:6px">`
     : '';
-  const ctrlBlok=!featOn('comp')?'':`<div class="mini"><div class="mini-h">Uren controleren</div>
-    <label style="margin-top:2px">Hoe vaak zet ${esc(w)} je uren klaar?</label>
+  /* Ritme + klaardag + wanneer een nabetaling komt zijn planning-details die de meeste mensen nooit
+     hoeven aan te raken - de veilige standaard (per dienst klaar, nabetaald op je loondag) klopt bijna
+     altijd. Achter Geavanceerd, tenzij je zelf al iets anders had ingesteld. De kernvraag "hoe wordt
+     een afwijking rechtgezet" blijft gewoon zichtbaar; dat vink je toch per geval af. */
+  const ritmeAnders=(+c.ritmeN||1)!==1||c.ritmeU!=='dienst'||(+c.klaarDag||1)!==1;
+  const ritmeId='wc_ritmeAdv';
+  const ritmeBlok=`<span class="adv" onclick="var a=document.getElementById('${ritmeId}');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd — hoe vaak uren klaarstaan</span>
+    <div id="${ritmeId}" style="display:${ritmeAnders?'block':'none'}">
+    <label style="margin-top:10px">Hoe vaak zet ${esc(w)} je uren klaar?</label>
     <div class="row" style="gap:8px;align-items:center">${showN?`<span class="muted">elke</span><input id="wc_ritmeN" value="${c.ritmeN||1}" inputmode="numeric" style="width:56px;text-align:center" oninput="wcSet('ritmeN',Math.max(1,parseInt(this.value)||1),true)">`:''}<select id="wc_ritmeU" onchange="wcSet('ritmeU',this.value)" style="flex:1">${units.map(([k,l])=>`<option value="${k}" ${c.ritmeU===k?'selected':''}>${showN?l:'per '+k}</option>`).join('')}</select></div>
     ${klaarRow}
+    </div>`;
+  const nabAnders=c.nabetaalMode&&c.nabetaalMode!=='loondag';
+  const nabId='wc_nabAdv';
+  const nabBlok=`<span class="adv" style="margin-top:6px" onclick="var a=document.getElementById('${nabId}');a.style.display=a.style.display==='block'?'none':'block'">Geavanceerd — wanneer precies?</span>
+    <div id="${nabId}" style="display:${nabAnders?'block':'none'}">
+    <label style="margin-top:10px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast interval'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}
+    </div>`;
+  const ctrlBlok=!featOn('comp')?'':`<div class="mini"><div class="mini-h">Uren controleren</div>
+    ${ritmeBlok}
     <label style="margin-top:12px">Missende uren worden rechtgezet</label>
     <div class="row" style="gap:8px;flex-wrap:wrap">${[['later','Op latere dienst'],['nabetaald','Apart nabetaald'],['zelf','Zelf geregeld']].map(([k,l])=>`<span class="chip ${c.correctie===k?'on':''}" onclick="wcSet('correctie','${k}')">${l}</span>`).join('')}</div>
-    <div class="muted" style="font-size:12px;margin-top:4px">${c.correctie==='later'?'De uren komen bij een latere dienst erbij.':c.correctie==='nabetaald'?'De uren worden los uitbetaald (bijv. op je loonstrook).':'Geen vast systeem — je markeert een afwijking zelf als geregeld.'}</div>
-    ${c.correctie==='nabetaald'?`<label style="margin-top:12px">Apart nabetaald — wanneer?</label><div class="row" style="gap:8px;flex-wrap:wrap">${[['loondag','Op mijn loondag'],['interval','Vast interval'],['datum','Vaste datum']].map(([k,l])=>`<span class="chip ${c.nabetaalMode===k?'on':''}" onclick="wcSet('nabetaalMode','${k}')">${l}</span>`).join('')}</div>${nabWhen}`:''}</div>`;
+    <div class="muted" style="font-size:12px;margin-top:4px">${c.correctie==='later'?'De uren komen bij een latere dienst erbij.':c.correctie==='nabetaald'?'De uren worden los uitbetaald (bijv. op je loonstrook). Standaard op je eerstvolgende loondag.':'Geen vast systeem — je markeert een afwijking zelf als geregeld.'}</div>
+    ${c.correctie==='nabetaald'?nabBlok:''}</div>`;
   openSheet(`<h2>${esc(w)}</h2><div class="muted" style="margin-bottom:12px">Alles over deze werkgever op één plek. Weet je iets niet zeker? Tik onderaan "Herstel standaard" — dan zet de app alles op een veilige keuze.</div>
     ${dienst}${loonBlok}${ctrlBlok}
     <div class="row" style="margin-top:18px;gap:8px"><button class="ghost" onclick="wcSimpel()">Herstel standaard</button><button class="primary" style="flex:1" onclick="wcSave()">Opslaan</button></div>`,

@@ -809,19 +809,21 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
     meld('reservering: leeg potje geeft nul bezet en geen negatieve bedragen',
       e.res.bezet===0&&e.res.vrij===0&&e.res.tekort>0, JSON.stringify(e.res));
   }
+  /* dagOffset gebruikt lokale datumdelen, geen toISOString(): die valt op lokale middernacht een dag
+     terug zodra de tijdzone voor op UTC ligt (bijv. zomertijd, UTC+2), en zou "over 2 dagen" soms als
+     "morgen" laten doorkomen. Dat kostte een halve avond uitzoeken toen het per ongeluk in een
+     wegwerpscript stond - vastgelegd zodat het niet nog eens gebeurt. */
+  const pad2=v=>String(v).padStart(2,'0');
+  const dagOffset=n=>{const x=new Date();x.setHours(0,0,0,0);x.setDate(x.getDate()+n);return x.getFullYear()+'-'+pad2(x.getMonth()+1)+'-'+pad2(x.getDate());};
   // 59. de reservering loopt nooit boven het bedrag van de vaste last uit
   {
-    const nu=new Date();const bijna=new Date(nu);bijna.setDate(bijna.getDate()+2);
-    const iso=bijna.toISOString().slice(0,10);
-    const e=res(1000,[post('Opstal',400,1,'j',iso)]);
+    const e=res(1000,[post('Opstal',400,1,'j',dagOffset(2))]);
     meld('reservering: vlak voor de vervaldatum staat er hooguit het hele bedrag',
       e.res.rijen[0].nodig<=400&&e.res.rijen[0].nodig>380, JSON.stringify(e.res.rijen[0]));
   }
   // 60. een verre vervaldatum reserveert bijna niets
   {
-    const nu=new Date();const ver=new Date(nu);ver.setDate(ver.getDate()+350);
-    const iso=ver.toISOString().slice(0,10);
-    const e=res(1000,[post('Opstal',400,1,'j',iso)]);
+    const e=res(1000,[post('Opstal',400,1,'j',dagOffset(350))]);
     meld('reservering: een jaarpost die net betaald is reserveert bijna niets',
       e.res.rijen[0].nodig<25, JSON.stringify(e.res.rijen[0]));
   }
@@ -830,6 +832,39 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
     const e=res(900,[post('Huur',800,1,'m',(J)+'-08-05')]);
     meld('reservering: potje met alleen maandposten wordt als maandelijks herkend',
       e.maandelijks===true, JSON.stringify({maandelijks:e.maandelijks}));
+  }
+  // 62. mix van meerdere gedateerde vaste lasten MET verschillende ritmes plus meerdere buffers samen
+  {
+    const mixItems=[
+      post('Wegenbelasting',90,3,'m',dagOffset(14)),
+      post('Autoverzekering',480,1,'j',dagOffset(120)),
+      post('Opstalverzekering',300,1,'j',dagOffset(45)),
+      post('APK',50,1,'j',dagOffset(240)),
+      buf('Onderhoud auto',40),buf('Tandarts',20),buf('Kapotte apparaten',25),
+    ];
+    // Bij 700 is precies genoeg voor alle vier gedateerde posten samen (76.20+263.04+322.26+17.15 ≈ 678.65);
+    // pas daarboven mag er iets voor de buffers overblijven.
+    const laag=res(400,mixItems), hoog=res(2000,mixItems);
+    const gedateerdeNamen=['Wegenbelasting','Opstalverzekering','Autoverzekering','APK'];
+    meld('mix: vier gedateerde posten met eigen ritme + drie buffers, geen buffer tussen de rijen',
+      laag.res.rijen.length===4
+      && laag.res.rijen.every(r=>gedateerdeNamen.includes(r.n))
+      && laag.res.rijen.every((r,i)=>i===0||r.datum>=laag.res.rijen[i-1].datum),
+      JSON.stringify(laag.res.rijen.map(r=>r.n)));
+    meld('mix: bij weinig saldo krijgt de eerstvolgende post voorrang, geen "vrij" naast een tekort',
+      laag.res.tekort>0&&laag.res.vrij===0, JSON.stringify({tekort:laag.res.tekort,vrij:laag.res.vrij}));
+    meld('mix: bij ruim saldo zijn alle vier gedateerde posten volledig gedekt en rest gaat naar de buffers',
+      hoog.res.tekort===0
+      && hoog.res.rijen.every(r=>Math.abs(r.bezet-r.nodig)<0.01)
+      && hoog.res.vrij>0
+      && hoog.res.restLabel==='Rest — voor Onderhoud auto, Tandarts en 1 andere',
+      JSON.stringify({tekort:hoog.res.tekort,vrij:hoog.res.vrij,label:hoog.res.restLabel}));
+    meld('mix: bezet plus vrij is op elk saldo-niveau precies het saldo, nooit negatief',
+      [0,50,200,400,700,2000].every(saldo=>{
+        const e=res(saldo,mixItems).res;
+        const som=Math.round((e.bezet+e.vrij)*100)/100;
+        return som===saldo&&e.vrij>=0&&e.tekort>=0&&e.rijen.every(r=>r.bezet>=0&&r.nodig<=(mixItems.find(it=>it.n===r.n).v+0.01));
+      }), 'gecontroleerd op saldo 0, 50, 200, 400, 700, 2000');
   }
 }
 console.log(check.join('\n'));

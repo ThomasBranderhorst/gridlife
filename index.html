@@ -2404,10 +2404,14 @@ function potReservering(pi){
   rijen.sort((a,b)=>a.datum-b.datum);
   let over=Math.max(0,round2(+p.saldo||0)),tekort=0;
   rijen.forEach(r=>{const k=Math.min(over,r.nodig);r.bezet=round2(k);over=round2(over-k);tekort=round2(tekort+(r.nodig-k));});
-  /* Wat overblijft heet alleen "vrij te besteden" als er niets anders op wacht. Zit er een buffer in
-     het potje, dan is de rest juist die buffer - dat geld "vrij" noemen zou uitnodigen het op te maken. */
-  const heeftBuffer=(p.items||[]).some(it=>it&&it.buffer);
-  return {rijen,bezet:round2(rijen.reduce((a,r)=>a+r.bezet,0)),vrij:round2(over),tekort:round2(tekort),heeftBuffer};
+  /* Wat overblijft heet alleen "vrij te besteden" als er niets anders op wacht. Staat er een buffer in
+     het potje, dan is de rest juist die buffer - dat geld "vrij" noemen zou uitnodigen het op te maken.
+     "Voor je buffer" is te vaag als je er twee hebt, dus we noemen ze bij naam. */
+  const wacht=(p.items||[]).filter(it=>it&&it.buffer&&it.n).map(it=>it.n);
+  if(p.fuel&&+p.maand>0)wacht.push('benzine');
+  const restLabel=!wacht.length?'Vrij te besteden'
+    :('Rest — voor '+(wacht.length>2?wacht.slice(0,2).join(', ')+' en '+(wacht.length-2)+' andere':lijstTekst(wacht)));
+  return {rijen,bezet:round2(rijen.reduce((a,r)=>a+r.bezet,0)),vrij:round2(over),tekort:round2(tekort),wacht,restLabel};
 }
 function potNeed(pi){const ms=potMonthStatus(pi);return ms?ms.tekort:0;}
 function totalSaldo(){return db.potjes.reduce((a,p)=>a+(+p.saldo||0),0);}
@@ -2545,7 +2549,7 @@ function renderPotjes(){
     let resPanel='';
     const res=(!spaar&&!potIsMaandelijks(p))?potReservering(i):null;
     if(res){
-      const rest=res.heeftBuffer?'Rest — voor je buffer':'Vrij te besteden';
+      const rest=res.restLabel;
       resPanel=`<div class="mini"><div class="mini-h">Waar is je saldo voor?</div>`
         +res.rijen.map(r=>`<div class="kv"><span class="k">${esc(r.n)} <span class="muted" style="font-size:11.5px">· ${r.datum.getDate()} ${MND[r.datum.getMonth()].slice(0,3)}</span></span><span class="v">${eur(r.bezet)}</span></div>`).join('')
         +`<div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k">${rest}</span><span class="v" style="color:var(--ok-tx)">${eur(res.vrij)}</span></div>`

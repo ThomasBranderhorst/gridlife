@@ -784,8 +784,9 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   {
     const a=res(96,[post('APK',50,1,'j',(J+1)+'-07-01'),buf('Onderhoud',40)]);
     const b=res(96,[post('APK',50,1,'j',(J+1)+'-07-01')]);
-    meld('reservering: potje met buffer markeert de rest niet als vrij besteedbaar',
-      a.res.heeftBuffer===true&&b.res.heeftBuffer===false, JSON.stringify({a:a.res.heeftBuffer,b:b.res.heeftBuffer}));
+    meld('reservering: de rest wordt bij naam genoemd, of heet vrij besteedbaar',
+      a.res.restLabel==='Rest — voor Onderhoud'&&b.res.restLabel==='Vrij te besteden',
+      JSON.stringify({a:a.res.restLabel,b:b.res.restLabel}));
   }
   // 56. meerdere gedateerde posten: op volgorde van vervaldatum, en alles telt op tot het saldo
   {

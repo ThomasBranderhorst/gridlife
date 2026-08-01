@@ -483,6 +483,13 @@ function migrate(){
   ['shifts','potjes','recepten','loonLog','documenten','docTypes','werkgevers','receptCategorieen','rekeningen','boodschappen','tegoed'].forEach(k=>{if(!Array.isArray(db[k]))db[k]=[];});
   ['modules','feat','lock','loon','overboek','contract','werkCfg','backup'].forEach(k=>{if(!db[k]||typeof db[k]!=='object'||Array.isArray(db[k]))db[k]=JSON.parse(JSON.stringify(DEFAULT[k]||{}));});
   db.potjes.forEach(p=>{if(!p||typeof p!=='object')return;if(!Array.isArray(p.items))p.items=[];if(!Array.isArray(p.log))p.log=[];});
+  /* Schakelaars die niet meer bestaan. Had je zo'n functie ooit uitgezet, dan stond er 'false' in
+     db.feat - en zonder knop om hem terug te zetten bleef hij voorgoed uit. Die sleutels ruimen we op,
+     zodat de bijbehorende kaart of knop weer gewoon verschijnt. De startscherm-kaarten hangen nu aan
+     je gegevens, de back-up-knoppen horen er altijd te zijn. */
+  ['st_groet','st_loon','st_over','st_potjes','st_uren','st_grafiek','st_bet','st_trans',
+   'backup','autobackup','export','import','pdf','profiel',
+   'receptcat','receptfav','receptporties'].forEach(k=>{delete db.feat[k];});
   db.potjes=db.potjes.filter(p=>p&&typeof p==='object');
   db.shifts=db.shifts.filter(s=>s&&typeof s==='object');
   db.loon=schoonLoonCfg(db.loon);
@@ -765,16 +772,8 @@ const FEATGRP=[
 ];
 const FEATS=[
  /* Startscherm - per kaart aan/uit */
- {k:'st_groet',grp:'start',label:'Begroeting',oms:'"Goedemorgen, Thomas" bovenaan het startscherm'},
- {k:'st_loon',grp:'start',label:'Tegel: Volgende loon',oms:'Aftelling naar je eerstvolgende loondag',mod:'loon'},
- {k:'st_over',grp:'start',label:'Tegel: Hou ik over',oms:'Je gemiddelde inkomen min alles wat je opzij zet',mod:'loon',dep:'loonlog'},
- {k:'st_potjes',grp:'start',label:'Kaart: Potjes deze periode',oms:'Balkje met hoeveel potjes je al hebt overgemaakt',mod:'potjes'},
- {k:'st_uren',grp:'start',label:'Kaart: Uren deze week',oms:'Totaal van deze week plus de controle-stand',mod:'uren'},
- {k:'st_grafiek',grp:'start',label:'Kaart: Uren per maand',oms:'Staafgrafiek van je laatste zes maanden',mod:'uren',dep:'stats'},
- {k:'st_bet',grp:'start',label:'Kaart: Eerstvolgende betaling',oms:'De eerstvolgende afschrijving of ontvangst',mod:'potjes'},
- {k:'st_trans',grp:'start',label:'Kaart: Laatste transacties',oms:'De drie laatst geboekte uitgaven of ontvangsten',mod:'potjes'},
  /* Uren */
- {k:'contract',grp:'uren',label:'Contract-uren',oms:'Per week zien of je boven of onder je contract zit',mod:'uren'},
+ {k:'contract',grp:'uren',label:'Vast aantal uur per week',oms:'Je ziet dan of je meer of minder hebt gewerkt dan afgesproken. Heb je een oproepcontract, laat dit dan uit.',mod:'uren'},
  {k:'comp',grp:'uren',label:'Uren controleren',oms:'Elke dienst afvinken als Klopt of Klopt niet, en afwijkingen rechtzetten',mod:'uren'},
  {k:'stats',grp:'uren',label:'Statistieken',oms:'Uren-grafieken per dag, week en maand',mod:'uren'},
  /* Potjes */
@@ -788,18 +787,9 @@ const FEATS=[
  /* Loon */
  {k:'loonlog',grp:'loon',label:'Loon loggen',oms:'Netto inkomen bijhouden en zien wat je overhoudt',mod:'loon'},
  /* Recepten */
- {k:'receptcat',grp:'recept',label:'Recept-categorieën',oms:'Recepten indelen en filteren op categorie',mod:'recept'},
- {k:'receptfav',grp:'recept',label:'Favorieten',oms:'Sterretje bij je favoriete recepten; die staan bovenaan',mod:'recept'},
- {k:'receptporties',grp:'recept',label:'Porties omrekenen',oms:'Ingrediënten meeschalen als je meer of minder porties maakt',mod:'recept'},
  /* Extra */
  {k:'documenten',grp:'extra',label:'Documenten',oms:'Verloopdatums van ID en passen bewaken'},
- {k:'profiel',grp:'extra',label:'Profiel',oms:'Je naam bewaren voor de begroeting en het PDF-overzicht'},
  /* Data */
- {k:'backup',grp:'data',label:'Back-up & herstel',oms:'De hele kaart: automatische back-up, exporteren en importeren'},
- {k:'autobackup',grp:'data',label:'Automatische back-up',oms:'De app zet zelf een back-upbestand op je telefoon',dep:'backup'},
- {k:'export',grp:'data',label:'Exporteren',oms:'Zelf een back-upbestand opslaan of delen',dep:'backup'},
- {k:'import',grp:'data',label:'Importeren',oms:'Een back-upbestand terugzetten (voegt samen met wat je hebt)',dep:'backup'},
- {k:'pdf',grp:'data',label:'PDF-overzicht',oms:'Je uren, potjes en betalingen als PDF exporteren'}
 ];
 function featOn(k){return !db.feat||db.feat[k]!==false;}
 /* Hoort deze schakelaar in de lijst? (module aan en de functie waar hij aan hangt aan) */
@@ -1224,19 +1214,19 @@ function renderPill(){const d=new Date();document.getElementById('datePill').tex
 function renderStart(){
   const now=new Date();now.setHours(0,0,0,0);const h=new Date().getHours();
   const groet=h<6?'Goedenacht':h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond';
-  let html=featOn('st_groet')?`<div class="big" style="font-size:20px;margin-bottom:12px">${groet}${(db.naam&&featOn('profiel'))?', '+esc(db.naam):''}</div>`:'';
+  let html=db.naam?`<div class="big" style="font-size:20px;margin-bottom:12px">${groet}${db.naam?', '+esc(db.naam):''}</div>`:'';
   // Twee compacte geld-tegels naast elkaar (volgende loon + wat je overhoudt)
   let loonTile='',overTile='';
-  if(moduleOn('loon')&&featOn('st_loon')){const nx=nextPaydayEff();if(nx){const diff=Math.round((nx-now)/86400000);loonTile=`<div class="dashcard" style="margin-bottom:0" onclick="go('loon')"><div class="muted" style="font-size:12.5px">Volgende loon</div><div class="big" style="font-size:19px;margin-top:3px">${diff===0?'Vandaag':diff+' dag'+(diff>1?'en':'')}</div><div class="muted" style="font-size:12px;margin-top:1px">${nx.getDate()} ${MND[nx.getMonth()].slice(0,3)}</div></div>`;}}
-  if(moduleOn('loon')&&featOn('loonlog')&&featOn('st_over')){const inc=avgIncome();if(inc!=null){const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));const vrij=round2(inc-opzij);overTile=`<div class="dashcard" style="margin-bottom:0" onclick="go('loon')"><div class="muted" style="font-size:12.5px">Hou ik over</div><div class="big" style="font-size:19px;margin-top:3px;color:${vrij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(vrij)}</div><div class="muted" style="font-size:12px;margin-top:1px">per maand</div></div>`;}}
+  if(moduleOn('loon')){const nx=nextPaydayEff();if(nx){const diff=Math.round((nx-now)/86400000);loonTile=`<div class="dashcard" style="margin-bottom:0" onclick="go('loon')"><div class="muted" style="font-size:12.5px">Volgende loon</div><div class="big" style="font-size:19px;margin-top:3px">${diff===0?'Vandaag':diff+' dag'+(diff>1?'en':'')}</div><div class="muted" style="font-size:12px;margin-top:1px">${nx.getDate()} ${MND[nx.getMonth()].slice(0,3)}</div></div>`;}}
+  if(moduleOn('loon')&&featOn('loonlog')){const inc=avgIncome();if(inc!=null){const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));const vrij=round2(inc-opzij);overTile=`<div class="dashcard" style="margin-bottom:0" onclick="go('loon')"><div class="muted" style="font-size:12.5px">Hou ik over</div><div class="big" style="font-size:19px;margin-top:3px;color:${vrij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(vrij)}</div><div class="muted" style="font-size:12px;margin-top:1px">per maand</div></div>`;}}
   if(loonTile&&overTile)html+=`<div class="grid2" style="margin-bottom:12px">${loonTile}${overTile}</div>`;
   else if(loonTile||overTile)html+=`<div style="margin-bottom:12px">${loonTile||overTile}</div>`;
-  if(moduleOn('potjes')&&featOn('st_potjes')&&db.potjes.length){const pk=currentPeriodKey();const done=db.overboek[pk]||{};let tot=0,ged=0,cd=0,rel=0;db.potjes.forEach((p,i)=>{const t=potTot(p);if(t>0){rel++;tot+=t;if(done[i]){ged+=t;cd++;}}});const pct=tot?Math.round(ged/tot*100):0;if(rel)html+=`<div class="dashcard" onclick="go('potjes')"><div class="row between"><b>${ico('pot')}Opzij zetten deze maand</b><span class="muted">${cd}/${rel}</span></div><div class="bar" style="margin:8px 0 4px"><div style="width:${pct}%"></div></div><div class="muted">${eur(ged)} van ${eur(tot)} overgemaakt</div></div>`;}
-  if(moduleOn('uren')&&featOn('st_uren')){const wk=isoWeek(new Date()),wy=isoWeekYear(new Date());const wkMin=db.shifts.filter(s=>{const d=new Date(s.date);return isoWeek(d)===wk&&isoWeekYear(d)===wy;}).reduce((a,s)=>a+hoursOf(s)*60,0);const openAfw=afwOpenShifts().length,minOpen=afwMinOpen(),todo=teCheckShifts().length,nabW=nabWachtShifts().length;const tegHtml=!featOn('comp')?'':(openAfw?`<div class="muted" style="color:var(--bad-tx);margin-top:4px">${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' &middot; '+fmtDur(minOpen/60):''}</div>`:(todo?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${todo} dienst${todo===1?'':'en'} te controleren</div>`:(nabW?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${nabW} nabetaling${nabW===1?'':'en'} verwacht</div>`:'<div class="muted" style="margin-top:4px;color:var(--ok-tx)">Alles gecontroleerd</div>')));html+=`<div class="dashcard" onclick="go('uren')"><div class="row between"><b>${ico('klok')}Uren deze week</b><span>${fmtDur(wkMin/60)}</span></div>${tegHtml}</div>`;}
-  if(moduleOn('uren')&&featOn('stats')&&featOn('st_grafiek')&&db.shifts.length){const by={};db.shifts.forEach(s=>{if(!geldigeDatum(s.date))return;const k=s.date.slice(0,7);by[k]=(by[k]||0)+hoursOf(s);});const keys=Object.keys(by).sort().slice(-6);const max=Math.max(...keys.map(k=>by[k]),1);html+=`<div class="dashcard" onclick="go('uren');setTimeout(openStats,120)"><div class="row between"><b>${ico('chart')}Uren per maand</b><span class="statusbadge none">meer</span></div><div style="display:flex;align-items:flex-end;gap:6px;height:74px;margin-top:10px">${keys.map(k=>{const mo=k.split('-')[1];return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;background:linear-gradient(var(--accent),var(--accent2));border-radius:4px 4px 0 0;height:${Math.max(6,Math.round(by[k]/max*54))}px"></div><span class="muted" style="font-size:10px">${MND[+mo-1].slice(0,3)}</span></div>`;}).join('')}</div></div>`;}
-  if(moduleOn('potjes')&&featOn('st_bet')){const nb=nextPaymentOrReceipt();if(nb){const diff=Math.round((nb.date-now)/86400000);html+=`<div class="dashcard" onclick="go('betalingen')"><div class="row between"><b>${ico('cal')}Eerstvolgende ${nb.isRec?'ontvangst':'betaling'}</b><span class="muted">${nb.date.getDate()} ${MND[nb.date.getMonth()].slice(0,3)} ${nb.date.getFullYear()}</span></div><div class="big" style="font-size:20px;margin-top:4px">${esc(nb.label)}</div><div class="muted" style="margin-top:2px">${diff===0?'Vandaag':diff===1?'Morgen':'Over '+diff+' dagen'} &middot; ${nb.isRec?'+ ':''}${eur(nb.amount)}</div></div>`;}}
-  if(moduleOn('potjes')&&featOn('st_trans')){const recent=recentTransactions(3);if(recent.length){html+=`<div class="dashcard" onclick="openOverzicht('uit')"><div class="row between"><b>${ico('pot')}Laatste transacties</b><span class="statusbadge none">alles</span></div>${recent.map(u=>{const isRec=u.x.kind==='ontvangst';return `<div class="row between" style="margin-top:8px;font-size:14px"><span class="muted">${esc(u.x.item||u.pot)}</span><b style="color:${isRec?'var(--ok-tx)':'var(--text)'}">${isRec?'+ ':''}${eur(u.x.amount)}</b></div>`;}).join('')}</div>`;}}
-  if(!html)html=`<div class="empty">Je startscherm is leeg.<br>Zet kaarten aan via Instellingen &rarr; Functies &rarr; Startscherm.</div>`;
+  if(moduleOn('potjes')&&db.potjes.length){const pk=currentPeriodKey();const done=db.overboek[pk]||{};let tot=0,ged=0,cd=0,rel=0;db.potjes.forEach((p,i)=>{const t=potTot(p);if(t>0){rel++;tot+=t;if(done[i]){ged+=t;cd++;}}});const pct=tot?Math.round(ged/tot*100):0;if(rel)html+=`<div class="dashcard" onclick="go('potjes')"><div class="row between"><b>${ico('pot')}Opzij zetten deze maand</b><span class="muted">${cd}/${rel}</span></div><div class="bar" style="margin:8px 0 4px"><div style="width:${pct}%"></div></div><div class="muted">${eur(ged)} van ${eur(tot)} overgemaakt</div></div>`;}
+  if(moduleOn('uren')&&db.shifts.length){const wk=isoWeek(new Date()),wy=isoWeekYear(new Date());const wkMin=db.shifts.filter(s=>{const d=new Date(s.date);return isoWeek(d)===wk&&isoWeekYear(d)===wy;}).reduce((a,s)=>a+hoursOf(s)*60,0);const openAfw=afwOpenShifts().length,minOpen=afwMinOpen(),todo=teCheckShifts().length,nabW=nabWachtShifts().length;const tegHtml=!featOn('comp')?'':(openAfw?`<div class="muted" style="color:var(--bad-tx);margin-top:4px">${openAfw} afwijking${openAfw===1?'':'en'} open${minOpen?' &middot; '+fmtDur(minOpen/60):''}</div>`:(todo?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${todo} dienst${todo===1?'':'en'} te controleren</div>`:(nabW?`<div class="muted" style="color:var(--wait-tx);margin-top:4px">${nabW} nabetaling${nabW===1?'':'en'} verwacht</div>`:'<div class="muted" style="margin-top:4px;color:var(--ok-tx)">Alles gecontroleerd</div>')));html+=`<div class="dashcard" onclick="go('uren')"><div class="row between"><b>${ico('klok')}Uren deze week</b><span>${fmtDur(wkMin/60)}</span></div>${tegHtml}</div>`;}
+  if(moduleOn('uren')&&featOn('stats')&&db.shifts.length){const by={};db.shifts.forEach(s=>{if(!geldigeDatum(s.date))return;const k=s.date.slice(0,7);by[k]=(by[k]||0)+hoursOf(s);});const keys=Object.keys(by).sort().slice(-6);const max=Math.max(...keys.map(k=>by[k]),1);html+=`<div class="dashcard" onclick="go('uren');setTimeout(openStats,120)"><div class="row between"><b>${ico('chart')}Uren per maand</b><span class="statusbadge none">meer</span></div><div style="display:flex;align-items:flex-end;gap:6px;height:74px;margin-top:10px">${keys.map(k=>{const mo=k.split('-')[1];return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;background:linear-gradient(var(--accent),var(--accent2));border-radius:4px 4px 0 0;height:${Math.max(6,Math.round(by[k]/max*54))}px"></div><span class="muted" style="font-size:10px">${MND[+mo-1].slice(0,3)}</span></div>`;}).join('')}</div></div>`;}
+  if(moduleOn('potjes')){const nb=nextPaymentOrReceipt();if(nb){const diff=Math.round((nb.date-now)/86400000);html+=`<div class="dashcard" onclick="go('betalingen')"><div class="row between"><b>${ico('cal')}Eerstvolgende ${nb.isRec?'ontvangst':'betaling'}</b><span class="muted">${nb.date.getDate()} ${MND[nb.date.getMonth()].slice(0,3)} ${nb.date.getFullYear()}</span></div><div class="big" style="font-size:20px;margin-top:4px">${esc(nb.label)}</div><div class="muted" style="margin-top:2px">${diff===0?'Vandaag':diff===1?'Morgen':'Over '+diff+' dagen'} &middot; ${nb.isRec?'+ ':''}${eur(nb.amount)}</div></div>`;}}
+  if(moduleOn('potjes')){const recent=recentTransactions(3);if(recent.length){html+=`<div class="dashcard" onclick="openOverzicht('uit')"><div class="row between"><b>${ico('pot')}Laatste transacties</b><span class="statusbadge none">alles</span></div>${recent.map(u=>{const isRec=u.x.kind==='ontvangst';return `<div class="row between" style="margin-top:8px;font-size:14px"><span class="muted">${esc(u.x.item||u.pot)}</span><b style="color:${isRec?'var(--ok-tx)':'var(--text)'}">${isRec?'+ ':''}${eur(u.x.amount)}</b></div>`;}).join('')}</div>`;}}
+  if(!html)html=`<div class="empty">Hier komt je overzicht te staan.<br><span style="font-size:12.5px">Zodra je uren of potjes invult, verschijnen de kaarten vanzelf.</span></div>`;
   document.getElementById('tab-start').innerHTML=html;
 }
 function nextPaymentOrReceipt(){
@@ -3783,23 +3773,23 @@ let receptFilter='';
 const EENHEDEN=['stuks','g','kg','ml','l','el','tl','snufje'];
 function fmtAmt(a,u){if(a==null||a===''||isNaN(a))return '';let v=+a,unit=u||'';if(unit==='g'&&v>=1000){v/=1000;unit='kg';}if(unit==='ml'&&v>=1000){v/=1000;unit='l';}v=Math.round(v*100)/100;return v.toLocaleString('nl-NL')+(unit==='stuks'?'':' '+unit);}
 function renderRecept(){
-  const cats=featOn('receptcat')?db.receptCategorieen:[];const q=(val('receptZoek')||'').toLowerCase().trim();
+  const cats=true?db.receptCategorieen:[];const q=(val('receptZoek')||'').toLowerCase().trim();
   const ff=document.getElementById('receptFilters');
   ff.style.display=cats.length?'':'none';
   ff.innerHTML=cats.length?[`<span class="chip ${receptFilter===''?'on':''}" onclick="setReceptFilter('')">Alle</span>`].concat(cats.map(c=>`<span class="chip ${receptFilter===c?'on':''}" onclick="setReceptFilter('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</span>`)).join(''):'';
   let list=db.recepten.map((r,i)=>({r,i}));if(receptFilter&&cats.length)list=list.filter(x=>(x.r.cat||'')===receptFilter);
   if(q)list=list.filter(x=>{const r=x.r;return r.n.toLowerCase().includes(q)||(r.cat||'').toLowerCase().includes(q)||(r.body||'').toLowerCase().includes(q)||(r.ing||[]).some(g=>(g.n||'').toLowerCase().includes(q));});
-  list.sort((a,b)=>(featOn('receptfav')?((b.r.fav?1:0)-(a.r.fav?1:0)):0)||(featOn('receptcat')?(a.r.cat||'').localeCompare(b.r.cat||''):0)||a.r.n.localeCompare(b.r.n));
+  list.sort((a,b)=>(true?((b.r.fav?1:0)-(a.r.fav?1:0)):0)||(true?(a.r.cat||'').localeCompare(b.r.cat||''):0)||a.r.n.localeCompare(b.r.n));
   const c=document.getElementById('receptList');
   if(!list.length){c.innerHTML=`<div class="empty">${q?'Niets gevonden.':'Nog geen recepten. Tik op ＋.'}</div>`;return;}
-  c.innerHTML=list.map(({r,i})=>`<div class="card" onclick="viewRecept(${i})" style="cursor:pointer"><div class="row between"><div class="row" style="align-items:center;gap:6px">${featOn('receptfav')?`<button class="star" onclick="event.stopPropagation();toggleFav(${i})">${starSvg(r.fav)}</button>`:''}<b>${esc(r.n)}</b></div>${(featOn('receptcat')&&r.cat)?`<span class="chip" style="cursor:default">${esc(r.cat)}</span>`:''}</div><div class="muted" style="margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(((r.ing||[]).map(g=>g.n).join(', ')||r.body||'').replace(/\n/g,' '))}</div></div>`).join('');
+  c.innerHTML=list.map(({r,i})=>`<div class="card" onclick="viewRecept(${i})" style="cursor:pointer"><div class="row between"><div class="row" style="align-items:center;gap:6px">${true?`<button class="star" onclick="event.stopPropagation();toggleFav(${i})">${starSvg(r.fav)}</button>`:''}<b>${esc(r.n)}</b></div>${(true&&r.cat)?`<span class="chip" style="cursor:default">${esc(r.cat)}</span>`:''}</div><div class="muted" style="margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(((r.ing||[]).map(g=>g.n).join(', ')||r.body||'').replace(/\n/g,' '))}</div></div>`).join('');
 }
 function setReceptFilter(c){receptFilter=c;renderRecept();}
 function toggleFav(i){haptic();db.recepten[i].fav=!db.recepten[i].fav;save();renderRecept();}
-function viewRecept(i){const r=db.recepten[i];const por=featOn('receptporties');window._rp=por?(r.porties||4):(r.porties||4);openSheet(`<div class="row between"><div class="row" style="align-items:center;gap:6px">${featOn('receptfav')?`<button class="star" onclick="toggleFav(${i});this.innerHTML=starSvg(db.recepten[${i}].fav)">${starSvg(r.fav)}</button>`:''}<h2 style="margin:0">${esc(r.n)}</h2></div>${(featOn('receptcat')&&r.cat)?`<span class="chip" style="cursor:default">${esc(r.cat)}</span>`:''}</div>${(r.ing&&r.ing.length)?`${por?`<div class="row between" style="margin-top:12px"><span class="muted">Porties</span><div class="stepper"><button onclick="stepPortie(${i},-1)">−</button><span id="portieVal">${window._rp}</span><button onclick="stepPortie(${i},1)">＋</button></div></div>`:''}<div id="ingList" style="margin-top:8px"></div>${r.body?`<label style="margin-top:14px">Bereiding</label><div class="recipe-body">${esc(r.body)}</div>`:''}`:`<div class="recipe-body" style="margin-top:12px">${esc(r.body||'')}</div>`}<div class="row" style="margin-top:16px"><button class="danger" onclick="delRecept(${i})">Verwijderen</button><button class="primary" style="flex:1" onclick="openRecept(${i})">Bewerken</button></div>`);if(r.ing&&r.ing.length)renderIngList(i);}
-function renderIngList(i){const r=db.recepten[i];const f=featOn('receptporties')?(window._rp/(r.porties||4)):1;document.getElementById('ingList').innerHTML=r.ing.map(g=>{const amt=(g.a!==''&&g.a!=null)?fmtAmt(g.a*f,g.u):'';return `<div class="row between" style="padding:7px 0;border-top:1px solid var(--line);font-size:14px"><span>${esc(g.n)}</span><b style="white-space:nowrap">${amt}</b></div>`;}).join('');}
+function viewRecept(i){const r=db.recepten[i];const por=true;window._rp=por?(r.porties||4):(r.porties||4);openSheet(`<div class="row between"><div class="row" style="align-items:center;gap:6px">${true?`<button class="star" onclick="toggleFav(${i});this.innerHTML=starSvg(db.recepten[${i}].fav)">${starSvg(r.fav)}</button>`:''}<h2 style="margin:0">${esc(r.n)}</h2></div>${(true&&r.cat)?`<span class="chip" style="cursor:default">${esc(r.cat)}</span>`:''}</div>${(r.ing&&r.ing.length)?`${por?`<div class="row between" style="margin-top:12px"><span class="muted">Porties</span><div class="stepper"><button onclick="stepPortie(${i},-1)">−</button><span id="portieVal">${window._rp}</span><button onclick="stepPortie(${i},1)">＋</button></div></div>`:''}<div id="ingList" style="margin-top:8px"></div>${r.body?`<label style="margin-top:14px">Bereiding</label><div class="recipe-body">${esc(r.body)}</div>`:''}`:`<div class="recipe-body" style="margin-top:12px">${esc(r.body||'')}</div>`}<div class="row" style="margin-top:16px"><button class="danger" onclick="delRecept(${i})">Verwijderen</button><button class="primary" style="flex:1" onclick="openRecept(${i})">Bewerken</button></div>`);if(r.ing&&r.ing.length)renderIngList(i);}
+function renderIngList(i){const r=db.recepten[i];const f=true?(window._rp/(r.porties||4)):1;document.getElementById('ingList').innerHTML=r.ing.map(g=>{const amt=(g.a!==''&&g.a!=null)?fmtAmt(g.a*f,g.u):'';return `<div class="row between" style="padding:7px 0;border-top:1px solid var(--line);font-size:14px"><span>${esc(g.n)}</span><b style="white-space:nowrap">${amt}</b></div>`;}).join('');}
 function stepPortie(i,d){window._rp=Math.max(1,(window._rp||4)+d);document.getElementById('portieVal').textContent=window._rp;renderIngList(i);}
-function openRecept(i){const r=(typeof i==='number')?db.recepten[i]:{n:'',cat:'',body:'',ing:[],porties:4};const id=(typeof i==='number')?i:-1;const cats=db.receptCategorieen;const catOn=featOn('receptcat'),porOn=featOn('receptporties');
+function openRecept(i){const r=(typeof i==='number')?db.recepten[i]:{n:'',cat:'',body:'',ing:[],porties:4};const id=(typeof i==='number')?i:-1;const cats=db.receptCategorieen;const catOn=true,porOn=true;
   const catBlok=catOn?`<div><label>Categorie</label><select id="r_cat">${cats.map(c=>`<option ${c===r.cat?'selected':''}>${esc(c)}</option>`).join('')}${(r.cat&&!cats.includes(r.cat))?`<option selected>${esc(r.cat)}</option>`:''}${!cats.length&&!r.cat?'<option value=""></option>':''}</select></div>`:'';
   const porBlok=porOn?`<div><label>Porties</label><input id="r_porties" type="number" value="${r.porties||4}" inputmode="numeric" min="1"></div>`:'';
   const kop=(catBlok&&porBlok)?`<div class="grid2">${catBlok}${porBlok}</div>`:(catBlok||porBlok);
@@ -3814,11 +3804,11 @@ function saveRecept(id,door){const oud=(id>=0)?db.recepten[id]:{};
     if(al){vraagDubbel('een recept',al,()=>saveRecept(id,true));return;}
   }
   /* Categorie en porties blijven bewaard als die functies uit staan (de velden staan er dan niet). */
-  let nw=featOn('receptcat')?val('r_catnew').trim():'';
+  let nw=true?val('r_catnew').trim():'';
   /* Tik je een categorie die al bestaat maar anders geschreven, dan hoort het recept bij die bestaande
      categorie in plaats van bij een tweede met dezelfde naam. */
   if(nw){const albestaand=bestaandeNaam(db.receptCategorieen,nw);if(albestaand)nw=albestaand;else db.receptCategorieen.push(nw);}
-  const cat=featOn('receptcat')?(nw||val('r_cat').trim()):(oud.cat||'');const ing=[...document.querySelectorAll('#ingEdit [data-ing]')].map(r=>{const a=r.querySelector('.ga').value.trim().replace(',','.');return {a:a===''?'':parseFloat(a)||0,u:r.querySelector('.gu').value,n:r.querySelector('.gn').value.trim()};}).filter(g=>g.n);const r={n:val('r_n').trim()||'Recept',cat,body:val('r_body'),ing,porties:featOn('receptporties')?Math.max(1,parseInt(val('r_porties'))||4):(oud.porties||4),fav:!!oud.fav};if(id>=0)db.recepten[id]=r;else db.recepten.push(r);haptic();save();closeSheet();go('recept');toast('Opgeslagen');}
+  const cat=true?(nw||val('r_cat').trim()):(oud.cat||'');const ing=[...document.querySelectorAll('#ingEdit [data-ing]')].map(r=>{const a=r.querySelector('.ga').value.trim().replace(',','.');return {a:a===''?'':parseFloat(a)||0,u:r.querySelector('.gu').value,n:r.querySelector('.gn').value.trim()};}).filter(g=>g.n);const r={n:val('r_n').trim()||'Recept',cat,body:val('r_body'),ing,porties:true?Math.max(1,parseInt(val('r_porties'))||4):(oud.porties||4),fav:!!oud.fav};if(id>=0)db.recepten[id]=r;else db.recepten.push(r);haptic();save();closeSheet();go('recept');toast('Opgeslagen');}
 function delRecept(i){const item=db.recepten[i];if(!item)return;
   confirmSheet('Recept verwijderen',`"${item.n||'Recept'}" wordt verwijderd.`,'Verwijderen',()=>{
     db.recepten.splice(i,1);save();closeSheet();render();showUndo('Recept verwijderd',()=>{db.recepten.splice(i,0,item);save();render();});
@@ -3831,7 +3821,7 @@ function renderMeer(){
   let html='';
   if(moduleOn('loon')){const nx=nextPaydayEff();html+=row('loon','Loon',nx?('Volgende loon: '+nx.getDate()+' '+MND[nx.getMonth()].slice(0,3)+' '+nx.getFullYear()):'Loondag instellen',"go('loon')");}
   if(featOn('documenten')){const nd=(db.documenten||[]).length;html+=row('doc','Documenten',nd?(nd+' document'+(nd===1?'':'en')+' · verloopdatums'):'Verloopdatums van je passen en ID',"go('documenten')");}
-  if(featOn('pdf'))html+=row('pdf','PDF-overzicht','Je uren, potjes en betalingen als PDF','exportOverzichtPDF()');
+  if(true)html+=row('pdf','PDF-overzicht','Je uren, potjes en betalingen als PDF','exportOverzichtPDF()');
   html+=row('uitleg','Uitleg','Antwoord op alle vragen, met voorbeelden','openGuide()');
   html+=`<button class="primary" style="width:100%;margin-top:14px" onclick="go('instellingen')">${ico('gear','width:18px;height:18px;vertical-align:-3.5px;margin-right:8px;color:var(--on-accent)')}Instellingen</button>`;
   c.innerHTML=html;
@@ -3904,7 +3894,7 @@ function delDoc(id){
 /* ===== INSTELLINGEN ===== */
 function renderInstellingen(){
   const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
-  show('profielCard',featOn('profiel'));
+  show('profielCard',true);
   const pn=document.getElementById('profNaam');pn.value=db.naam||'';pn.onchange=()=>{db.naam=pn.value.trim();save();toast('Opgeslagen');};
   document.querySelectorAll('#themeChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.t===(db.theme||'system')));
   const uitL=FEATS.filter(f=>featShow(f)&&!featOn(f.k)).map(f=>f.label).concat(MODULES.filter(m=>!moduleOn(m.k)).map(m=>m.naam));
@@ -3917,13 +3907,13 @@ function renderInstellingen(){
   const ti=document.getElementById('meldTijd');ti.value=db.meldTijd||'08:00';ti.onchange=()=>{db.meldTijd=ti.value;save();scheduleLoonMeldingen();renderMeldTypes();toast('Opgeslagen');};
   renderMeldTypes();
   renderBeheerRows();
-  // Back-up-kaart: hele kaart, automatisch-blok, exporteren en importeren zijn los aan/uit te zetten.
-  const bkOn=featOn('backup');show('backupCard',bkOn);show('pdfCard',featOn('pdf'));
-  if(bkOn){
-    show('autoBackupBlock',featOn('autobackup'));
-    const exOn=featOn('export'),imOn=featOn('import');
-    show('expBtn',exOn);show('impBtn',imOn);show('impHint',imOn);
-    const rw=document.getElementById('expImpRow');rw.className=(exOn&&imOn)?'grid2':'row';rw.style.display=(exOn||imOn)?'':'none';
+  /* Back-up, terugzetten en PDF hebben geen eigen schakelaars meer. Een kopie kunnen maken hoort er
+     altijd te zijn, en niemand zet "Exporteren" uit terwijl "Importeren" aan blijft. */
+  show('backupCard',true);show('pdfCard',true);
+  {
+    show('autoBackupBlock',true);
+    show('expBtn',true);show('impBtn',true);show('impHint',true);
+    const rw=document.getElementById('expImpRow');rw.className='grid2';rw.style.display='';
     const B=db.backup||{on:true,dir:'DOCUMENTS',freq:'change'};const bt=document.getElementById('backupToggle');bt.classList.toggle('on',B.on!==false);bt.textContent=B.on!==false?'✓':'';document.getElementById('backupOpts').style.display=B.on!==false?'block':'none';
     const bd=document.getElementById('backupDir');bd.value=B.dir||'DOCUMENTS';bd.onchange=()=>{db.backup.dir=bd.value;save();toast('Opgeslagen');};
     const bf=document.getElementById('backupFreq');bf.value=B.freq||'change';bf.onchange=()=>{db.backup.freq=bf.value;save();toast('Opgeslagen');};
@@ -3939,7 +3929,7 @@ const BEHEER=[
 ];
 function renderBeheerRows(){
   const c=document.getElementById('beheerList');if(!c)return;
-  const rows=BEHEER.filter(b=>(!b.mod||moduleOn(b.mod))&&(b.k!=='doctypes'||featOn('documenten'))&&(b.k!=='receptcat'||featOn('receptcat')));
+  const rows=BEHEER.filter(b=>(!b.mod||moduleOn(b.mod))&&(b.k!=='doctypes'||featOn('documenten'))&&(b.k!=='receptcat'||true));
   const card=document.getElementById('beheerCard');if(card)card.style.display=rows.length?'':'none';
   c.innerHTML=rows.map(b=>{const n=b.get().length;return `<div class="mrow" onclick="openBeheerSheet('${b.k}')"><div style="flex:1;padding-left:8px"><b>${b.label}</b><div class="muted">${n?n+' item'+(n===1?'':'s'):b.oms}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`;}).join('');
 }
@@ -4222,7 +4212,7 @@ function maybeLock(){
 }
 
 /* ===== BACK-UP ===== */
-async function autoBackup(){if(!(NATIVE&&P.Filesystem))return;if(!featOn('backup')||!featOn('autobackup'))return;const B=db.backup||{};if(B.on===false)return;const lb=db.lastBackup;if(B.freq==='day'&&lb&&Date.now()-lb.t<86400000)return;if(B.freq==='week'&&lb&&Date.now()-lb.t<7*86400000)return;const data=JSON.stringify(db);const dirs=B.dir==='EXTERNAL'?['EXTERNAL','DOCUMENTS']:['DOCUMENTS','EXTERNAL'];for(const dir of dirs){try{await P.Filesystem.writeFile({path:'GridLife/gridlife-backup.json',data,directory:dir,encoding:'utf8',recursive:true});db.lastBackup={t:Date.now(),dir};saveQuiet();if(cur==='instellingen')renderInstellingen();return;}catch(e){}}}
+async function autoBackup(){if(!(NATIVE&&P.Filesystem))return;if(!true||!true)return;const B=db.backup||{};if(B.on===false)return;const lb=db.lastBackup;if(B.freq==='day'&&lb&&Date.now()-lb.t<86400000)return;if(B.freq==='week'&&lb&&Date.now()-lb.t<7*86400000)return;const data=JSON.stringify(db);const dirs=B.dir==='EXTERNAL'?['EXTERNAL','DOCUMENTS']:['DOCUMENTS','EXTERNAL'];for(const dir of dirs){try{await P.Filesystem.writeFile({path:'GridLife/gridlife-backup.json',data,directory:dir,encoding:'utf8',recursive:true});db.lastBackup={t:Date.now(),dir};saveQuiet();if(cur==='instellingen')renderInstellingen();return;}catch(e){}}}
 /* Wat zit er in de back-up die je net hebt weggeschreven. Zelfde gedachte als het import-verslag: je
    wilt zien dat je administratie er echt in zit voordat je erop vertrouwt. */
 function toonExportVerslag(waar,naam){
@@ -4239,9 +4229,9 @@ function toonExportVerslag(waar,naam){
     <div class=\"muted\" style=\"font-size:12.5px;margin-top:12px\">Je instellingen en welke functies aan staan zitten er ook in. Je pincode bewust niet - die hoort niet in een bestand dat je deelt.</div>
     <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
 }
-async function exportData(){if(!featOn('backup')||!featOn('export')){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld',name);return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife',name);return;}catch(e2){toast('Opslaan is niet gelukt. Er is niets veranderd aan je gegevens — probeer het nog eens of kies een andere plek.');return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload',name);}
+async function exportData(){if(false){toast('Exporteren staat uit');return;}const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld',name);return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife',name);return;}catch(e2){toast('Opslaan is niet gelukt. Er is niets veranderd aan je gegevens — probeer het nog eens of kies een andere plek.');return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload',name);}
 async function exportOverzichtPDF(){
-  if(!featOn('pdf')){toast('PDF-overzicht staat uit');return;}
+  if(!true){toast('PDF-overzicht staat uit');return;}
   const J=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
   if(!J){toast('PDF-bibliotheek niet geladen');return;}
   armNoLock();
@@ -4371,7 +4361,7 @@ function toonBestandFout(kop){
    bestand staat erbij, want daaraan zie je of je het juiste bestand te pakken hebt. */
 function importData(e){
   const f=e.target.files[0];if(!f)return;e.target.value='';
-  if(!featOn('backup')||!featOn('import')){toast('Terugzetten staat uit');return;}
+  if(false){toast('Terugzetten staat uit');return;}
   const rd=new FileReader();
   rd.onload=()=>{
     let d;

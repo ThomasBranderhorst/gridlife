@@ -424,6 +424,96 @@ const loonLijst=a=>{
     !r.fout&&r.extra.hoofd==='Sincere', String(r.extra&&r.extra.hoofd));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 16. Terugkomen bij een oude werkgever: eerst gestopt, later weer aangenomen.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const L={mode:'month',dag:25,intervalWeeks:4,start:'',vanaf:'2026-01-01',tot:'2026-03-31'};
+  const data=basis({
+    werkgevers:['Sincere'],
+    werkCfg:{Sincere:{ritmeN:1,ritmeU:'dienst',klaarDag:1,correctie:'later',nabetaalMode:'loondag',actief:false,loon:L}},
+    loon:L
+  });
+  const r=run(data,a=>{
+    window._wcName='Sincere';window._wc=JSON.parse(JSON.stringify(a.db.werkCfg['Sincere']));
+    window._wc.actief=true;window._wcVanaf='beheer';window._wcContract='';
+    a.wcSaveDoen();
+    const c=a.db.werkCfg['Sincere'];
+    const rijen=a.loonRows(new Date(2026,0,1),new Date(2027,0,1));
+    /* Het gat tussen de eerste dienstperiode (jan-mrt) en vandaag mag geen loondagen opleveren —
+       daar werkte je niet. Zonder fix bleef "vanaf" op de oude startdatum staan terwijl "tot" gewist
+       werd, en zag het model dat als één doorlopend dienstverband sinds januari. */
+    const gat=rijen.filter(x=>x.iso>'2026-03-31'&&x.iso<nu).map(x=>x.iso);
+    return{vanaf:c.loon.vanaf,tot:c.loon.tot,gat};
+  });
+  meld('terugkomen bij een oude werkgever: vanaf schuift mee naar het nieuwe dienstverband',
+    !r.fout&&r.extra.vanaf===nu&&r.extra.tot==='', JSON.stringify(r.extra||r.fout));
+  meld('terugkomen bij een oude werkgever: geen loondagen in het gat tussen de twee periodes',
+    !r.fout&&r.extra.gat.length===0, JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 17. Toeslag op een gedateerde kostenpost: "Waar is je saldo voor?" mag geen tekort
+//     melden voor het deel dat je nooit zelf hoefde te sparen (dat komt van de toeslag).
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const data=basis({potjes:[{n:'Kinderopvang',saldo:0,maand:0,items:[
+    {id:'i1',n:'Opvang',v:800,fn:1,fu:'m',due:'2026-01-27',
+     toeslagen:[{id:'t1',naam:'Kinderopvangtoeslag',v:600,fn:1,fu:'m',date:'2026-01-20'}]}
+  ],log:[]}]});
+  const r=run(data,a=>{
+    const it=a.db.potjes[0].items[0];
+    const nuHalverwege=new Date(2026,0,13); // halverwege de cyclus (27 dec -> 27 jan)
+    return{
+      opzijPerMaand:a.itMnd(it), // wat je écht gevraagd wordt te sparen: netto
+      gereserveerdHalverwege:a.itemGereserveerd(it,nuHalverwege)
+    };
+  });
+  meld('toeslag: "opzij zetten" is netto (bruto min toeslag)',
+    !r.fout&&r.extra.opzijPerMaand===200, JSON.stringify(r.extra||r.fout));
+  meld('toeslag: de reservering bouwt op naar het NETTO bedrag, niet het volle bruto bedrag',
+    !r.fout&&r.extra.gereserveerdHalverwege<=200, JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 18. Grillig loonritme: een gemiddelde van nul is geen garantie dat het loon op tijd komt.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const L={mode:'manual',dag:25,intervalWeeks:4,start:'',
+    dates:['2026-04-25','2026-05-25','2026-06-25']};
+  const data=basis({werkgevers:['Horeca'],werkCfg:werk('Horeca',L),loon:L,
+    loonLog:[{id:'a',date:'2026-04-19',amount:400,payIso:'2026-04-25'},  // 6 dagen te vroeg
+             {id:'b',date:'2026-05-31',amount:410,payIso:'2026-05-25'}]}); // 6 dagen te laat: gemiddeld exact 0
+  const r=run(data,a=>{
+    const kaal=s=>String(s).replace(/<[^>]+>/g,'');
+    return{
+      offs:a.loonOffsets('Horeca'),
+      tekst:kaal(a.loonHintRow({date:new Date(2026,5,25),werk:'Horeca'}))
+    };
+  });
+  meld('grillig loon: gemiddelde is (bijna) nul terwijl de spreiding groot is',
+    !r.fout&&r.extra.offs.length===2&&Math.abs(r.extra.offs.reduce((a,b)=>a+b,0)/2)<1,
+    JSON.stringify(r.extra&&r.extra.offs||r.fout));
+  meld('grillig loon: geen valse geruststelling — de tekst noemt dat het wisselt',
+    !r.fout&&r.extra.tekst.indexOf('wisselt')>=0&&r.extra.tekst.indexOf('meestal op je loondag')<0,
+    r.extra&&r.extra.tekst);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19. Onboarding met twee werkgevers in één keer: allebei moeten in dienst komen.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const r=run(basis({setup:false}),a=>{
+    a._testSetOb({step:0,naam:'T',werk:'Jumbo, Sincere',loon:a.schoonLoonCfg(a.db.loon),
+      mods:{uren:true,potjes:true,loon:true,recept:false},feat:{}});
+    a.finishOnboarding();
+    return a.db.werkgevers.map(w=>({w,actief:a.werkCfgOf(w).actief!==false}));
+  });
+  meld('onboarding: "Jumbo, Sincere" in één keer typen zet allebei in dienst',
+    !r.fout&&r.extra.length===2&&r.extra.every(x=>x.actief), JSON.stringify(r.extra||r.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

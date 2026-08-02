@@ -310,7 +310,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
     <div id="potHeader"></div>
     <button class="ghost" id="potOverzichtBtn" style="width:100%;margin-bottom:12px" onclick="openOverzicht()">Al mijn uitgaven</button>
     <div id="potList"></div>
-    <div class="grid2"><button class="ghost" onclick="toggleAllOverboek()" id="potAllBtn">Alles overgemaakt</button><button class="ghost" onclick="openPotEdit()">Beheren</button></div>
+    <div class="grid2" id="potActionsRow"><button class="ghost" onclick="toggleAllOverboek()" id="potAllBtn">Alles overgemaakt</button><button class="ghost" onclick="openPotEdit()">Beheren</button></div>
   </section>
 
   <section class="tab" id="tab-betalingen">
@@ -847,6 +847,9 @@ function fabAction(){haptic();if(cur==='uren')openShift();else if(cur==='recept'
    Loopt alle onderdelen én functie-schakelaars langs zodat de app volledig op maat start;
    eindigt met een persoonlijke uitleg (openGuide) op basis van de gemaakte keuzes. */
 let _ob=null;
+/* Test-only: _ob is anders niet van buitenaf te zetten (de node-testharness draait dit script als één
+   grote functie, dus een module-scope let-variabele is geen live binding op het teruggegeven object). */
+function _testSetOb(v){_ob=v;}
 function showOnboarding(){
   _ob={step:0,naam:db.naam||'',werk:'',loon:schoonLoonCfg(db.loon),
     /* De wizard vroeg vroeger naar elf losse functies. Dat is de verkeerde vraag op het verkeerde
@@ -969,10 +972,13 @@ function finishOnboarding(){
   db.loon=schoonLoonCfg(_ob.loon);
   Object.keys(_ob.mods).forEach(k=>{db.modules[k]=_ob.mods[k];});
   Object.keys(_ob.feat).forEach(k=>{if(_ob.feat[k])delete db.feat[k];else db.feat[k]=false;});
-  /* Alleen de eerste werkgever staat op "in dienst" — de app rekent met één loonstroom tegelijk. */
-  if(_ob.mods.uren&&_ob.werk){const alEen=!!actiefWerk();
+  /* Meerdere werkgevers tegelijk in dienst is inmiddels het normale pad (bijbanen, oproepwerk), dus
+     iedereen die je hier invult komt gewoon in dienst — niet alleen de eerste. Het voorbeeld in het
+     invoerveld is zelf "Jumbo, Sincere": typte je dat letterlijk over, dan kreeg je vroeger van Sincere
+     stilzwijgend geen loon, geen meldingen en geen loondag totdat je hem apart aanzette. */
+  if(_ob.mods.uren&&_ob.werk){
     /* "Jumbo, jumbo" in één regel typen levert één werkgever op, niet twee. */
-    _ob.werk.split(',').map(x=>x.trim()).filter(Boolean).forEach((w,i)=>{if(!bestaandeNaam(db.werkgevers,w)){db.werkgevers.push(w);const c=defWerkCfg();c.loon=schoonLoonCfg(db.loon);if(i>0||alEen)c.actief=false;db.werkCfg[w]=c;}});}
+    _ob.werk.split(',').map(x=>x.trim()).filter(Boolean).forEach(w=>{if(!bestaandeNaam(db.werkgevers,w)){db.werkgevers.push(w);const c=defWerkCfg();c.loon=schoonLoonCfg(db.loon);db.werkCfg[w]=c;}});}
   if(!MODULES.some(m=>moduleOn(m.k)))db.modules.uren=true;
   db.setup=true;save();
   document.getElementById('onb').classList.remove('show');document.body.classList.remove('noscroll');
@@ -2381,8 +2387,11 @@ function opzijRegel(pi){
      anders lijkt het alsof je afvinken niets deed, terwijl het tellen dan juist net begonnen is. */
   if(!s.gestart)return `<div style="margin-top:8px"><span class="statusbadge none">${s.lopendGedaan?'Genoteerd · vanaf je volgende loondag gaat de app tellen':"Vink dit potje af zodra je het hebt overgemaakt"}</span></div>`;
   if(!s.gemist)return `<div style="margin-top:8px"><span class="statusbadge ok">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span></div>`;
+  /* "Overgeslagen" + "achterstand" las als een schuldenoverzicht — terwijl de oorzaak vaker een
+     vergeten vinkje is dan een echt gemiste storting (vandaar de knop eronder: "Toch overgemaakt?").
+     Neutraler: het is niet afgevinkt, niet per se niet gedaan. */
   return `<div style="margin-top:8px"><span class="statusbadge warn">● ${s.gedaan} van ${s.periodes} keer overgemaakt</span>`
-    +`<div style="font-size:13px;margin-top:4px;color:var(--amber)">${s.gemist} keer overgeslagen · <b>${eur(s.achterstand)}</b> minder opzij gezet</div>`
+    +`<div style="font-size:13px;margin-top:4px;color:var(--amber)">${s.gemist}× nog niet afgevinkt · <b>${eur(s.achterstand)}</b> staat nog niet als opzijgezet</div>`
     +`<button class="tiny ghost" style="margin-top:7px" onclick="event.stopPropagation();openInhaal(${pi})">Toch overgemaakt?</button></div>`;
 }
 /* ===== GEMISTE LOONDAGEN GOEDZETTEN =====
@@ -2441,7 +2450,14 @@ function itemGereserveerd(it,nu){
   /* Voorbij de vervaldatum (nog niet afgevinkt) hoort het hele bedrag klaar te staan, vandaar de klem
      op 1. En vlak na een betaling begint de opbouw weer bij nul. */
   const fractie=Math.min(1,Math.max(0,1-teGaan/cyclusDagen));
-  return round2(fractie*(+it.v||0));
+  /* Heeft deze kostenpost een toeslag, dan is "Opzij zetten deze maand" (itMnd/potTot) al NETTO: je
+     wordt nooit gevraagd het toeslag-deel zelf te sparen, want dat komt apart binnen en landt in
+     hetzelfde potje-saldo (markOccurrence). Bouwde dit paneel toch op naar het volle bruto bedrag, dan
+     meldde het een tekort terwijl je precies volgens plan aan het sparen was — de toeslag was gewoon
+     nog niet binnen. Dus dezelfde netto-aftrek als itMnd, op dezelfde per-termijn-basis als it.v. */
+  const toeslagPerTermijn=itToeslagMnd(it)*monthsPer(it.fu||'m',+it.fn||1);
+  const netto=Math.max(0,(+it.v||0)-toeslagPerTermijn);
+  return round2(fractie*netto);
 }
 /* null = niets te verdelen (geen enkele gedateerde vaste last in dit potje). */
 function potReservering(pi){
@@ -2577,7 +2593,13 @@ function loonHintRow(x){
     :'Nog één loonbetaling, dan weet de app wanneer je loon meestal echt komt.');
   const h=loonDateHint(offs);
   if(!h)return '';
-  return rij(h.a!==0?hintDatumZin(h,x.date,'ontvangst'):'Je loon komt meestal op je loondag.');
+  if(h.a!==0)return rij(hintDatumZin(h,x.date,'ontvangst'));
+  /* Een gemiddelde van nul betekent niet dat het loon ook elke keer op tijd komt: 6 dagen vroeg en
+     9 dagen laat middelen ook naar zo goed als nul, en dan was "komt meestal op je loondag" een loze
+     geruststelling op precies het moment dat het inkomen het meest onvoorspelbaar is. */
+  return rij(h.spread>0
+    ?`Je loon wisselt: gemiddeld op je loondag, maar het kan enkele dagen schelen.`
+    :'Je loon komt meestal op je loondag.');
 }
 /* Jaarkost / 12 → eenmalige grote uitgaven worden over 12 maanden uitgesmeerd i.p.v. blind als maandbedrag genomen. */
 function potAvg(p){const s=sumLast12(p.log);return s==null?null:s/12;}
@@ -2587,15 +2609,24 @@ function renderPotjes(){
   const pk=currentPeriodKey();const done=db.overboek[pk]||{};
   let tot=0,gedaan=0,cnt=0,cntDone=0;db.potjes.forEach((p,i)=>{const t=potTot(p);tot+=t;if(t>0){cnt++;gedaan+=Math.min(t,obGedaan(i,p));if(obVol(i,p))cntDone++;}});
   const nx=nextPaydayEff();
+  /* Iemand met alleen een spaarpotje (geen enkele vaste last, cnt=0) heeft niets aan deze kaart — die
+     gaat helemaal over "wat moet ik deze maand overmaken voor vaste lasten". Hem toch tonen met de
+     badge "geen potjes" was misleidend: er staat gewoon een potje op het scherm hierboven, alleen geen
+     vaste-lasten-potje. Dan de hele kaart maar weglaten in plaats van iets te zeggen dat niet klopt. */
   document.getElementById('potHeader').innerHTML=`
     <div class="card hero"><div class="row between" style="align-items:center"><div><div class="muted">Totaal in je potjes</div><div class="big">${eur(totalSaldo())}</div></div><span class="pill" style="background:rgba(255,255,255,.16);color:var(--hero-tx)">${db.potjes.length} potje${db.potjes.length===1?'':'s'}</span></div></div>
-    <div class="card">
-      <div class="row between" style="align-items:flex-start"><div><div class="muted">Opzij zetten deze maand</div><div class="big">${eur(tot)}</div></div><span class="statusbadge ${cnt&&cntDone===cnt?'ok':'none'}">${cnt?`${cntDone}/${cnt} overgemaakt`:'geen potjes'}</span></div>
+    ${cnt?`<div class="card">
+      <div class="row between" style="align-items:flex-start"><div><div class="muted">Opzij zetten deze maand</div><div class="big">${eur(tot)}</div></div><span class="statusbadge ${cntDone===cnt?'ok':'none'}">${cntDone}/${cnt} overgemaakt</span></div>
       <div class="bar" style="margin-top:14px"><div style="width:${tot?Math.round(gedaan/tot*100):0}%"></div></div>
       <div class="kv"><span class="k">Overgemaakt</span><span class="v" style="color:var(--green)">${eur(gedaan)}</span></div>
       ${nx?`<div class="muted" style="margin-top:2px;font-size:12.5px">De vinkjes beginnen opnieuw op je loondag, ${nx.getDate()} ${MND[nx.getMonth()].slice(0,3)}. Je saldo blijft gewoon staan.</div>`:''}
-    </div>`;
-  document.getElementById('potAllBtn').textContent=(cnt&&cntDone===cnt)?'Toch niet overgemaakt':'Alles overgemaakt';
+    </div>`:''}`;
+  /* Zonder vaste-lasten-potjes heeft "Alles overgemaakt" niets om te doen — die liet anders een
+     bevestiging zien met "€0,00 erbij in 0 potjes", verwarrend voor wie alleen spaart. */
+  const allBtn=document.getElementById('potAllBtn');
+  allBtn.style.display=cnt?'':'none';
+  document.getElementById('potActionsRow').style.gridTemplateColumns=cnt?'1fr 1fr':'1fr';
+  if(cnt)allBtn.textContent=(cntDone===cnt)?'Toch niet overgemaakt':'Alles overgemaakt';
   /* De knop heette "Overzicht" zonder te zeggen waarvan. De juiste tekst hangt ervan af of je losse
      ontvangsten gebruikt, en dat weet uitOntvLabel al - maar dit is vaste HTML, geen template. */
   const ov=document.getElementById('potOverzichtBtn');if(ov)ov.textContent='Al mijn '+uitOntvLabel().toLowerCase();
@@ -4278,7 +4309,10 @@ function bhAdd(){const v=val('bhNew').trim();if(!v)return;const b=BEHEER.find(x=
   const alEen=(window._bk==='werkgevers')?!!actiefWerk():false;
   if(isNew){list.push(v);
     if(window._bk==='werkgevers'&&!db.werkCfg[v]){const c=defWerkCfg();c.loon=Object.assign(defLoonCfg(),db.loon||{});
-      /* Staat er al iemand op "in dienst"? Dan komt de nieuwe erbij als uit dienst — je kiest zelf of je wisselt. */
+      /* Sta je hier voor het eerst een werkgever bij te schrijven, dan is het meestal een baan die je nog
+         moet configureren (soms zelfs een toekomstige), dus die komt voorzichtig uit dienst binnen. Het
+         instellingenscherm dat er meteen op volgt (openWerkCfg hieronder) heeft de "In dienst"-knop
+         bovenaan, dus je zet 'm in één tik aan als hij dat wél moet zijn. */
       if(alEen)c.actief=false;
       stempelEersteLoondag(c);
       db.werkCfg[v]=c;}
@@ -4310,13 +4344,19 @@ function renderWerkCfg(){
   const days=['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
   const units=[['dienst','diensten'],['week','weken'],['maand','maanden'],['loonperiode','loonperiodes']];
   const act=c.actief!==false;
+  /* Sinds meerdere werkgevers tegelijk in dienst kunnen staan, gaat "ander" niet meer uit dienst als je
+     deze aanzet — die zin loog gewoon tegen de gebruiker. "ander" bestaat hier nu alleen nog om te
+     zeggen wie er in dienst blijft als je juist DEZE uitzet. */
   const ander=(db.werkgevers||[]).find(x=>x!==w&&werkCfgOf(x).actief!==false)||null;
+  const isHoofd=act&&w===hoofdBaan();
   /* ---- 1. Dienstverband ---- */
   const dienst=`<div class="mini"><div class="mini-h">Dienstverband</div>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin:4px 0 2px">${[[true,'In dienst'],[false,'Uit dienst']].map(([v,l])=>`<span class="chip ${act===v?'on':''}" onclick="wcSet('actief',${v})">${l}</span>`).join('')}</div>
     <div class="muted" style="font-size:12.5px;margin-top:4px">${act
-      ? (ander?`Bij opslaan gaat <b>${esc(ander)}</b> uit dienst — de app rekent met één loon tegelijk.`:'Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.')
-      : `Geen controle-meldingen meer voor ${esc(w)}. Je diensten, uren en historie blijven gewoon staan.${ander?` <b>${esc(ander)}</b> blijft je loon leveren.`:' Er is dan niemand in dienst; de app rekent door met de laatst ingestelde loondag.'}`}</div>
+      ? (isHoofd?'Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.'
+         :ander?`<b>${esc(ander)}</b> bepaalt je potjes-periode; ${esc(w)} telt gewoon mee met een eigen loondag en eigen meldingen.`
+         :'Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.')
+      : `Geen controle-meldingen meer voor ${esc(w)}. Je diensten, uren en historie blijven gewoon staan.${ander?` <b>${esc(ander)}</b> blijft gewoon in dienst.`:' Er is dan niemand in dienst; de app rekent door met de laatst ingestelde loondag.'}`}</div>
     ${featOn('contract')?`<label style="margin-top:10px">Vast aantal uur per week</label><input id="wc_contract" value="${esc(window._wcContract||'')}" inputmode="decimal" placeholder="bijv. 32" onchange="wcSet('__c',0,true)"><div class="muted" style="font-size:12px;margin-top:4px">Leeg laten = nulurencontract. Hiermee zie je per week of je meer of minder hebt gewerkt dan afgesproken.</div>`:''}</div>`;
   /* ---- 2. Loon ---- */
   /* Wissel je van baan zonder eerste loondag in te vullen, dan verwacht de app al loon op de eerstvolgende
@@ -4410,6 +4450,9 @@ function wcSave(){
   const w=window._wcName,c=window._wc;
   c.loon=schoonLoonCfg(c.loon);
   const L=c.loon,act=c.actief!==false;
+  /* "ander" gaat NIET meer uit dienst zodra je deze aanzet — dat kon vroeger wel, maar nu heb je
+     gewoon meerdere werkgevers tegelijk in dienst. Deze naam wordt alleen nog gebruikt om te melden wie
+     er overblijft als je juist DEZE uitzet, en om te waarschuwen als je hoofdbaan wordt de vraag wordt. */
   const ander=(db.werkgevers||[]).find(x=>x!==w&&werkCfgOf(x).actief!==false)||null;
   const oud=db.werkCfg[w];
   const oudL=(oud&&oud.loon)?schoonLoonCfg(oud.loon):null;
@@ -4417,7 +4460,7 @@ function wcSave(){
   const waarschuw=[],notities=[];
   const fmt=d=>(d&&!isNaN(d))?(d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()):'—';
 
-  if(act&&ander)waarschuw.push(`<b>${esc(ander)}</b> gaat hiermee uit dienst — de app rekent met één loon tegelijk. Alle diensten, uren en historie van ${esc(ander)} blijven gewoon staan.`);
+  if(act&&!oudAct&&ander)notities.push(`<b>${esc(w)}</b> komt erbij naast <b>${esc(ander)}</b>. Je uren, meldingen en potjes blijven gewoon van je huidige ritme uitgaan; ${esc(w)} telt mee met een eigen loondag.`);
   if(!act&&oudAct)notities.push(`Je gaat <b>uit dienst</b> bij ${esc(w)}. Je krijgt hier geen controle-meldingen meer; je uren en historie blijven staan.${ander?` <b>${esc(ander)}</b> blijft je loon leveren.`:' Er is dan niemand in dienst — de app rekent door met de laatst ingestelde loondag.'}`);
 
   if(moduleOn('loon')&&act){
@@ -4462,12 +4505,19 @@ function wcSaveDoen(){
      tegelijk is normaal, en de app moet er niet één voor je wegstrepen. */
   const wasAct=db.werkCfg[w]?db.werkCfg[w].actief!==false:false;
   const act=c.actief!==false;
-  /* Van uit dienst naar in dienst is een baanwissel — ook als je er een paar weken tussen zat. */
-  if(!wasAct&&act)stempelEersteLoondag(c);
+  /* Van uit dienst naar in dienst is een baanwissel — ook als je er een paar weken tussen zat.
+     Had je hier al eerder gewerkt (er staat een "tot" in het verleden), dan is dit een NIEUW
+     dienstverband: vanaf schuift mee naar vandaag. Zonder dit bleef vanaf op de oude, eerste
+     startdatum staan, en het wissen van tot alleen zette het model op "sinds toen aaneengesloten in
+     dienst" — dan verschijnen er loondagen in precies het gat waarin je er niet werkte. */
+  if(!wasAct&&act){
+    const eerderGewerkt=c.loon&&c.loon.tot&&c.loon.tot<isoDate(vandaag());
+    if(eerderGewerkt){c.loon.vanaf=isoDate(vandaag());c.loon.tot='';}
+    else stempelEersteLoondag(c);
+  }
   /* En andersom: ga je hier uit dienst en heb je geen laatste loondag ingevuld, dan blijft de app tot in
      de eeuwigheid loondagen van deze baan verwachten. Vandaag is dan de eerlijkste bovengrens. */
   if(wasAct&&!act&&c.loon&&!c.loon.tot)c.loon.tot=isoDate(vandaag());
-  if(!wasAct&&act&&c.loon&&c.loon.tot&&c.loon.tot<isoDate(vandaag()))c.loon.tot=''; /* weer terug in dienst */
   db.werkCfg[w]=c;
   const cv=String(window._wcContract||'').replace(',','.').trim();
   if(cv==='')delete db.contract[w];else db.contract[w]=parseFloat(cv)||0;

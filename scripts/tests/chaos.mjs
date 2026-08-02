@@ -66,8 +66,14 @@ const ACTIES=[
      actief:r()<0.5,loon:{mode:'month',dag:1+Math.floor(r()*28),intervalWeeks:4,start:''}};}],
  ['werkgever weg', (a,r)=>{if(!a.db.werkgevers.length)return;const i=Math.floor(r()*a.db.werkgevers.length);
    const w=a.db.werkgevers[i];a.db.werkgevers.splice(i,1);delete a.db.werkCfg[w];}],
- ['in of uit dienst', (a,r)=>{const w=a.db.werkgevers[Math.floor(r()*a.db.werkgevers.length)];
+ ['in of uit dienst (ruw)', (a,r)=>{const w=a.db.werkgevers[Math.floor(r()*a.db.werkgevers.length)];
    const c=w&&a.db.werkCfg[w];if(c)c.actief=!(c.actief!==false);}],
+ /* Via het echte opslagpad, niet rauw het veld omzetten — dat is waar vanaf/tot gestempeld worden.
+    Ontdekte precies dit soort bug: iemand die stopt en later bij dezelfde werkgever terugkomt. */
+ ['in of uit dienst (via scherm)', (a,r)=>{const w=a.db.werkgevers[Math.floor(r()*a.db.werkgevers.length)];
+   if(!w)return;window._wcName=w;window._wc=JSON.parse(JSON.stringify(a.werkCfgOf(w)));
+   window._wc.actief=!(window._wc.actief!==false);window._wcVanaf='beheer';window._wcContract='';
+   a.wcSaveDoen();}],
  ['loonritme wijzigen', (a,r)=>{a.db.loon.mode=MODES[Math.floor(r()*MODES.length)];a.db.loon.dag=1+Math.floor(r()*31);
    a.db.loon.intervalWeeks=1+Math.floor(r()*5);if(r()<0.3)a.db.loon.dates=[];}],
  ['eerste loondag wijzigen', (a,r)=>{a.db.loon.vanaf=r()<0.5?'':'2026-0'+(1+Math.floor(r()*9))+'-15';}],
@@ -128,6 +134,12 @@ function controleer(a){
     if(h&&act.indexOf(h)<0)fout.push('hoofdbaan "'+h+'" staat niet in dienst');
     if(!h&&act.length)fout.push('werkgevers in dienst maar geen hoofdbaan aangewezen');
   }
+  /* Elke werkgever met zowel vanaf als tot moet vanaf <= tot hebben. Klopt dat niet, dan genereert
+     loonRaster loondagen buiten wat de gebruiker heeft ingevuld (het gat-probleem bij terugkomen). */
+  (a.db.werkgevers||[]).forEach(w=>{
+    const L=a.werkCfgOf(w).loon;if(!L)return;
+    if(L.vanaf&&L.tot&&L.vanaf>L.tot)fout.push('werkgever "'+w+'": vanaf ('+L.vanaf+') ligt na tot ('+L.tot+')');
+  });
 
   let bet=[],ont=[],lon=[];
   try{bet=a.paymentRows(new Date(2026,0,1),new Date(2027,6,1));}catch(e){fout.push('betalingen berekenen: '+e.message);}

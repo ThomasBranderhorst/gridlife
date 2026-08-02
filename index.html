@@ -1006,11 +1006,13 @@ const GUIDE=[
  t:gt(`Werkgevers maken fouten met urenregistratie. Zodra jouw werkgever de uren klaarzet, vergelijk je ze met wat er in de app staat en tik je <b>Klopt</b> of <b>Klopt niet</b>. Zo weet je altijd zeker dat je krijgt betaald voor wat je gewerkt hebt — en zie je bovenaan het Uren-scherm in één oogopslag wat er nog open staat.`)
   +gt(`Klopt het niet, dan vul je in hoeveel tijd je miste (bijvoorbeeld "45 min") en kies je hoe dat rechtgezet wordt: op een <b>latere dienst</b>, <b>apart nabetaald</b>, of <b>zelf geregeld</b>. Onder elke knop staat wat er dan gebeurt. Een "apart nabetaald"-correctie blijft meetellen als openstaand tot je 'm afvinkt als ontvangen; klopt iets niet, dan kun je een rechtgezette afwijking altijd weer heropenen.`)},
 {s:'Uren',mod:'uren',q:'Wat stel ik allemaal in per werkgever?',a:{lbl:'Naar Instellingen → Werkgevers',fn:"gaNaarBlok('instellingen','beheerCard');setTimeout(()=>openBeheerSheet('werkgevers'),260)"},
- v:gv(`<div class="mini" style="margin-bottom:8px"><div class="mini-h">Dienstverband</div>${GCHIPS(['In dienst','Uit dienst'],'In dienst')}<div class="muted" style="font-size:12.5px;margin-top:5px">Deze werkgever bepaalt je loondag, je meldingen en je potjes-periode.</div>${GLBL('Vast aantal uur per week')}${GINP('32','bijv. 32')}</div><div class="mini" style="margin-bottom:0"><div class="mini-h">Loon</div>${GLBL('Hoe vaak krijg je loon?')}${GCHIPS(['Maandelijks','2× per maand','Per aantal weken','Wisselend'],'Maandelijks')}${GLBL('Dag van de maand')}${GINP('25e van de maand')}</div>`),
+ v:gv(`<div class="mini" style="margin-bottom:8px"><div class="mini-h">Dienstverband</div>${GCHIPS(['In dienst','Uit dienst'],'In dienst')}<div class="muted" style="font-size:12.5px;margin-top:5px">Sincere bepaalt je potjes-periode; Jumbo telt gewoon mee met een eigen loondag en eigen meldingen.</div>${GLBL('Vast aantal uur per week')}${GINP('32','bijv. 32')}</div><div class="mini" style="margin-bottom:0"><div class="mini-h">Loon</div>${GLBL('Hoe vaak krijg je loon?')}${GCHIPS(['Maandelijks','2× per maand','Per aantal weken','Wisselend'],'Maandelijks')}${GLBL('Dag van de maand')}${GINP('25e van de maand')}${GLBL('Laatste loondag hier (optioneel)')}${GINP('','leeg = nog in dienst')}</div>`),
  t:gt(`Ga naar <b>Instellingen → Lijsten &amp; categorieën → Werkgevers</b> en tik op <b>Instellingen</b> bij een werkgever. Daar staat alles bij elkaar: of je er nog in dienst bent, je vaste aantal uur per week, wanneer je loon krijgt, en hoe deze werkgever met uren en correcties omgaat.`)
   +gt(`Onderaan staat een blokje <b>"Je eerstvolgende loondagen"</b> met je eerstvolgende vijf loondagen, inclusief de reden als er eentje verschoven is. Zo controleer je een instelling aan de uitkomst in plaats van aan de knoppen.`)
-  +gt(`Als je op Opslaan tikt krijg je eerst een <b>bevestiging</b> met wat er daarna geldt. Verandert er iets ingrijpends — een andere werkgever gaat uit dienst, je loondag verschuift, of er ontbreekt een datum waardoor de app niets kan berekenen — dan staat dat er expliciet bij. Is er niks bijzonders, dan is het gewoon een korte samenvatting.`)
-  +gt(`Je kunt zoveel werkgevers toevoegen als je wilt, maar er kan er maar <b>één tegelijk op "in dienst"</b> staan — die bepaalt je loondag. Wissel je van baan, dan zet je de nieuwe op "in dienst"; de oude gaat automatisch uit dienst en al zijn diensten en historie blijven gewoon staan.`)},
+  +gt(`Als je op Opslaan tikt krijg je eerst een <b>bevestiging</b> met wat er daarna geldt. Verandert er iets ingrijpends — je loondag verschuift, je gaat hier uit dienst, of er ontbreekt een datum waardoor de app niets kan berekenen — dan staat dat er expliciet bij. Is er niks bijzonders, dan is het gewoon een korte samenvatting.`)
+  +gt(`Je kunt <b>meerdere werkgevers tegelijk in dienst</b> hebben — twee bijbanen naast elkaar is heel normaal. Elke baan houdt zijn eigen loondag, eigen meldingen en eigen loonregels op Betalingen, met de naam erbij zodat je ze uit elkaar houdt.`)
+  +gt(`Eén ding heeft wél één antwoord nodig: wanneer de vinkjes van je potjes opnieuw beginnen. Daarvoor wijst de app je <b>hoofdbaan</b> aan — standaard de baan waar het meeste binnenkomt. Je ziet het staan in de werkgeverslijst en je kunt het daar in één tik omzetten. Je andere baan telt gewoon mee, alleen het ritme komt van je hoofdbaan.`)
+  +gt(`Stop je bij een baan? Zet hem op <b>uit dienst</b>. De app vult dan zelf je laatste loondag in en verwacht daarna geen loon meer van die werkgever — je diensten, uren en alles wat je er verdiend hebt blijven gewoon staan. Kom je er later weer werken, dan zet je hem terug op "in dienst" en begint de app opnieuw te tellen vanaf die dag.`)},
 {s:'Potjes & sparen',mod:'potjes',q:'Wat is een potje precies?',a:{lbl:'Naar Potjes',fn:"go('potjes')"},
  v:gv(`<div class="pot" style="margin-bottom:8px"><div class="ph"><div style="flex:1"><b>Vaste Lasten</b></div><div class="check on">✓</div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Opzij zetten deze maand</span><span class="amt">${eur(208.7)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">saldo ${eur(225.59)}</div><div style="margin-top:8px"><span class="statusbadge ok">● Saldo genoeg</span></div></div></div></div><div class="pot" style="margin-bottom:0"><div class="ph"><div style="flex:1"><b>Bunq spaar</b></div></div><div class="pot-sum"><div style="flex:1"><div class="pot-opzij"><span class="lbl">Saldo</span><span class="amt">${eur(4195.67)}</span></div><div class="muted" style="margin-top:3px;font-size:12.5px">Spaarpotje</div></div></div></div>`),
  t:gt(`Een potje is een <b>doel om geld voor apart te zetten</b> — het hoeft geen echte rekening te zijn. Zet je er vaste lasten in — huur, verzekering, abonnementen — dan rekent de app uit hoeveel je per maand opzij moet zetten en of je saldo genoeg is. Zonder vaste lasten is het gewoon een <b>spaarpotje</b>: alleen een saldo.`)},
@@ -4630,7 +4632,6 @@ function toonExportVerslag(waar,naam){
 }
 async function exportData(){const json=JSON.stringify(db,null,2);const name='gridlife-backup-'+isoDate(new Date())+'.json';if(NATIVE&&P.Filesystem&&P.Share){try{await P.Filesystem.writeFile({path:name,data:json,directory:'CACHE',encoding:'utf8'});const uri=await P.Filesystem.getUri({path:name,directory:'CACHE'});await P.Share.share({title:'GridLife back-up',files:[uri.uri],dialogTitle:'Back-up opslaan of delen'});toonExportVerslag('Gedeeld',name);return;}catch(e){if(String(e&&e.message||e).toLowerCase().includes('cancel'))return;try{await P.Filesystem.writeFile({path:'GridLife/'+name,data:json,directory:'DOCUMENTS',encoding:'utf8',recursive:true});toonExportVerslag('Opgeslagen in Documenten/GridLife',name);return;}catch(e2){toast('Opslaan is niet gelukt. Er is niets veranderd aan je gegevens — probeer het nog eens of kies een andere plek.');return;}}}downloadFile(name,json,'application/json');toonExportVerslag('Gedownload',name);}
 async function exportOverzichtPDF(){
-  if(!true){toast('PDF-overzicht staat uit');return;}
   const J=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
   if(!J){toast('Het overzicht kon nu niet gemaakt worden. Sluit de app en probeer het nog eens.');return;}
   armNoLock();
@@ -4661,8 +4662,12 @@ async function exportOverzichtPDF(){
     if(moduleOn('loon')){
       sectie('Loon & uitbetaling');
       const L=db.loon,lw=loonWerkgever();
+      /* Met twee banen tegelijk zou "Werkgever: Sincere" suggereren dat je andere baan niet meetelt,
+         terwijl die gewoon zijn eigen loondagen heeft. Dus benoemen waar dit ritme vandaan komt. */
+      const bronnen=loonBronnen().filter(b=>b.werk);
       const regels=[];
-      if(lw)regels.push(['Werkgever',lw]);
+      if(lw)regels.push([bronnen.length>1?'Hoofdbaan (bepaalt het ritme)':'Werkgever',lw]);
+      if(bronnen.length>1)regels.push(['In dienst bij',bronnen.map(b=>b.werk).join(', ')]);
       regels.push(['Hoe vaak',loonFreqTekst(L)]);
       regels.push(['Loondag',loonDagTekst(L)]);
       if(L.mode!=='manual')regels.push(['Valt niet op een werkdag',loonShiftTekst(L)]);
@@ -4674,12 +4679,26 @@ async function exportOverzichtPDF(){
         regels.push(['Houd je over',eur(round2(inc-opzij))]);
       }
       tabel(['Onderdeel','Wat er geldt'],regels);
-      const kom=[];{let d=rawNextPayday(L),g=0;while(d&&!isNaN(d)&&kom.length<6&&g<200){kom.push(new Date(d));d=rawPaydayAfter(L,d);g++;}}
+      /* Liep alleen over db.loon (je hoofdbaan), dus de loondagen van je andere baan stonden helemaal
+         niet in de PDF. Nu per loonbron door hetzelfde onverschoven raster — dan houden we ook de
+         "bijzonderheid" (verschoven voor een weekend of feestdag), wat je uit een verschoven datum
+         alleen niet meer kunt afleiden. */
+      const meerBanen=bronnen.length>1;
+      const bronLijst=bronnen.length?bronnen:[{werk:'',L}];
+      const kom=[];
+      bronLijst.forEach(b=>{
+        let d=rawNextPayday(b.L),g=0,n=0;
+        while(d&&!isNaN(d)&&n<6&&g<200){kom.push({ruw:new Date(d),s:loonShift(d,b.L),werk:b.werk});d=rawPaydayAfter(b.L,d);g++;n++;}
+      });
+      kom.sort((a,b)=>a.s-b.s);
       if(kom.length){
         ensure(70);
-        tabel(['Komende loondag','Bijzonderheid'],kom.map(ruw=>{
-          const s=loonShift(ruw,L),naam=feestNaam(ruw),versch=isoDate(s)!==isoDate(ruw);
-          return [DAGVOL[s.getDay()]+' '+s.getDate()+' '+MND[s.getMonth()]+' '+s.getFullYear(),versch?('verschoven vanaf '+ruw.getDate()+' '+MND[ruw.getMonth()].slice(0,3)+' — '+(naam||'weekend')):'—'];
+        const kop=meerBanen?['Komende loondag','Van wie','Bijzonderheid']:['Komende loondag','Bijzonderheid'];
+        tabel(kop,kom.slice(0,meerBanen?10:6).map(x=>{
+          const naam=feestNaam(x.ruw),versch=isoDate(x.s)!==isoDate(x.ruw);
+          const datum=DAGVOL[x.s.getDay()]+' '+x.s.getDate()+' '+MND[x.s.getMonth()]+' '+x.s.getFullYear();
+          const bijz=versch?('verschoven vanaf '+x.ruw.getDate()+' '+MND[x.ruw.getMonth()].slice(0,3)+' — '+(naam||'weekend')):'—';
+          return meerBanen?[datum,x.werk||'—',bijz]:[datum,bijz];
         }));
       }
       if(featOn('loonlog')&&(db.loonLog||[]).length){
@@ -4690,7 +4709,14 @@ async function exportOverzichtPDF(){
           const totL=round2(lg.reduce((a,x)=>a+(+x.amount||0),0));
           doc.setTextColor(...MUT);doc.setFont('helvetica','normal');doc.setFontSize(9.5);
           doc.text('Ontvangen in de laatste 12 maanden: '+eur(totL)+'    ·    '+lg.length+' betaling'+(lg.length===1?'':'en'),40,y);y+=15;
-          tabel(['Datum','Netto ontvangen'],lg.map(x=>{const d=parseISO(x.date);return [d?(d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()):String(x.date||'—'),eur(x.amount)];}),{columnStyles:{1:{halign:'right'}}});
+          /* Met twee banen is "€ 480" zonder naam niet terug te herleiden; de kolom verschijnt daarom
+             alleen als er ook echt loon van meer dan één werkgever in staat. */
+          const werkNamen=[...new Set(lg.map(x=>x.werk).filter(Boolean))];
+          const metWerk=werkNamen.length>1;
+          const datumVan=x=>{const d=parseISO(x.date);return d?(d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()):String(x.date||'—');};
+          tabel(metWerk?['Datum','Van wie','Netto ontvangen']:['Datum','Netto ontvangen'],
+            lg.map(x=>metWerk?[datumVan(x),x.werk||'—',eur(x.amount)]:[datumVan(x),eur(x.amount)]),
+            {columnStyles:metWerk?{2:{halign:'right'}}:{1:{halign:'right'}}});
         }
       }
     }

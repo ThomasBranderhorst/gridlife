@@ -867,6 +867,118 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
       }), 'gecontroleerd op saldo 0, 50, 200, 400, 700, 2000');
   }
 }
+// 26. loon: leert de app dat het loon structureel later binnenkomt dan de ingestelde loondag?
+{
+  const L={mode:'month',dag:25,intervalWeeks:4,start:''};
+  // De laatste drie loondagen vóór vandaag opzoeken, zodat de test niet aan een vaste datum vastzit.
+  const isos=run(basis({loon:L}),a=>{
+    const nu=a.vandaag(),van=new Date(nu);van.setFullYear(van.getFullYear()-1);
+    return a.loonDatesInRange(van,nu).map(a.isoDate).slice(-3);
+  }).extra||[];
+  const plus=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  const log=(offs)=>isos.map((iso,i)=>({id:'L'+i,date:plus(iso,offs[i]),amount:1800,payIso:iso}));
+
+  const geen=run(basis({loon:L}),a=>a.loonDateHint());
+  meld('loonhint: zonder ontvangsten geen voorspelling', !geen.fout&&geen.extra===null, JSON.stringify(geen.extra||geen.fout));
+
+  const een=run(basis({loon:L,loonLog:log([2,0,0]).slice(0,1)}),a=>a.loonDateHint());
+  meld('loonhint: na één keer nog geen voorspelling', !een.fout&&een.extra===null, JSON.stringify(een.extra||een.fout));
+
+  const vast=run(basis({loon:L,loonLog:log([2,2,2])}),a=>({offs:a.loonOffsets(),h:a.loonDateHint()}));
+  meld('loonhint: drie keer 2 dagen later = meestal 2 dagen later, geen speling',
+    !vast.fout&&vast.extra.h&&vast.extra.h.a===2&&vast.extra.h.spread===0, JSON.stringify(vast.extra||vast.fout));
+
+  const wissel=run(basis({loon:L,loonLog:log([1,5,3])}),a=>a.loonDateHint());
+  meld('loonhint: 1, 5 en 3 dagen later = gemiddeld 3 dagen, speling 2',
+    !wissel.fout&&wissel.extra&&wissel.extra.a===3&&wissel.extra.spread===2, JSON.stringify(wissel.extra||wissel.fout));
+
+  const vroeg=run(basis({loon:L,loonLog:log([-2,-2,-2])}),a=>a.loonDateHint());
+  meld('loonhint: eerder binnen dan de loondag geeft een negatieve afwijking',
+    !vroeg.fout&&vroeg.extra&&vroeg.extra.a===-2, JSON.stringify(vroeg.extra||vroeg.fout));
+
+  const optijd=run(basis({loon:L,loonLog:log([0,0,0])}),a=>a.loonDateHint());
+  meld('loonhint: precies op de loondag = geen afwijking',
+    !optijd.fout&&optijd.extra&&optijd.extra.a===0&&optijd.extra.spread===0, JSON.stringify(optijd.extra||optijd.fout));
+
+  // Een ontvangst die maanden naast de loondag ligt is geen "afwijking" maar een verkeerde koppeling.
+  const gek=run(basis({loon:L,loonLog:log([2,2,90])}),a=>a.loonOffsets());
+  meld('loonhint: uitschieter van 90 dagen telt niet mee', !gek.fout&&JSON.stringify(gek.extra)==='[2,2]', JSON.stringify(gek.extra||gek.fout));
+}
+// 27. de zin zelf: "±3 dagen" liet mensen denken dat dat het verschil met de planning was.
+{
+  const kaal=s=>String(s).replace(/<[^>]+>/g,'');
+  const r=run(basis(),a=>[
+    kaal(a.hintDatumZin({a:7,spread:3},new Date(2026,10,14),'ontvangst')),
+    kaal(a.hintDatumZin({a:7,spread:3},new Date(2026,10,14),'uitgave')),
+    kaal(a.hintDatumZin({a:-1,spread:0},new Date(2026,10,14),'ontvangst')),
+    kaal(a.afwTekst({date:new Date(2026,6,25),dispDate:new Date(2026,6,27)})),
+    kaal(a.afwTekst({date:new Date(2026,6,25),dispDate:new Date(2026,6,24)})),
+    kaal(a.afwTekst({date:new Date(2026,6,25),dispDate:new Date(2026,6,25)})),
+    /* Met een venster van 4 dagen is alles binnen dat bereik gewoon op tijd. */
+    kaal(a.afwTekst({date:new Date(2026,6,25),dispDate:new Date(2026,6,27),span:4})),
+  ]);
+  const [ontv,uit,vroeg,laat2,vroeg1,gelijk,venster]=r.extra||[];
+  meld('hintzin: later dan gepland heet "pas", zonder cijfers of ±',
+    !r.fout&&ontv==='Komt meestal pas rond 21 november', ontv);
+  meld('hintzin: bij een uitgave gaat het geld eraf i.p.v. dat het komt',
+    !r.fout&&uit==='Gaat er meestal pas rond 21 november af', uit);
+  meld('hintzin: eerder dan gepland heet "al"',
+    !r.fout&&vroeg==='Komt meestal al rond 13 november', vroeg);
+  meld('afwijking: twee dagen later, enkelvoud/meervoud klopt', !r.fout&&laat2==='2 dagen later', laat2);
+  meld('afwijking: één dag eerder', !r.fout&&vroeg1==='1 dag eerder', vroeg1);
+  meld('afwijking: op de dag zelf zegt niets', !r.fout&&gelijk==='', JSON.stringify(gelijk));
+  meld('afwijking: binnen het venster is geen afwijking', !r.fout&&venster==='', JSON.stringify(venster));
+}
+// 28. loon stopt zodra niemand meer in dienst is, en kijkt niet verder terug dan je eigen historie.
+{
+  const L={mode:'month',dag:25,intervalWeeks:4,start:''};
+  const wc=(actief)=>({W:{ritmeN:1,ritmeU:'dienst',klaarDag:1,correctie:'later',nabetaalMode:'loondag',actief,loon:L}});
+  const venster=a=>{const nu=a.vandaag();const van=new Date(nu);van.setFullYear(van.getFullYear()-1);
+    return a.loonRows(a.loonHistorieVan(van),new Date(nu.getFullYear(),nu.getMonth()+2,0));};
+
+  const uit=run(basis({loon:L,werkCfg:wc(false),loonLog:[]}),a=>({verwacht:a.loonVerwacht(),n:venster(a).length}));
+  meld('loon: niemand in dienst = geen loondagen meer verwachten',
+    !uit.fout&&uit.extra.verwacht===false&&uit.extra.n===0, JSON.stringify(uit.extra||uit.fout));
+
+  const aan=run(basis({loon:L,werkCfg:wc(true),loonLog:[]}),a=>({verwacht:a.loonVerwacht(),n:venster(a).length}));
+  meld('loon: wel in dienst = loondagen gewoon zichtbaar',
+    !aan.fout&&aan.extra.verwacht===true&&aan.extra.n>0, JSON.stringify(aan.extra||aan.fout));
+
+  // Zonder werkgevers is de Loon-pagina zelf de bron; dan mag "uit dienst" niets blokkeren.
+  const geenW=run(basis({loon:L,werkgevers:[],werkCfg:{}}),a=>a.loonVerwacht());
+  meld('loon: zonder werkgevers blijft de Loon-pagina de bron', !geenW.fout&&geenW.extra===true, JSON.stringify(geenW.extra||geenW.fout));
+
+  // Nooit loon ingevuld en geen startdatum: dan geen verzonnen loondagen uit het verleden.
+  const leeg=run(basis({loon:L,werkCfg:wc(true),loonLog:[]}),a=>{
+    const nu=a.vandaag();const van=new Date(nu);van.setFullYear(van.getFullYear()-1);
+    return a.isoDate(a.loonHistorieVan(van))===a.isoDate(new Date(nu.getFullYear(),nu.getMonth(),1));
+  });
+  meld('loon: zonder historie begint het overzicht deze maand', !leeg.fout&&leeg.extra===true, JSON.stringify(leeg.extra||leeg.fout));
+
+  /* Wél loon ingevuld: dan begint het overzicht in de maand van dat oudste loon. Niet op de dag zelf —
+     kwam het loon ná de loondag binnen, dan viel die loondag er anders net buiten. */
+  const hist=run(basis({loon:L,werkCfg:wc(true),loonLog:[{id:'a',date:'2026-05-27',amount:1800,payIso:'2026-05-25'}]}),a=>{
+    const nu=a.vandaag();const van=new Date(nu);van.setFullYear(van.getFullYear()-1);
+    const start=a.loonHistorieVan(van);
+    return{start:a.isoDate(start),dagen:a.loonRows(start,nu).map(x=>a.isoDate(x.date))};
+  });
+  meld('loon: met historie begint het overzicht in de maand van je oudste ingevulde loon',
+    !hist.fout&&hist.extra.start==='2026-05-01'&&hist.extra.dagen[0]==='2026-05-25', JSON.stringify(hist.extra||hist.fout));
+
+  /* "Eerste loondag hier" is de sterkste rem. Let op: db.loon is maar een werkkopie — de actieve
+     werkgever is de bron, dus die datum moet in zijn eigen loon-config staan, anders wist de app hem. */
+  const nuIso=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const halfJaarTerug=(()=>{const d=new Date(nuIso);d.setMonth(d.getMonth()-6);d.setDate(25);return d.toISOString().slice(0,10);})();
+  const Lv=Object.assign({},L,{vanaf:halfJaarTerug});
+  const vanaf=run(basis({loon:Lv,werkCfg:{W:Object.assign(wc(true).W,{loon:Lv})},loonLog:[]}),a=>{
+    const nu=a.vandaag();const van=new Date(nu);van.setFullYear(van.getFullYear()-1);
+    return a.loonRows(a.loonHistorieVan(van),nu).map(x=>a.isoDate(x.date));
+  });
+  const gevonden=vanaf.extra||[];
+  meld('loon: geen loondagen vóór je eerste loondag bij deze werkgever',
+    !vanaf.fout&&gevonden.length>0&&gevonden.every(d=>d>=halfJaarTerug),
+    JSON.stringify(vanaf.extra||vanaf.fout)+' vanaf '+halfJaarTerug);
+}
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' CONTROLES GEFAALD':'alle '+check.length+' rekencontroles kloppen'));

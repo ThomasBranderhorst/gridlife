@@ -202,8 +202,10 @@ input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webki
 .calev .cd{width:46px;text-align:center;flex-shrink:0}.calev .cd b{display:block;font-size:17px}
 
 nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;background:var(--nav-bg);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:6px 0;padding-bottom:calc(6px + var(--safe-b))}
-nav.bottom button{flex:1;background:none;border:none;border-radius:0;padding:5px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.1px}
-nav.bottom svg{padding:4px 17px;border-radius:99px;transition:background .18s ease,transform .18s ease;box-sizing:content-box;width:22px;height:22px}
+/* Zes tabbladen met een vaste icoonpil van 56px passen niet op een smalle telefoon (6x56 > 320) en
+   duwden de balk buiten beeld: "Meer" viel er half af. Pil en label krimpen nu mee met het scherm. */
+nav.bottom button{flex:1 1 0;min-width:0;background:none;border:none;border-radius:0;padding:5px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:clamp(9px,2.9vw,10.5px);font-weight:700;letter-spacing:.1px}
+nav.bottom svg{padding:4px clamp(6px,3.6vw,17px);border-radius:99px;transition:background .18s ease,transform .18s ease;box-sizing:content-box;width:22px;height:22px;flex-shrink:0}
 nav.bottom button.on{color:var(--accent)}
 nav.bottom button.on svg{background:var(--accent-soft);transform:translateY(-1px)}
 
@@ -253,7 +255,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .pinpad button:active{transform:scale(.9);background:var(--card2)}
 .biobtn{margin-top:26px;display:inline-flex;align-items:center;gap:9px;background:var(--card2);color:var(--accent);border:none;border-radius:99px;font-size:14.5px;font-weight:700;padding:13px 22px}
 
-#shiftList .shift,#potList .pot,#receptList .card,.calev,.potitem{animation:fade .25s ease}
+#shiftList .shift,#potList .pot,#betalingList .pot,#receptList .card,.calev,.potitem{animation:fade .25s ease}
 .chip:active{transform:scale(.94)}
 button.tiny:active{transform:scale(.94)}
 .ico{width:18px;height:18px;vertical-align:-3.5px;margin-right:8px;color:var(--accent)}
@@ -298,7 +300,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
   <section class="tab active" id="tab-start"></section>
 
   <section class="tab" id="tab-uren">
-    <div class="card"><div class="row between" style="gap:8px;align-items:flex-start"><div style="min-width:0"><div class="muted">Deze maand gewerkt</div><div class="big" id="urenMaandTotaal">0u 0m</div></div><select id="filterWerk" style="width:auto;min-width:110px;flex-shrink:0"></select></div><button class="ghost" id="statsBtn" style="width:100%;margin-top:12px" onclick="openStats()"><svg style="width:17px;height:17px;vertical-align:-3px;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-6M12 20V8M19 20v-9"/></svg>Statistieken bekijken</button></div>
+    <div class="card"><div class="row between" style="gap:8px;align-items:flex-start"><div style="min-width:0"><div class="muted">Deze maand gewerkt</div><div class="big" id="urenMaandTotaal">0u 0m</div></div><select id="filterWerk" style="width:auto;min-width:96px;max-width:52%;flex:0 1 auto;text-overflow:ellipsis" title="Filter op werkgever"></select></div><button class="ghost" id="statsBtn" style="width:100%;margin-top:12px" onclick="openStats()"><svg style="width:17px;height:17px;vertical-align:-3px;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-6M12 20V8M19 20v-9"/></svg>Statistieken bekijken</button></div>
     <div id="tegoedCard"></div>
     <div class="row" id="statusChips" style="gap:8px;flex-wrap:wrap;margin:0 0 4px"></div>
     <div id="shiftList"></div>
@@ -1913,9 +1915,54 @@ function loonEntryFor(iso){
   const dichtstbij=x=>{const q=parseISO(x.date);if(!q)return null;let b=null,bd=Infinity;inMaand.forEach(p=>{const v=Math.abs(p-q);if(v<bd){bd=v;b=p;}});return b?isoDate(b):null;};
   return kand.find(x=>dichtstbij(x)===iso)||null;
 }
+/* Verwacht de app nog loon? Zonder werkgevers is de Loon-pagina zelf de bron, dus dan gewoon wel.
+   Maar staat iedereen op "Uit dienst", dan bleef de app tot in de eeuwigheid loondagen verzinnen van
+   een baan die je niet meer hebt. Wat je al hebt ingevuld blijft staan; er komt niets nieuws bij. */
+function loonVerwacht(){
+  if(!(moduleOn('uren')&&(db.werkgevers||[]).length))return true;
+  return !!actiefWerk();
+}
+/* Vanaf welke datum mogen er loondagen in het overzicht staan? De app rekent altijd met het ritme van
+   je huidige werkgever, dus terugkijken heeft een rem nodig: nooit vóór "Eerste loondag hier", en staat
+   die leeg, dan niet vóór het oudste loon dat je zelf hebt ingevuld. Anders verschijnen er loondagen
+   bij een baan die je toen nog niet had. Heb je nog nooit loon ingevuld, dan begint het deze maand. */
+function loonHistorieVan(from){
+  if((db.loon||{}).vanaf&&parseISO(db.loon.vanaf))return from; /* loonDatesInRange knipt daar zelf al af */
+  const isos=(db.loonLog||[]).map(x=>x&&x.date).filter(Boolean).sort();
+  const oud=isos.length?parseISO(isos[0]):null;
+  if(!oud)return monthStart(vandaag());
+  /* De maand in, niet de dag: kwam dat oudste loon een paar dagen ná de loondag binnen, dan zou de
+     bijbehorende loondag zelf er net buiten vallen en zie je een ontvangst zonder zijn eigen regel. */
+  const start=monthStart(oud);
+  return start>from?start:from;
+}
+/* Word je hier in dienst gezet, dan is dit de werkgever waar de hele app mee rekent — ook terugkijkend.
+   Zonder "Eerste loondag hier" legt de app zijn ritme dus óók over de maanden vóór je overstap, en zie je
+   loondagen van een baan waar je toen nog niet werkte. Vandaag is dan de eerlijkste ondergrens; in het
+   werkgeverscherm stel je hem zelf bij als je hier al langer werkt. Bij je állereerste werkgever slaan we
+   dit over: dan is er nog geen verleden om mee te botsen. */
+function stempelEersteLoondag(c){
+  if(!c||!c.loon||c.loon.vanaf)return;
+  if((db.werkgevers||[]).length<=1&&!(db.loonLog||[]).length)return;
+  c.loon.vanaf=isoDate(vandaag());
+}
 function loonRows(from,to){
   if(!(moduleOn('loon')&&featOn('loonlog')))return [];
-  return loonDatesInRange(from,to).map(d=>{const iso=isoDate(d);const e=loonEntryFor(iso);let dispDate=new Date(d);if(e&&e.date){const ld=new Date(e.date);if(!isNaN(ld))dispDate=ld;}return{kind:'loon',date:new Date(d),dispDate,iso,label:'Netto loon',amount:e?round2(e.amount):null,received:!!e,entry:e};});
+  const verwacht=loonVerwacht();
+  const rijen=loonDatesInRange(from,to).filter(d=>verwacht||loonEntryFor(isoDate(d))).map(d=>{const iso=isoDate(d);const e=loonEntryFor(iso);let dispDate=new Date(d);if(e&&e.date){const ld=new Date(e.date);if(!isNaN(ld))dispDate=ld;}return{kind:'loon',date:new Date(d),dispDate,iso,label:'Netto loon',amount:e?round2(e.amount):null,received:!!e,entry:e};});
+  /* Loon dat je hebt ingevuld maar dat bij geen enkele loondag van je huidige ritme past — typisch loon
+     van je vorige baan — kreeg nergens een regel en was daarmee onvindbaar op deze pagina. Zo'n
+     ontvangst krijgt nu zijn eigen regel op de dag dat het geld binnenkwam. */
+  const gedekt=new Set(rijen.filter(x=>x.entry).map(x=>x.entry.id));
+  (db.loonLog||[]).forEach(e=>{
+    if(!e||!e.date||gedekt.has(e.id))return;
+    const d=parseISO(e.date);if(!d||d<from||d>to)return;
+    const plan=e.payIso?parseISO(e.payIso):null;
+    rijen.push({kind:'loon',date:plan||new Date(d),dispDate:new Date(d),iso:isoDate(d),
+      label:'Netto loon',amount:round2(e.amount),received:true,entry:e,los:true});
+  });
+  rijen.sort((a,b)=>(a.dispDate||a.date)-(b.dispDate||b.date));
+  return rijen;
 }
 function openMarkLoonSheet(iso){
   const laatste=[...(db.loonLog||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
@@ -2408,33 +2455,72 @@ function amountHint(p,it,kind,toeId){
   const spread=round2((Math.max(...ds)-Math.min(...ds))/2);
   return{a,spread};
 }
+/* De datumzin van een voorspelling. Er stond "Verwacht rond 21 november (±3 dagen)", en als de geplande
+   datum de 14e was las je die 3 dagen als het verschil met de planning — terwijl het de speling rondom
+   die 21e is. Nu doen "pas" en "al" dat werk in één lettergreep, zonder cijfers en zonder ±-teken. */
+function hintDatumZin(h,basis,kind){
+  const exp=new Date(basis);exp.setDate(exp.getDate()+h.a);
+  const wanneer=`${h.a>0?'pas':'al'} rond <b style="color:var(--text)">${exp.getDate()+' '+MND[exp.getMonth()]}</b>`;
+  return kind==='uitgave'?`Gaat er meestal ${wanneer} af`:`Komt meestal ${wanneer}`;
+}
 /* Regel onder een openstaande betaling met wat de app uit je historie heeft geleerd:
-   "Verwacht rond 19 september (±2 dagen) · meestal € 2,15 meer dan gepland".
+   "Komt meestal pas rond 21 november, en € 2,15 meer dan gepland".
    Datum en bedrag staan los van elkaar: wijkt alleen het bedrag af, dan zie je alleen dat deel.
-   Zijn er nog geen twee afvinkingen, dan zeggen we dát — anders lijkt het alsof de app bij de ene
-   kostenpost wel meedenkt en bij de andere niet, zonder dat je kunt zien waarom. */
+   Zijn er nog geen twee afvinkingen, dan zeggen we wat er nog nodig is — anders lijkt het alsof de app
+   bij de ene kostenpost wel meedenkt en bij de andere niet, zonder dat je kunt zien waarom. */
 function dateHintRow(x,kind){
   if(!featOn('hints'))return '';
   const rij=t=>`<div class="muted" style="font-size:12px;margin-top:5px">${t}</div>`;
   const n=hintLogs(x.pot,x.it,kind,x.toeId).length;
+  /* "Vink twee keer af" las alsof je dezelfde betaling twee keer moest aantikken. Het gaat om twee
+     verschillende betalingen, dus noemen we het ding zelf in plaats van de handeling. */
+  const wat=kind==='uitgave'?'betalingen':'ontvangsten',één=kind==='uitgave'?'betaling':'ontvangst';
   if(n<2)return rij(n===0
-    ?'Nog niet eerder afgevinkt — na twee keer ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.'
-    :'Eén keer afgevinkt — na de volgende ziet de app of dit meestal eerder of voor een ander bedrag gebeurt.');
-  const delen=[];
+    ?`Na twee afgevinkte ${wat} weet de app wanneer dit meestal echt gebeurt.`
+    :`Nog één ${één}, dan weet de app wanneer dit meestal echt gebeurt.`);
   const h=dateHint(x.pot,x.it,kind,x.toeId);
-  if(h&&h.a!==0){
-    /* Bij een venster hangt de afwijking aan de rand waar hij overheen ging, niet aan de startdatum. */
-    const basis=h.a>0?vensterEind(x.date,x.span||0):new Date(x.date);
-    const exp=new Date(basis);exp.setDate(exp.getDate()+h.a);
-    const pm=h.spread>0?' (±'+h.spread+(h.spread===1?' dag':' dagen')+')':'';
-    delen.push(`Verwacht rond <b style="color:var(--text)">${exp.getDate()+' '+MND[exp.getMonth()]}</b>${pm}`);
-  }
+  /* Bij een venster hangt de afwijking aan de rand waar hij overheen ging, niet aan de startdatum. */
+  const datumZin=(h&&h.a!==0)?hintDatumZin(h,h.a>0?vensterEind(x.date,x.span||0):new Date(x.date),kind):'';
   const am=amountHint(x.pot,x.it,kind,x.toeId);
-  if(am&&Math.abs(am.a)>=0.01){
-    const pm=am.spread>=0.01?' (±'+eur(am.spread)+')':'';
-    delen.push(`meestal <b style="color:var(--text)">${eur(Math.abs(am.a))} ${am.a>0?'meer':'minder'}</b> dan gepland${pm}`);
-  }
-  return delen.length?rij(delen.join(' · ')):'';
+  const bedragZin=(am&&Math.abs(am.a)>=0.01)?`<b style="color:var(--text)">${eur(Math.abs(am.a))} ${am.a>0?'meer':'minder'}</b> dan gepland`:'';
+  if(datumZin&&bedragZin)return rij(`${datumZin}, en ${bedragZin}`);
+  if(datumZin)return rij(datumZin);
+  return bedragZin?rij(`Meestal ${bedragZin}`):'';
+}
+/* Hetzelfde geleerd-uit-je-historie-trucje, maar dan voor loon. Loon hangt niet aan een kostenpost, dus
+   er is geen log met payIso om op te filteren. We lopen de loondagen van het afgelopen jaar langs en
+   kijken welke ontvangst eraan hangt — loonEntryFor pakt ook losse ontvangsten zonder koppeling op. */
+function loonOffsets(){
+  const tot=vandaag();const van=new Date(tot);van.setFullYear(van.getFullYear()-1);
+  const out=[];
+  loonDatesInRange(van,tot).forEach(d=>{
+    const e=loonEntryFor(isoDate(d));if(!e||!e.date)return;
+    const q=parseISO(e.date);if(!q)return;
+    const n=afwijkingDagen(q,d,0);
+    if(isFinite(n)&&Math.abs(n)<=31)out.push(n);
+  });
+  return out;
+}
+function loonDateHint(alle){
+  const offs=(alle||loonOffsets()).slice(-6);
+  if(offs.length<2)return null;
+  const a=Math.round(offs.reduce((x,y)=>x+y,0)/offs.length);
+  const spread=Math.round((Math.max(...offs)-Math.min(...offs))/2);
+  return{a,spread};
+}
+/* Regel onder een loondag die nog moet komen. Bij loon stond hier nooit een voorspelling, terwijl je
+   loon net zo goed structureel een dag of wat na je ingestelde loondag kan binnenkomen. Komt het wél
+   steeds op tijd, dan zeggen we dát — anders lijkt het alsof de app bij loon niet meedenkt. */
+function loonHintRow(x){
+  if(!featOn('hints'))return '';
+  const rij=t=>`<div class="muted" style="font-size:12px;margin-top:5px">${t}</div>`;
+  const offs=loonOffsets(),n=offs.length;
+  if(n<2)return rij(n===0
+    ?'Na twee ingevulde loonbetalingen weet de app wanneer je loon meestal echt komt.'
+    :'Nog één loonbetaling, dan weet de app wanneer je loon meestal echt komt.');
+  const h=loonDateHint(offs);
+  if(!h)return '';
+  return rij(h.a!==0?hintDatumZin(h,x.date,'ontvangst'):'Je loon komt meestal op je loondag.');
 }
 /* Jaarkost / 12 → eenmalige grote uitgaven worden over 12 maanden uitgesmeerd i.p.v. blind als maandbedrag genomen. */
 function potAvg(p){const s=sumLast12(p.log);return s==null?null:s/12;}
@@ -2607,9 +2693,9 @@ function renderBetalingen(){
   const to=wide?addMonths(now,24):monthEnd(addMonths(now,1));
   let payments=paymentRows(from,to).map(x=>({...x,kind:'payment'}));
   let receipts=receiptRows(from,to);
-  // Onafgevinkt loon alleen in het nabije venster tonen; afgevinkt loon mag ook in de brede weergave verschijnen.
-  const nearFrom=monthStart(now),nearTo=monthEnd(addMonths(now,1));
-  let loon=loonRows(from,to).filter(x=>x.received||(x.date>=nearFrom&&x.date<=nearTo));
+  /* Loon kijkt even ver terug en vooruit als de rest van deze pagina. Het viel hiervoor na de maandwissel
+     stilzwijgend weg, waardoor een loondag die je nooit hebt afgevinkt onbereikbaar werd. */
+  let loon=loonRows(loonHistorieVan(from),to);
   const thisMonthRows=paymentRows(monthStart(now),monthEnd(now)).map(x=>({...x,kind:'payment'}));
   const thisMonthReceipts=receiptRows(monthStart(now),monthEnd(now));
   const thisMonthLoon=loonRows(monthStart(now),monthEnd(now));
@@ -2664,7 +2750,10 @@ function renderBetalingen(){
     else if(beide&&rec>0)hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b>${open>0?'<span class="muted"> · </span>':''}<b style="color:var(--ok-tx)">+ ${eur(rec)}</b>`;
     else hdrR=`<b style="color:var(--bad-tx)">− ${eur(open)}</b><div class="muted" style="font-size:11px">${betalingFilter==='done'?'afgerond':'open'}</div>`;
     return `<div class="weekhdr"><span><b>${MND[+m-1]} ${y}</b></span><div style="text-align:right">${hdrR}</div></div>${grp[k].map(x=>x.kind==='loon'?loonCard(x):x.kind==='receipt'?receiptCard(x):betalingCard(x)).join('')}`;
-  }).join(''):`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen open betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze periode.':betalingFilter==='done'?'Nog niets afgevinkt deze periode.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Hier komen je vaste lasten te staan, zoals huur en verzekering. Zodra je er één invult, zie je per maand wat eraf gaat.'}</div>`;
+  }).join(''):/* De open-filters kijken tot en met volgende maand, "Afgerond" en "Alles" veel breder. Dat verschil
+   hoor je terug te zien in de tekst — "in deze periode" zei bij de ene filter iets anders dan bij de
+   andere, terwijl het er hetzelfde uitzag. */
+`<div class="empty">${betalingFilter==='open'?'Niets openstaand in deze of volgende maand.':betalingFilter==='pay'?'Geen openstaande betalingen in deze of volgende maand.':betalingFilter==='receive'?'Niets te ontvangen in deze of volgende maand.':betalingFilter==='done'?'Je hebt nog niets afgevinkt.':betalingFilter==='late'?'Niets te laat — je bent bij.':'Hier komen je vaste lasten te staan, zoals huur en verzekering. Zodra je er één invult, zie je per maand wat eraf gaat.'}</div>`;
 }
 /* Op een afgeronde regel staat de datum waarop het geld echt van je rekening ging of binnenkwam. Dat
    is meestal niet de dag die in je kostenpost staat, en dan is onduidelijk welke termijn je nu eigenlijk
@@ -2679,10 +2768,38 @@ function kaartDatumTekst(x){
   if(span>0&&!vast)return termijnDatumTekst(x.date,span,false);
   return DAG[dd.getDay()]+' '+dd.getDate()+' '+MND[dd.getMonth()]+' '+dd.getFullYear();
 }
-function termijnSuffix(x){
+/* "6 dagen eerder" — hoeveel de echte datum afweek van de planning. Leeg als het op tijd was. */
+function afwTekst(x){
   const d=x.dispDate,t=x.date;
-  if(!d||!t||isoDate(d)===isoDate(t))return '';
-  return ` · voor de betaling van ${termijnDatumTekst(t,x.span||0,true)}`;
+  if(!d||!t)return '';
+  const dg=afwijkingDagen(d,t,x.span||0);
+  if(!dg)return '';
+  const n=Math.abs(dg);
+  return `${n} dag${n===1?'':'en'} ${dg<0?'eerder':'later'}`;
+}
+/* Een detailregel: naam links, waarde rechts. De afwijking hangt er als rustige staart achter, zodat de
+   datum zelf het zwaarst blijft wegen. Past het niet op één regel — "30 sep 2026 · 5 dagen later" op een
+   smal scherm — dan valt de staart als geheel naar de volgende regel. Zonder dit brak hij middenin
+   ("5 dagen" boven, "later" eronder), en dat oogt als een fout in plaats van als een tweede regel. */
+function betKV(k,v,staart,kleur){
+  const waarde=staart
+    ? `<span style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><span style="white-space:nowrap">${v}</span><span class="muted" style="white-space:nowrap;font-weight:600">${staart}</span></span>`
+    : v;
+  return `<div class="kv"><span class="k">${k}</span><span class="v"${kleur?` style="color:${kleur}"`:''}>${waarde}</span></div>`;
+}
+/* De drie kaarten op deze pagina hebben dezelfde vorm als een potje: ingeklapt zie je de naam, het
+   bedrag, de status en één korte regel; uitgeklapt staan de details onder elkaar. Alles op één muted
+   regel proppen ("· voor de betaling van 27 aug 2026") werd onleesbaar zodra er iets bijzonders was.
+   Afvinken zit nu in het rondje rechtsboven, net als bij potjes — tikken op de kaart klapt hem open. */
+function betKaart(o){
+  const tog=`onclick="document.getElementById('${o.id}').classList.toggle('open')"`;
+  const chev=`<span class="cvx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px;display:block"><path d="M6 9.5l6 6 6-6"/></svg></span>`;
+  return `<div class="pot" id="${o.id}"><div class="ph" ${tog}><div style="flex:1;min-width:0"><b>${o.naam}</b></div><div class="check ${o.aan?'on':''}" onclick="event.stopPropagation();${o.actie}">${o.aan?'✓':''}</div></div>
+    <div class="pot-sum" ${tog}><div style="flex:1;min-width:0">
+      <div class="row between" style="gap:10px;align-items:baseline"><span style="font-size:20px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;color:${o.kleur}">${o.bedrag}</span><span class="badge ${o.st.cls}" style="flex:0 0 auto">${o.st.txt}</span></div>
+      <div class="muted" style="margin-top:3px;font-size:13px">${o.regel}</div>${o.hint||''}
+    </div>${chev}</div>
+    <div class="sub"><div class="mini"><div class="mini-h">Details</div>${o.rijen}</div><button class="ghost" style="width:100%" onclick="${o.actie}">${o.knop}</button></div></div>`;
 }
 function betalingCard(x){
   const st=x.skipped?{cls:'b-ok',txt:'Overgeslagen',dot:'var(--muted)'}
@@ -2691,27 +2808,61 @@ function betalingCard(x){
     :{cls:'b-wait',txt:'Open',dot:'var(--wait-tx)'};
   /* Deze regel kijkt vooruit: van dit bedrag komt straks een deel terug. Zodra de betaling afgerond
      of overgeslagen is heeft de toeslag zijn eigen regel op deze pagina, en is dit alleen nog ruis. */
-  const toe=(x.toeslag>0&&!x.paid&&!x.skipped)?`<div class="muted" style="color:var(--ok-tx);margin-top:4px">Toeslag/vergoeding apart: ${eur(x.toeslag)}</div>`:'';
-  const hintRow=(!x.paid&&!x.skipped)?dateHintRow(x,'uitgave'):'';const dd=x.dispDate||x.date;
-  const bedrag=x.skipped?`<span style="color:var(--muted);text-decoration:line-through">${eur(x.net)}</span>`:`− ${eur(x.net)}`;
-  const actie=x.skipped?'Tik om weer op openstaand te zetten':x.paid?'Tik om terug op open te zetten':'Tik om betaald te zetten';
-  return `<div class="shift" onclick="toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.it.n)}</b><div class="muted">${kaartDatumTekst(x)} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;white-space:nowrap;color:${x.skipped?'var(--muted)':'var(--bad-tx)'}">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${toe}${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.paid?'on':''}" onclick="event.stopPropagation();toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')">${x.paid?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
+  const open=!x.paid&&!x.skipped;
+  const rijen=betKV('Potje',esc(x.pot.n))
+    +betKV('Gepland',termijnDatumTekst(x.date,x.span||0,true))
+    +(x.paid?betKV('Betaald',termijnDatumTekst(x.dispDate||x.date,0,true),afwTekst(x)):'')
+    +betKV('Bedrag',eur(x.net))
+    /* Van dit bedrag komt straks een deel terug. Is de betaling afgerond of overgeslagen, dan heeft de
+       toeslag zijn eigen regel op deze pagina en is dit alleen nog ruis. */
+    +((x.toeslag>0&&open)?betKV('Toeslag komt apart terug','+ '+eur(x.toeslag),'','var(--ok-tx)'):'');
+  return betKaart({
+    id:`bet_${x.pi}_${x.it.id}_${x.iso}`,naam:esc(x.it.n),st,
+    bedrag:x.skipped?`<span style="text-decoration:line-through">${eur(x.net)}</span>`:`− ${eur(x.net)}`,
+    kleur:x.skipped?'var(--muted)':'var(--bad-tx)',
+    regel:`${kaartDatumTekst(x)} · ${esc(x.pot.n)}`,
+    hint:open?dateHintRow(x,'uitgave'):'',rijen,aan:!!x.paid,
+    actie:`toggleItemPaid(${x.pi},'${x.it.id}','${x.iso}')`,
+    knop:x.skipped?'Weer op openstaand zetten':x.paid?'Terug op open zetten':'Markeer als betaald'
+  });
 }
 function loonCard(x){
   const st=x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}:{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
-  const amt=x.amount!=null?('+ '+eur(x.amount)):'nog invullen';
-  const action=x.received?`openLoonLog('${x.entry.id}')`:`openMarkLoonSheet('${x.iso}')`;const dd=x.dispDate||x.date;
-  return `<div class="shift" onclick="${action}"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${DAG[dd.getDay()]} ${dd.getDate()} ${MND[dd.getMonth()]} ${dd.getFullYear()}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.amount!=null?'var(--ok-tx)':'var(--muted)'};white-space:nowrap">${amt}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div><div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();${action}">${x.received?'✓':''}</div><span class="muted">${x.received?'Tik om te bewerken':'Tik om ontvangen te zetten'}</span></div></div>`;
+  /* Op een ontvangen loondag stond alleen de echte datum, waardoor je loondag verschoven leek. Op een
+     loondag die nog moet komen stond niets, terwijl de app allang weet dat je loon meestal een dag of
+     wat later binnenkomt. Allebei nu zichtbaar, net als bij de andere regels op deze pagina. */
+  const rijen=betKV('Loondag',termijnDatumTekst(x.date,0,true))
+    +(x.received?betKV('Ontvangen',termijnDatumTekst(x.dispDate||x.date,0,true),afwTekst(x)):'')
+    +betKV('Bedrag',x.amount!=null?'+ '+eur(x.amount):'nog invullen','',x.amount!=null?'var(--ok-tx)':'var(--muted)')
+    +((x.entry&&x.entry.note)?betKV('Notitie',esc(x.entry.note)):'');
+  return betKaart({
+    id:`loon_${x.entry?x.entry.id:x.iso}`,naam:esc(x.label),st,
+    bedrag:x.amount!=null?'+ '+eur(x.amount):'nog invullen',
+    kleur:x.amount!=null?'var(--ok-tx)':'var(--muted)',
+    regel:kaartDatumTekst(x),hint:x.received?'':loonHintRow(x),rijen,aan:!!x.received,
+    actie:x.received?`openLoonLog('${x.entry.id}')`:`openMarkLoonSheet('${x.iso}')`,
+    knop:x.received?'Loon bewerken':'Invullen wat je kreeg'
+  });
 }
 function receiptCard(x){
   const st=x.skipped?{cls:'b-ok',txt:'Komt niet',dot:'var(--muted)'}
     :x.received?{cls:'b-ok',txt:'Ontvangen',dot:'var(--green)'}
     :x.telaat?{cls:'b-bad',txt:'Te laat',dot:'var(--bad-tx)'}
     :{cls:'b-wait',txt:'Verwacht',dot:'var(--wait-tx)'};
-  const hintRow=(!x.received&&!x.skipped)?dateHintRow(x,'ontvangst'):'';const dd=x.dispDate||x.date;
-  const bedrag=x.skipped?`<span style="text-decoration:line-through">${eur(x.amount)}</span>`:`+ ${eur(x.amount)}`;
-  const actie=x.skipped?'Tik om weer op verwacht te zetten':x.received?'Tik om terug op verwacht te zetten':'Tik om ontvangen te zetten';
-  return `<div class="shift" onclick="toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}','${x.toeId}')"><div class="head"><div><b><span class="dot" style="background:${st.dot}"></span>${esc(x.label)}</b><div class="muted">${kaartDatumTekst(x)} · ${esc(x.pot.n)}${termijnSuffix(x)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:${x.skipped?'var(--muted)':'var(--ok-tx)'};white-space:nowrap">${bedrag}</div><div class="badge ${st.cls}" style="margin-top:5px">${st.txt}</div></div></div>${hintRow}<div class="row" style="gap:8px;align-items:center;margin-top:10px"><div class="check ${x.received?'on':''}" onclick="event.stopPropagation();toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}','${x.toeId}')">${x.received?'✓':''}</div><span class="muted">${actie}</span></div></div>`;
+  const rijen=betKV('Potje',esc(x.pot.n))
+    +betKV('Hoort bij',esc(x.it.n))
+    +betKV('Verwacht',termijnDatumTekst(x.date,x.span||0,true))
+    +(x.received?betKV('Ontvangen',termijnDatumTekst(x.dispDate||x.date,0,true),afwTekst(x)):'')
+    +betKV('Bedrag','+ '+eur(x.amount),'',x.skipped?'var(--muted)':'var(--ok-tx)');
+  return betKaart({
+    id:`ontv_${x.pi}_${x.it.id}_${x.toeId||'x'}_${x.iso}`,naam:esc(x.label),st,
+    bedrag:x.skipped?`<span style="text-decoration:line-through">${eur(x.amount)}</span>`:`+ ${eur(x.amount)}`,
+    kleur:x.skipped?'var(--muted)':'var(--ok-tx)',
+    regel:`${kaartDatumTekst(x)} · ${esc(x.pot.n)}`,
+    hint:(!x.received&&!x.skipped)?dateHintRow(x,'ontvangst'):'',rijen,aan:!!x.received,
+    actie:`toggleItemReceived(${x.pi},'${x.it.id}','${x.iso}','${x.toeId}')`,
+    knop:x.skipped?'Weer op verwacht zetten':x.received?'Terug op verwacht zetten':'Markeer als ontvangen'
+  });
 }
 
 function renderAlleUitgaven(){
@@ -3719,7 +3870,8 @@ async function scheduleLoonMeldingen(){if(!(NATIVE&&P.LocalNotifications))return
   const fmtD=d=>d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear();
   const daysTo=(at,doel)=>Math.round((doel-new Date(at.getFullYear(),at.getMonth(),at.getDate()))/86400000);
   let id=1000;const CL=meldCfgOf('loon');
-  if(moduleOn('loon')&&CL.on&&CL.reminders.length){const[hh,mm]=typeTime(CL);upcomingPaydays(12).forEach(pd=>CL.reminders.forEach(r=>{if(id>=1200)return;const at=remDate(pd,r,hh,mm);const dagen=Math.max(0,daysTo(at,pd));const ctx={naam:'Loon',datum:fmtD(pd),dagen:String(dagen),wanneer:wanneerTxt(dagen)};const body=CL.tekst?fillTekst(CL.tekst,ctx):(dagen===0?'Vandaag komt je loon binnen. Maak je potjes over bij je bank en vink ze daarna af.':dagen===1?'Morgen ontvang je je loon.':'Over '+dagen+' dagen ontvang je je loon.');push(id++,dagen===0?'Vandaag loon':'Loon komt eraan',body,at);}));}
+  /* Geen enkele werkgever meer in dienst? Dan ook geen "je loon komt eraan" meer. */
+  if(moduleOn('loon')&&CL.on&&CL.reminders.length&&loonVerwacht()){const[hh,mm]=typeTime(CL);upcomingPaydays(12).forEach(pd=>CL.reminders.forEach(r=>{if(id>=1200)return;const at=remDate(pd,r,hh,mm);const dagen=Math.max(0,daysTo(at,pd));const ctx={naam:'Loon',datum:fmtD(pd),dagen:String(dagen),wanneer:wanneerTxt(dagen)};const body=CL.tekst?fillTekst(CL.tekst,ctx):(dagen===0?'Vandaag komt je loon binnen. Maak je potjes over bij je bank en vink ze daarna af.':dagen===1?'Morgen ontvang je je loon.':'Over '+dagen+' dagen ontvang je je loon.');push(id++,dagen===0?'Vandaag loon':'Loon komt eraan',body,at);}));}
   id=1200;const CB=meldCfgOf('betaling');
   if(moduleOn('potjes')&&CB.on&&CB.reminders.length){const[hh,mm]=typeTime(CB);const from=new Date();from.setHours(0,0,0,0);paymentRows(from,addMonths(from,2)).forEach(e=>{if(e.paid)return;CB.reminders.forEach(r=>{if(id>=1400)return;const at=remDate(e.date,r,hh,mm);const dagen=daysTo(at,e.date);const ctx={naam:e.it.n,bedrag:eur(e.net),datum:fmtD(e.date),wanneer:wanneerTxt(dagen)};const body=CB.tekst?fillTekst(CB.tekst,ctx):e.it.n+': '+eur(e.net)+' wordt '+wanneerTxt(dagen)+' afgeschreven.';push(id++,dagen<=0?'Betaling vandaag':dagen===1?'Betaling morgen':'Betaling over '+dagen+' dagen',body,at);});});}
   id=1400;const CT=meldCfgOf('toeslag');
@@ -3745,7 +3897,7 @@ function renderMeldTypes(){
   c.innerHTML=MELD_TYPES.filter(t=>(!t.mod||moduleOn(t.mod))&&(t.k!=='toeslag'||featOn('toeslag'))&&(t.k!=='document'||featOn('documenten'))&&(t.k!=='controle'||featOn('comp'))).map(t=>{
     const cfg=meldCfgOf(t.k);
     const sum=cfg.on?(cfg.reminders.length?lijstTekst(cfg.reminders.map(remShort)):'geen herinneringen')+(cfg.tijd?', om '+cfg.tijd:''):'Uit';
-    return `<div class="mrow" onclick="openMeldSheet('${t.k}')"><span style="color:var(--accent);padding-left:6px">${ico(t.ico,'width:20px;height:20px;margin:0 6px 0 0')}</span><div style="flex:1;min-width:0"><b>${t.label}</b><div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sum}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`;
+    return `<div class="mrow" onclick="openMeldSheet('${t.k}')"><span style="color:var(--accent);padding-left:6px">${ico(t.ico,'width:20px;height:20px;margin:0 6px 0 0')}</span><div style="flex:1;min-width:0"><b>${t.label}</b><div class="muted" style="font-size:12.5px;line-height:1.35">${sum}</div></div><span class="muted chevwrap"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg></span></div>`;
   }).join('');
 }
 function openMeldSheet(k){
@@ -3993,6 +4145,7 @@ function bhAdd(){const v=val('bhNew').trim();if(!v)return;const b=BEHEER.find(x=
     if(window._bk==='werkgevers'&&!db.werkCfg[v]){const c=defWerkCfg();c.loon=Object.assign(defLoonCfg(),db.loon||{});
       /* Staat er al iemand op "in dienst"? Dan komt de nieuwe erbij als uit dienst — je kiest zelf of je wisselt. */
       if(alEen)c.actief=false;
+      stempelEersteLoondag(c);
       db.werkCfg[v]=c;}
   }
   document.getElementById('bhNew').value='';haptic();save();renderBhList();if(isNew&&window._bk==='werkgevers')openWerkCfg(v,'beheer');}
@@ -4169,6 +4322,10 @@ function wcSaveDoen(){
   /* Maar één werkgever tegelijk in dienst: de rest gaat automatisch uit dienst. */
   let overgenomen='';
   if(c.actief!==false)(db.werkgevers||[]).forEach(x=>{if(x!==w&&db.werkCfg[x]&&db.werkCfg[x].actief!==false){db.werkCfg[x].actief=false;overgenomen=x;}});
+  /* Ging deze werkgever van "uit dienst" naar "in dienst"? Dan is dit een baanwissel — ook als je er een
+     paar weken tussen zat en er dus niemand was om over te nemen. */
+  const wasAct=db.werkCfg[w]?db.werkCfg[w].actief!==false:false;
+  if(!wasAct&&c.actief!==false)stempelEersteLoondag(c);
   db.werkCfg[w]=c;
   const cv=String(window._wcContract||'').replace(',','.').trim();
   if(cv==='')delete db.contract[w];else db.contract[w]=parseFloat(cv)||0;
@@ -4682,6 +4839,15 @@ async function initNative(){
     if(id>=1000&&id<1200)dest='loon';           // loon-meldingen
     else if(id>=1200&&id<1500)dest='betalingen'; // betaling + toeslag → Betalingen
     else if(id>=1500&&id<1600)dest='documenten'; // document-meldingen
+    else if(id>=1700&&id<1800)dest='controle';   // "Uren controleren" → Uren + het controlescherm
+    /* Zonder deze regel viel de controle-melding in de restcategorie en kwam je op Start uit —
+       precies het scherm waar je niets kunt afvinken. */
+    if(dest==='controle'){
+      const kan=moduleOn('uren')&&featOn('comp');
+      go(kan?'uren':'start');
+      if(kan)setTimeout(()=>openControle(''),200);
+      return;
+    }
     const ok=dest==='documenten'?featOn('documenten'):(dest&&moduleOn(dest));
     go(ok?dest:'start');
   });}catch(e){}

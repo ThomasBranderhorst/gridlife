@@ -301,6 +301,129 @@ const loonLijst=a=>{
     !r.fout&&r.extra.labels.length===2&&r.extra.eigen===true, JSON.stringify(r.extra||r.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 13. Twee bijbanen tegelijk — ruim één op de acht werkende Nederlanders heeft dit.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const AH={mode:'month',dag:4,intervalWeeks:4,start:''};
+  const SIN={mode:'month',dag:25,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['Albert Heijn','Sincere'],
+    werkCfg:Object.assign(werk('Albert Heijn',AH),werk('Sincere',SIN)),
+    loon:SIN,
+    loonLog:[{id:'a1',date:'2026-06-04',amount:480,payIso:'2026-06-04',werk:'Albert Heijn'},
+             {id:'s1',date:'2026-06-25',amount:1810,payIso:'2026-06-25',werk:'Sincere'},
+             {id:'a2',date:'2026-07-04',amount:495,payIso:'2026-07-04',werk:'Albert Heijn'},
+             {id:'s2',date:'2026-07-25',amount:1805,payIso:'2026-07-25',werk:'Sincere'}],
+    potjes:[{n:'Vaste lasten',saldo:0,maand:0,items:[{id:'i1',n:'Huur',v:820,fn:1,fu:'m',due:nu.slice(0,8)+'01'}],log:[]}]
+  });
+  schermen(data,'twee bijbanen');
+
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const rijen=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-2,1),new Date(nu2.getFullYear(),nu2.getMonth()+2,0));
+    return{
+      allebei:[...new Set(rijen.map(x=>x.werk))].filter(Boolean).sort(),
+      naamInLabel:rijen.every(x=>!x.werk||x.label.indexOf(x.werk)>=0),
+      dubbel:rijen.length!==new Set(rijen.map(x=>x.iso+'|'+x.werk)).size,
+      /* Eén ontvangst mag niet bij twee banen tegelijk als "binnen" gelden. */
+      entries:rijen.filter(x=>x.entry).map(x=>x.entry.id),
+      hoofd:a.hoofdBaan()
+    };
+  });
+  const e=r.extra||{};
+  meld('twee bijbanen: allebei de banen leveren loondagen',
+    !r.fout&&JSON.stringify(e.allebei)==='["Albert Heijn","Sincere"]', JSON.stringify(e.allebei||r.fout));
+  meld('twee bijbanen: elke regel noemt van welke baan hij is',
+    !r.fout&&e.naamInLabel===true, JSON.stringify(e.naamInLabel));
+  meld('twee bijbanen: geen dubbele regels', !r.fout&&e.dubbel===false, JSON.stringify(e.dubbel));
+  meld('twee bijbanen: geen ontvangst die bij twee banen tegelijk hoort',
+    !r.fout&&e.entries.length===new Set(e.entries).size, JSON.stringify(e.entries));
+  meld('twee bijbanen: de best betaalde baan wordt hoofdbaan',
+    !r.fout&&e.hoofd==='Sincere', String(e.hoofd));
+
+  /* De hoofdbaan mag niet spontaan omslaan — dan zou je twee keer per maand moeten overmaken. */
+  const plak=run(data,a=>{
+    const eerst=a.hoofdBaanVast();
+    a.db.loonLog.push({id:'a9',date:a.isoDate(a.vandaag()),amount:9999,werk:'Albert Heijn'});
+    return{eerst,daarna:a.hoofdBaan()};
+  });
+  meld('twee bijbanen: de hoofdbaan blijft plakken, ook als de andere ineens meer betaalt',
+    !plak.fout&&plak.extra.eerst===plak.extra.daarna, JSON.stringify(plak.extra||plak.fout));
+
+  /* En het echte probleem: vaste lasten die je pas na je tweede loon rond krijgt. */
+  const delen=run(data,a=>{
+    const p=a.db.potjes[0];const t=a.potTot(p);
+    a.db.overboek[a.currentPeriodKey()]={0:{done:false,amt:480}};
+    const na1={gedaan:a.obGedaan(0,p),vol:a.obVol(0,p)};
+    a.db.overboek[a.currentPeriodKey()]={0:{done:true,amt:t}};
+    const na2={gedaan:a.obGedaan(0,p),vol:a.obVol(0,p)};
+    return{t,na1,na2};
+  });
+  meld('gesplitst inkomen: 480 van 820 overgemaakt telt als deels, niet als klaar',
+    !delen.fout&&delen.extra.na1.gedaan===480&&delen.extra.na1.vol===false, JSON.stringify(delen.extra||delen.fout));
+  meld('gesplitst inkomen: pas bij het hele bedrag staat het vinkje vol',
+    !delen.fout&&delen.extra.na2.vol===true, JSON.stringify(delen.extra||delen.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 14. AOW plus pensioen: twee vaste inkomsten, geen werkgever-gevoel, wel hetzelfde probleem.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const AOW={mode:'month',dag:23,intervalWeeks:4,start:''};
+  const PEN={mode:'month',dag:1,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['AOW','Pensioenfonds'],
+    werkCfg:Object.assign(werk('AOW',AOW),werk('Pensioenfonds',PEN)),
+    loon:AOW,
+    loonLog:[{id:'x1',date:'2026-06-23',amount:1400,payIso:'2026-06-23',werk:'AOW'},
+             {id:'x2',date:'2026-07-01',amount:620,payIso:'2026-07-01',werk:'Pensioenfonds'}]
+  });
+  schermen(data,'AOW en pensioen');
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const rijen=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-2,1),new Date(nu2.getFullYear(),nu2.getMonth()+2,0));
+    return{bronnen:a.loonBronnen().length,binnen:rijen.filter(x=>x.received).length,hoofd:a.hoofdBaan()};
+  });
+  meld('AOW en pensioen: allebei worden als eigen inkomstenbron gevolgd',
+    !r.fout&&r.extra.bronnen===2&&r.extra.binnen===2, JSON.stringify(r.extra||r.fout));
+  meld('AOW en pensioen: de grootste inkomstenbron zet het ritme',
+    !r.fout&&r.extra.hoofd==='AOW', String(r.extra&&r.extra.hoofd));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 15. Stoppen bij één van je twee banen: de andere loopt gewoon door.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const A={mode:'month',dag:4,intervalWeeks:4,start:''};
+  const B={mode:'month',dag:25,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['Bezorgdienst','Sincere'],
+    werkCfg:Object.assign(werk('Bezorgdienst',Object.assign({},A,{tot:nu}),false),werk('Sincere',B,true)),
+    loon:B,
+    loonLog:[{id:'b1',date:'2026-06-04',amount:300,payIso:'2026-06-04',werk:'Bezorgdienst'}]
+  });
+  schermen(data,'één van twee banen gestopt');
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const toekomst=a.loonRows(nu2,new Date(nu2.getFullYear(),nu2.getMonth()+3,0));
+    const verleden=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-3,1),nu2);
+    return{
+      toekomstBanen:[...new Set(toekomst.map(x=>x.werk))].filter(Boolean),
+      oudLoonNogZichtbaar:verleden.some(x=>x.entry&&x.entry.id==='b1'),
+      hoofd:a.hoofdBaan()
+    };
+  });
+  meld('gestopte baan: geen nieuwe loondagen meer van de baan die je kwijt bent',
+    !r.fout&&JSON.stringify(r.extra.toekomstBanen)==='["Sincere"]', JSON.stringify(r.extra||r.fout));
+  meld('gestopte baan: wat je daar verdiende blijft wel gewoon staan',
+    !r.fout&&r.extra.oudLoonNogZichtbaar===true, JSON.stringify(r.extra));
+  meld('gestopte baan: de overgebleven baan wordt vanzelf de hoofdbaan',
+    !r.fout&&r.extra.hoofd==='Sincere', String(r.extra&&r.extra.hoofd));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

@@ -95,7 +95,16 @@ const ACTIES=[
  ['boeking weg', (a,r)=>{const p=a.db.potjes[Math.floor(r()*a.db.potjes.length)];
    if(p&&p.log&&p.log.length)p.log.splice(Math.floor(r()*p.log.length),1);}],
  ['buffer omzetten', (a,r)=>{const p=a.db.potjes[Math.floor(r()*a.db.potjes.length)];const it=p&&p.items&&p.items[Math.floor(r()*p.items.length)];
-   if(it)it.buffer=!it.buffer;}]
+   if(it)it.buffer=!it.buffer;}],
+ ['hoofdbaan omzetten', (a,r)=>{const act=a.db.werkgevers.filter(w=>a.werkCfgOf(w).actief!==false);
+   a.db.hoofdwerk=r()<0.2?'':(act[Math.floor(r()*act.length)]||'');}],
+ ['laatste loondag zetten', (a,r)=>{const w=a.db.werkgevers[Math.floor(r()*a.db.werkgevers.length)];
+   const c=w&&a.db.werkCfg[w];if(c&&c.loon)c.loon.tot=r()<0.4?'':'2026-0'+(1+Math.floor(r()*9))+'-15';}],
+ ['deels overmaken', (a,r)=>{const i=Math.floor(r()*a.db.potjes.length);const p=a.db.potjes[i];if(!p)return;
+   const pk=a.currentPeriodKey();a.db.overboek[pk]=a.db.overboek[pk]||{};
+   a.db.overboek[pk][i]={done:r()<0.3,amt:Math.round(r()*400)};}],
+ ['overmaking terugdraaien', (a,r)=>{const pk=a.currentPeriodKey();const d=a.db.overboek[pk];
+   if(d){const ks=Object.keys(d);if(ks.length)delete d[ks[Math.floor(r()*ks.length)]];}}]
 ];
 
 const SCHERMEN=['start','uren','potjes','betalingen','loon','recept','meer','instellingen','documenten'];
@@ -106,7 +115,19 @@ function controleer(a){
   const fout=[];
   SCHERMEN.forEach(t=>{try{a.go(t);}catch(e){fout.push('scherm '+t+': '+e.message);}});
 
-  a.db.potjes.forEach((p,i)=>{if(!isFinite(+p.saldo))fout.push('potje '+i+' heeft een saldo dat geen getal is: '+p.saldo);});
+  a.db.potjes.forEach((p,i)=>{
+    if(!isFinite(+p.saldo))fout.push('potje '+i+' heeft een saldo dat geen getal is: '+p.saldo);
+    const g=a.obGedaan(i,p);
+    if(!isFinite(g)||g<0)fout.push('potje '+i+' heeft een onmogelijk overgemaakt bedrag: '+g);
+    if(a.obVol(i,p)&&g<=0&&a.potTot(p)>0)fout.push('potje '+i+' staat als volledig overgemaakt met 0 euro');
+  });
+  /* Er mag altijd maar één hoofdbaan zijn, en die moet in dienst zijn. */
+  {
+    const h=a.hoofdBaan();
+    const act=(a.db.werkgevers||[]).filter(w=>a.werkCfgOf(w).actief!==false);
+    if(h&&act.indexOf(h)<0)fout.push('hoofdbaan "'+h+'" staat niet in dienst');
+    if(!h&&act.length)fout.push('werkgevers in dienst maar geen hoofdbaan aangewezen');
+  }
 
   let bet=[],ont=[],lon=[];
   try{bet=a.paymentRows(new Date(2026,0,1),new Date(2027,6,1));}catch(e){fout.push('betalingen berekenen: '+e.message);}
@@ -197,12 +218,19 @@ meld(RONDES+' rondes van '+STAPPEN+' willekeurige handelingen, herstart en gecon
   });
   const res=run(vier,a=>{
     const fout=controleer(a);
-    return{fout,actief:a.db.werkgevers.filter(w=>a.werkCfgOf(w).actief!==false).length};
+    const nu=a.vandaag();
+    const rijen=a.loonRows(new Date(nu.getFullYear(),nu.getMonth(),1),new Date(nu.getFullYear(),nu.getMonth()+2,0));
+    return{fout,actief:a.db.werkgevers.filter(w=>a.werkCfgOf(w).actief!==false).length,
+      hoofd:a.hoofdBaan(),banenInLijst:[...new Set(rijen.map(x=>x.werk))].filter(Boolean).length};
   });
   meld('vier bijbanen tegelijk: geen kapot scherm, geen dubbele kaart',
     !res.fout&&res.extra.fout.length===0, JSON.stringify(res.extra&&res.extra.fout||res.fout));
-  meld('vier bijbanen tegelijk: de app dwingt er nog steeds één actieve werkgever af',
-    !res.fout&&res.extra.actief===1, 'actief: '+(res.extra&&res.extra.actief));
+  meld('vier bijbanen tegelijk: alle vier blijven in dienst staan',
+    !res.fout&&res.extra.actief===4, 'actief: '+(res.extra&&res.extra.actief));
+  meld('vier bijbanen tegelijk: alle vier komen met eigen loondagen in het overzicht',
+    !res.fout&&res.extra.banenInLijst===4, 'banen in de lijst: '+(res.extra&&res.extra.banenInLijst));
+  meld('vier bijbanen tegelijk: er is precies één hoofdbaan aangewezen',
+    !res.fout&&!!res.extra.hoofd, 'hoofdbaan: '+(res.extra&&res.extra.hoofd));
 }
 
 console.log(check.join('\n'));

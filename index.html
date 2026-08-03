@@ -3713,7 +3713,12 @@ function renderLoon(){
   edit.style.display=w?'none':'block';
   if(w){
     const ws=esc(w).replace(/'/g,"\\'");
-    bron.innerHTML=`<div class="kv"><span class="k">${bronWoord(false,true)}</span><span class="v">${esc(w)}</span></div>
+    /* Met twee banen tegelijk stond hier alleen je hoofdbaan, alsof die andere niet bestond — terwijl de
+       PDF ze allebei netjes noemt. Nu zegt dit scherm hetzelfde: wie het ritme bepaalt, en wie er verder
+       nog meetellen. Elke baan houdt zijn eigen loondag; die zie je per baan op Betalingen. */
+    const anderen=(db.werkgevers||[]).filter(x=>x!==w&&werkCfgOf(x).actief!==false);
+    bron.innerHTML=`<div class="kv"><span class="k">${anderen.length?(moduleOn('uren')?'Hoofdbaan':'Bepaalt je ritme'):bronWoord(false,true)}</span><span class="v">${esc(w)}</span></div>
+      ${anderen.length?`<div class="kv stack"><span class="k">${moduleOn('uren')?'Ook in dienst bij':'Andere inkomsten'}</span><span class="v">${anderen.map(esc).join(', ')}</span></div>`:''}
       <div class="kv"><span class="k">Hoe vaak</span><span class="v">${loonFreqTekst(L)}</span></div>
       <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L,true)}</span></div>
       ${L.mode!=='manual'?`<div class="kv stack"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}

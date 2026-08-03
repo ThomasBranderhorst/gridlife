@@ -566,16 +566,24 @@ function migrate(){
   (db.shifts||[]).forEach(s=>{if(!geldigeDatum(s.date)){const n=new Date();s.date=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}});
   // shifts: comp(text) -> comps[]
   (db.shifts||[]).forEach(s=>{if(!Array.isArray(s.comps)){s.comps=[];if(s.comp){s.comps.push({amt:s.comp,date:'',note:''});}delete s.comp;}});
-  // Uren-tegoed: los boekje i.p.v. per-dienst mist/comps. Eenmalige migratie: bestaande mist→+tegoed, comps→−tegoed.
-  if(!Array.isArray(db.tegoed)){
-    db.tegoed=[];
-    (db.shifts||[]).forEach(s=>{
-      const m=parseDuur(s.mist);
-      if(m&&m>0)db.tegoed.push({id:rnd(),date:s.date,min:m,note:('Gemiste uren'+(s.note?' · '+s.note:'')),werk:s.werk||''});
-      (s.comps||[]).forEach(c=>{const cm=parseDuur(c.amt);if(cm&&cm>0)db.tegoed.push({id:rnd(),date:c.date||s.date,min:-cm,note:'Ingelost',werk:s.werk||''});});
-      s.mist='';s.comps=[];
-    });
-    db.tegoed.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  /* Uren-tegoed: los boekje i.p.v. per-dienst mist/comps. Dit stond achter "bestaat db.tegoed nog niet",
+     dus het draaide precies één keer in het leven van een installatie. Zet je daarna een oude back-up
+     terug, dan komen er diensten binnen mét mist/comps en werd dat nooit meer omgezet: je gemiste uren
+     stonden dan in het bestand maar nergens in de app. Nu kijkt hij naar de diensten zelf, dus ook
+     ingeladen diensten worden alsnog omgezet. Voor bestaande gebruikers verandert er niets: hun
+     diensten hebben mist/comps allang leeg. */
+  if(!Array.isArray(db.tegoed))db.tegoed=[];
+  {
+    const nog=(db.shifts||[]).filter(s=>parseDuur(s.mist)>0||(s.comps||[]).some(c=>parseDuur(c.amt)>0));
+    if(nog.length){
+      nog.forEach(s=>{
+        const m=parseDuur(s.mist);
+        if(m&&m>0)db.tegoed.push({id:rnd(),date:s.date,min:m,note:('Gemiste uren'+(s.note?' · '+s.note:'')),werk:s.werk||''});
+        (s.comps||[]).forEach(c=>{const cm=parseDuur(c.amt);if(cm&&cm>0)db.tegoed.push({id:rnd(),date:c.date||s.date,min:-cm,note:'Ingelost',werk:s.werk||''});});
+        s.mist='';s.comps=[];
+      });
+      db.tegoed.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    }
   }
   // Uren-controle: elke dienst krijgt een ctrl-object (te controleren / klopt / afwijking) i.p.v. los tegoed-boekje.
   // Eenmalige migratie uit oude status (wait/ok/bad) + gekoppeld tegoed. db.tegoed blijft bewaard (niets kwijt).
@@ -5053,7 +5061,11 @@ function mergeImport(d){
     const werkVan=w=>{if(!w)return db.werkgevers[0]||'Werk';return werkMap[w]||bestaandeNaam(db.werkgevers,w)||w;};
     const key=s=>[s.date,s.start,s.end,werkVan(s.werk),s.note||''].join('|');const have=new Set(db.shifts.map(s=>[s.date,s.start,s.end,s.werk,s.note||''].join('|')));
     d.shifts.forEach(s=>{if(!s.date)return;const k=key(s);if(have.has(k)){r.dienstenDubbel++;return;}have.add(k);
-      db.shifts.push({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:werkVan(s.werk),date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''});r.diensten++;});
+      /* mist/comps zijn velden uit een oudere versie. Ze werden hier weggelaten omdat de nieuwe code ze
+         niet meer gebruikt — maar migrate() zet ze juist óm naar db.tegoed, en die draait pas ná de
+         import. Zonder ze mee te nemen verdwenen de gemiste uren uit een oude back-up geruisloos. */
+      const oud={};if(s.mist!=null)oud.mist=s.mist;if(Array.isArray(s.comps))oud.comps=s.comps;if(s.comp!=null)oud.comp=s.comp;
+      db.shifts.push(Object.assign({id:s.id||('s'+Date.now()+Math.random().toString(36).slice(2,7)),werk:werkVan(s.werk),date:s.date,start:s.start||'',end:s.end||'',pauze:+s.pauze||0,status:s.status||'wait',ctrl:(s.ctrl&&typeof s.ctrl==='object')?s.ctrl:undefined,note:s.note||''},oud));r.diensten++;});
   }
   /* Loon-ontvangsten hangen ook aan een werkgevernaam; die moet dezelfde mapping volgen. */
   if(Array.isArray(d.loonLog))d.loonLog.forEach(x=>{if(x&&x.werk&&werkMap[x.werk])x.werk=werkMap[x.werk];});
@@ -5089,7 +5101,10 @@ function mergeImport(d){
        kaarten met hetzelfde id — en omdat bewerken en verwijderen met find/findIndex werken, opende en
        wiste je daarna altijd de eerste. De tweede was niet meer weg te krijgen. */
     const bestaandeIds=new Set(db.documenten.map(y=>y&&y.id).filter(Boolean));
-    d.documenten.forEach(x=>{if(!x||!x.verloopt)return;
+    /* Diensten worden op een geldige datum gecontroleerd, documenten niet — daar werd alleen gekeken óf
+       er iets stond. Een kapotte datum uit een oud of handmatig bewerkt bestand gaf daarna "Nog NaN
+       dagen" en "verloopt NaN undefined NaN" op het scherm. */
+    d.documenten.forEach(x=>{if(!x||!x.verloopt||!geldigeDatum(x.verloopt))return;
       if(db.documenten.some(y=>(y.n||y.type)===(x.n||x.type)&&y.verloopt===x.verloopt)){r.documentenDubbel++;return;}
       const kopie=Object.assign({},x);
       if(!kopie.id||bestaandeIds.has(kopie.id))kopie.id=rnd();

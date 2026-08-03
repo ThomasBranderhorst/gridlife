@@ -721,6 +721,34 @@ const loonLijst=a=>{
     JSON.stringify(r.extra||r.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 23. Een oude back-up terugzetten: niets mag geruisloos verdwijnen of NaN worden.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  /* Diensten uit een oude versie dragen mist/comps; migrate zet die om naar db.tegoed. */
+  const oud=run(basis({shifts:[],tegoed:[]}),a=>{
+    a.mergeImport({shifts:[{id:'s1',werk:'W',date:'2026-06-10',start:'09:00',end:'17:00',pauze:0,mist:'45m',comps:[]}]});
+    a.migrate();
+    return{tegoed:(a.db.tegoed||[]).length,minuten:(a.db.tegoed||[]).reduce((n,t)=>n+(+t.min||0),0)};
+  });
+  meld('oude back-up: gemiste uren uit een oude dienst komen in je tegoed terecht',
+    !oud.fout&&oud.extra.tegoed===1&&oud.extra.minuten===45, JSON.stringify(oud.extra||oud.fout));
+
+  /* Een onbruikbare verloopdatum mag niet als document binnenkomen: die gaf "Nog NaN dagen" op het
+     scherm. Let op: "2026-02-31" hoort hier NIET bij — JavaScript maakt daar 3 maart van, dus dat is
+     een bruikbare datum die alleen anders is opgeschreven. Geen NaN, geen kapot scherm, dus met rust
+     laten in plaats van er een uitzondering voor bouwen. */
+  const kapot=run(basis({documenten:[]}),a=>{
+    a.mergeImport({documenten:[
+      {id:'d1',n:'Paspoort',type:'ID',verloopt:'2031-05-05'},
+      {id:'d2',n:'Rommel',type:'ID',verloopt:'niet-een-datum'},
+      {id:'d3',n:'Leeg',type:'ID',verloopt:'0000-00-00'}]});
+    return a.db.documenten.map(x=>x.n);
+  });
+  meld('oude back-up: documenten met een onbruikbare verloopdatum komen er niet in',
+    !kapot.fout&&JSON.stringify(kapot.extra)==='["Paspoort"]', JSON.stringify(kapot.extra||kapot.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

@@ -575,6 +575,67 @@ const loonLijst=a=>{
     JSON.stringify(metUren.extra||metUren.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 22. Back-up en herstel: het enige vangnet dat de gebruiker heeft.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  /* De app belooft letterlijk dat je pincode niet in het bestand staat. Dan moet dat ook zo zijn. */
+  const pin=run(basis({lock:{on:true,pin:'1234'}}),a=>{
+    const b=a.backupData();
+    return{pin:b.lock.pin,slotAan:b.lock.on,inTekst:JSON.stringify(b).indexOf('1234')>=0};
+  });
+  meld('back-up: de pincode staat NIET in het bestand',
+    !pin.fout&&pin.extra.pin===''&&pin.extra.inTekst===false, JSON.stringify(pin.extra||pin.fout));
+  meld('back-up: dat het slot aanstond blijft wel bewaard',
+    !pin.fout&&pin.extra.slotAan===true, JSON.stringify(pin.extra||pin.fout));
+
+  /* Twee banen, zelfde dag, zelfde bedrag: dat zijn twee betalingen, geen duplicaat. */
+  const zelfde=run(basis({loonLog:[]}),a=>{
+    a.mergeImport({loonLog:[
+      {id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'},
+      {id:'p2',date:'2026-07-25',amount:480,werk:'Sincere'}]});
+    return a.db.loonLog.length;
+  });
+  meld('herstel: zelfde bedrag op zelfde dag van twee banen blijft twee ontvangsten',
+    !zelfde.fout&&zelfde.extra===2, String(zelfde.extra||zelfde.fout));
+
+  /* En een écht duplicaat moet nog steeds wél worden herkend. */
+  const dubbel=run(basis({loonLog:[{id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'}]}),a=>{
+    a.mergeImport({loonLog:[{id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'}]});
+    return a.db.loonLog.length;
+  });
+  meld('herstel: een echt duplicaat wordt nog steeds herkend',
+    !dubbel.fout&&dubbel.extra===1, String(dubbel.extra||dubbel.fout));
+
+  /* Je gekozen hoofdbaan hoort de overstap naar een nieuwe telefoon te overleven. */
+  const hoofd=run(basis({werkgevers:['Jumbo','Sincere'],
+    werkCfg:Object.assign(werk('Jumbo',{mode:'month',dag:4,intervalWeeks:4,start:''}),
+                          werk('Sincere',{mode:'month',dag:25,intervalWeeks:4,start:''}))}),a=>{
+    a.mergeImport({hoofdwerk:'Jumbo'});
+    return a.db.hoofdwerk;
+  });
+  meld('herstel: je gekozen hoofdbaan komt mee uit de back-up',
+    !hoofd.fout&&hoofd.extra==='Jumbo', String(hoofd.extra||hoofd.fout));
+
+  /* Een werkgever met andere schrijfwijze mag geen weesdiensten achterlaten. */
+  const schrijf=run(basis({werkgevers:['Jumbo'],werkCfg:werk('Jumbo',{mode:'month',dag:4,intervalWeeks:4,start:''}),shifts:[]}),a=>{
+    a.mergeImport({werkgevers:['jumbo'],shifts:[{id:'s9',werk:'jumbo',date:'2026-07-02',start:'09:00',end:'17:00',pauze:0}]});
+    return{werkgevers:a.db.werkgevers,dienstWerk:(a.db.shifts[0]||{}).werk};
+  });
+  meld('herstel: een dienst van "jumbo" komt onder het bestaande "Jumbo" te staan',
+    !schrijf.fout&&schrijf.extra.werkgevers.length===1&&schrijf.extra.dienstWerk==='Jumbo',
+    JSON.stringify(schrijf.extra||schrijf.fout));
+
+  /* Twee keer hetzelfde document met een andere datum mag geen dubbel id opleveren. */
+  const doc=run(basis({documenten:[{id:'d1',n:'Paspoort',type:'ID',verloopt:'2031-01-01'}]}),a=>{
+    a.mergeImport({documenten:[{id:'d1',n:'Paspoort',type:'ID',verloopt:'2026-01-01'}]});
+    const ids=a.db.documenten.map(x=>x.id);
+    return{aantal:ids.length,uniek:ids.length===new Set(ids).size};
+  });
+  meld('herstel: twee versies van hetzelfde document krijgen elk een eigen id',
+    !doc.fout&&doc.extra.aantal===2&&doc.extra.uniek===true, JSON.stringify(doc.extra||doc.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

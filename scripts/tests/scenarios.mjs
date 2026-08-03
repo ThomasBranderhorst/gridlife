@@ -514,6 +514,67 @@ const loonLijst=a=>{
     !r.fout&&r.extra.length===2&&r.extra.every(x=>x.actief), JSON.stringify(r.extra||r.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 20. "Je loopt een maand voor" mag alleen verschijnen als het écht klopt.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const due=nu.slice(0,8)+'15';
+  const potje=(naam,saldo,items)=>({n:naam,saldo,maand:0,items,log:[]});
+  const post={id:'i1',n:'Huur',v:820,fn:1,fu:'m',due};
+
+  const ruim=run(basis({potjes:[potje('Vaste lasten',5000,[post])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: met ruim saldo zegt de app het',!ruim.fout&&ruim.extra===true,String(ruim.extra||ruim.fout));
+
+  const krap=run(basis({potjes:[potje('Vaste lasten',10,[post])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: met krap saldo zwijgt de app',!krap.fout&&krap.extra===false,String(krap.extra||krap.fout));
+
+  /* Eén potje dat tekortkomt maakt de uitspraak onwaar, ook al staan de andere er goed voor. */
+  const gemengd=run(basis({potjes:[potje('Vaste lasten',5000,[post]),
+    potje('Auto',0,[{id:'i2',n:'Verzekering',v:90,fn:1,fu:'m',due}])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: één potje tekort en de app zwijgt',
+    !gemengd.fout&&gemengd.extra===false,String(gemengd.extra||gemengd.fout));
+
+  const leeg=run(basis({potjes:[potje('Sparen',900,[])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: zonder geplande betalingen valt er niets te zeggen',
+    !leeg.fout&&leeg.extra===false,String(leeg.extra||leeg.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 21. Wim: twee vaste inkomsten zonder werkgever-gevoel (Uren-module uit).
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const AOW={mode:'month',dag:23,intervalWeeks:4,start:''};
+  const PEN={mode:'month',dag:1,intervalWeeks:4,start:''};
+  const data=basis({modules:{uren:false,potjes:true,loon:true,recept:false},
+    werkgevers:['AOW','Pensioenfonds'],
+    werkCfg:Object.assign(werk('AOW',AOW),werk('Pensioenfonds',PEN)),
+    loon:AOW,
+    loonLog:[{id:'x1',date:'2026-06-23',amount:1400,payIso:'2026-06-23',werk:'AOW'},
+             {id:'x2',date:'2026-07-01',amount:620,payIso:'2026-07-01',werk:'Pensioenfonds'}]});
+  schermen(data,'AOW en pensioen zonder Uren-module');
+  const r=run(data,a=>({
+    woord:a.bronWoord(true),enkel:a.bronWoord(false,false),
+    actiefWoord:a.bronActiefWoord(true),
+    bronnen:a.loonBronnen().length,
+    /* De lijst moet bereikbaar zijn, anders kun je je tweede inkomen niet eens invoeren. */
+    lijstZichtbaar:a.BEHEER.find(b=>b.k==='werkgevers').toon()
+  }));
+  meld('zonder Uren-module heet het "Inkomstenbronnen", niet "Werkgevers"',
+    !r.fout&&r.extra.woord==='Inkomstenbronnen'&&r.extra.enkel==='inkomstenbron', JSON.stringify(r.extra||r.fout));
+  meld('zonder Uren-module heet het "Loopt nu", niet "In dienst"',
+    !r.fout&&r.extra.actiefWoord==='Loopt nu', String(r.extra&&r.extra.actiefWoord));
+  meld('zonder Uren-module is de lijst bereikbaar en zijn er twee inkomstenbronnen',
+    !r.fout&&r.extra.lijstZichtbaar===true&&r.extra.bronnen===2, JSON.stringify(r.extra||r.fout));
+
+  /* En met de Uren-module aan blijft het gewoon "Werkgever" heten. */
+  const metUren=run(basis({modules:{uren:true,potjes:true,loon:true,recept:false},
+    werkgevers:['Jumbo'],werkCfg:werk('Jumbo',AOW)}),a=>({woord:a.bronWoord(true),actief:a.bronActiefWoord(true)}));
+  meld('met Uren-module blijft het gewoon "Werkgevers" en "In dienst"',
+    !metUren.fout&&metUren.extra.woord==='Werkgevers'&&metUren.extra.actief==='In dienst',
+    JSON.stringify(metUren.extra||metUren.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

@@ -301,6 +301,341 @@ const loonLijst=a=>{
     !r.fout&&r.extra.labels.length===2&&r.extra.eigen===true, JSON.stringify(r.extra||r.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 13. Twee bijbanen tegelijk — ruim één op de acht werkende Nederlanders heeft dit.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const AH={mode:'month',dag:4,intervalWeeks:4,start:''};
+  const SIN={mode:'month',dag:25,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['Albert Heijn','Sincere'],
+    werkCfg:Object.assign(werk('Albert Heijn',AH),werk('Sincere',SIN)),
+    loon:SIN,
+    loonLog:[{id:'a1',date:'2026-06-04',amount:480,payIso:'2026-06-04',werk:'Albert Heijn'},
+             {id:'s1',date:'2026-06-25',amount:1810,payIso:'2026-06-25',werk:'Sincere'},
+             {id:'a2',date:'2026-07-04',amount:495,payIso:'2026-07-04',werk:'Albert Heijn'},
+             {id:'s2',date:'2026-07-25',amount:1805,payIso:'2026-07-25',werk:'Sincere'}],
+    potjes:[{n:'Vaste lasten',saldo:0,maand:0,items:[{id:'i1',n:'Huur',v:820,fn:1,fu:'m',due:nu.slice(0,8)+'01'}],log:[]}]
+  });
+  schermen(data,'twee bijbanen');
+
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const rijen=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-2,1),new Date(nu2.getFullYear(),nu2.getMonth()+2,0));
+    return{
+      allebei:[...new Set(rijen.map(x=>x.werk))].filter(Boolean).sort(),
+      naamInLabel:rijen.every(x=>!x.werk||x.label.indexOf(x.werk)>=0),
+      dubbel:rijen.length!==new Set(rijen.map(x=>x.iso+'|'+x.werk)).size,
+      /* Eén ontvangst mag niet bij twee banen tegelijk als "binnen" gelden. */
+      entries:rijen.filter(x=>x.entry).map(x=>x.entry.id),
+      hoofd:a.hoofdBaan()
+    };
+  });
+  const e=r.extra||{};
+  meld('twee bijbanen: allebei de banen leveren loondagen',
+    !r.fout&&JSON.stringify(e.allebei)==='["Albert Heijn","Sincere"]', JSON.stringify(e.allebei||r.fout));
+  meld('twee bijbanen: elke regel noemt van welke baan hij is',
+    !r.fout&&e.naamInLabel===true, JSON.stringify(e.naamInLabel));
+  meld('twee bijbanen: geen dubbele regels', !r.fout&&e.dubbel===false, JSON.stringify(e.dubbel));
+  meld('twee bijbanen: geen ontvangst die bij twee banen tegelijk hoort',
+    !r.fout&&e.entries.length===new Set(e.entries).size, JSON.stringify(e.entries));
+  meld('twee bijbanen: de best betaalde baan wordt hoofdbaan',
+    !r.fout&&e.hoofd==='Sincere', String(e.hoofd));
+
+  /* De hoofdbaan mag niet spontaan omslaan — dan zou je twee keer per maand moeten overmaken. */
+  const plak=run(data,a=>{
+    const eerst=a.hoofdBaanVast();
+    a.db.loonLog.push({id:'a9',date:a.isoDate(a.vandaag()),amount:9999,werk:'Albert Heijn'});
+    return{eerst,daarna:a.hoofdBaan()};
+  });
+  meld('twee bijbanen: de hoofdbaan blijft plakken, ook als de andere ineens meer betaalt',
+    !plak.fout&&plak.extra.eerst===plak.extra.daarna, JSON.stringify(plak.extra||plak.fout));
+
+  /* En het echte probleem: vaste lasten die je pas na je tweede loon rond krijgt. */
+  const delen=run(data,a=>{
+    const p=a.db.potjes[0];const t=a.potTot(p);
+    a.db.overboek[a.currentPeriodKey()]={0:{done:false,amt:480}};
+    const na1={gedaan:a.obGedaan(0,p),vol:a.obVol(0,p)};
+    a.db.overboek[a.currentPeriodKey()]={0:{done:true,amt:t}};
+    const na2={gedaan:a.obGedaan(0,p),vol:a.obVol(0,p)};
+    return{t,na1,na2};
+  });
+  meld('gesplitst inkomen: 480 van 820 overgemaakt telt als deels, niet als klaar',
+    !delen.fout&&delen.extra.na1.gedaan===480&&delen.extra.na1.vol===false, JSON.stringify(delen.extra||delen.fout));
+  meld('gesplitst inkomen: pas bij het hele bedrag staat het vinkje vol',
+    !delen.fout&&delen.extra.na2.vol===true, JSON.stringify(delen.extra||delen.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 14. AOW plus pensioen: twee vaste inkomsten, geen werkgever-gevoel, wel hetzelfde probleem.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const AOW={mode:'month',dag:23,intervalWeeks:4,start:''};
+  const PEN={mode:'month',dag:1,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['AOW','Pensioenfonds'],
+    werkCfg:Object.assign(werk('AOW',AOW),werk('Pensioenfonds',PEN)),
+    loon:AOW,
+    loonLog:[{id:'x1',date:'2026-06-23',amount:1400,payIso:'2026-06-23',werk:'AOW'},
+             {id:'x2',date:'2026-07-01',amount:620,payIso:'2026-07-01',werk:'Pensioenfonds'}]
+  });
+  schermen(data,'AOW en pensioen');
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const rijen=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-2,1),new Date(nu2.getFullYear(),nu2.getMonth()+2,0));
+    return{bronnen:a.loonBronnen().length,binnen:rijen.filter(x=>x.received).length,hoofd:a.hoofdBaan()};
+  });
+  meld('AOW en pensioen: allebei worden als eigen inkomstenbron gevolgd',
+    !r.fout&&r.extra.bronnen===2&&r.extra.binnen===2, JSON.stringify(r.extra||r.fout));
+  meld('AOW en pensioen: de grootste inkomstenbron zet het ritme',
+    !r.fout&&r.extra.hoofd==='AOW', String(r.extra&&r.extra.hoofd));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 15. Stoppen bij één van je twee banen: de andere loopt gewoon door.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const A={mode:'month',dag:4,intervalWeeks:4,start:''};
+  const B={mode:'month',dag:25,intervalWeeks:4,start:''};
+  const data=basis({
+    werkgevers:['Bezorgdienst','Sincere'],
+    werkCfg:Object.assign(werk('Bezorgdienst',Object.assign({},A,{tot:nu}),false),werk('Sincere',B,true)),
+    loon:B,
+    loonLog:[{id:'b1',date:'2026-06-04',amount:300,payIso:'2026-06-04',werk:'Bezorgdienst'}]
+  });
+  schermen(data,'één van twee banen gestopt');
+  const r=run(data,a=>{
+    const nu2=a.vandaag();
+    const toekomst=a.loonRows(nu2,new Date(nu2.getFullYear(),nu2.getMonth()+3,0));
+    const verleden=a.loonRows(new Date(nu2.getFullYear(),nu2.getMonth()-3,1),nu2);
+    return{
+      toekomstBanen:[...new Set(toekomst.map(x=>x.werk))].filter(Boolean),
+      oudLoonNogZichtbaar:verleden.some(x=>x.entry&&x.entry.id==='b1'),
+      hoofd:a.hoofdBaan()
+    };
+  });
+  meld('gestopte baan: geen nieuwe loondagen meer van de baan die je kwijt bent',
+    !r.fout&&JSON.stringify(r.extra.toekomstBanen)==='["Sincere"]', JSON.stringify(r.extra||r.fout));
+  meld('gestopte baan: wat je daar verdiende blijft wel gewoon staan',
+    !r.fout&&r.extra.oudLoonNogZichtbaar===true, JSON.stringify(r.extra));
+  meld('gestopte baan: de overgebleven baan wordt vanzelf de hoofdbaan',
+    !r.fout&&r.extra.hoofd==='Sincere', String(r.extra&&r.extra.hoofd));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 16. Terugkomen bij een oude werkgever: eerst gestopt, later weer aangenomen.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const L={mode:'month',dag:25,intervalWeeks:4,start:'',vanaf:'2026-01-01',tot:'2026-03-31'};
+  const data=basis({
+    werkgevers:['Sincere'],
+    werkCfg:{Sincere:{ritmeN:1,ritmeU:'dienst',klaarDag:1,correctie:'later',nabetaalMode:'loondag',actief:false,loon:L}},
+    loon:L
+  });
+  const r=run(data,a=>{
+    window._wcName='Sincere';window._wc=JSON.parse(JSON.stringify(a.db.werkCfg['Sincere']));
+    window._wc.actief=true;window._wcVanaf='beheer';window._wcContract='';
+    a.wcSaveDoen();
+    const c=a.db.werkCfg['Sincere'];
+    const rijen=a.loonRows(new Date(2026,0,1),new Date(2027,0,1));
+    /* Het gat tussen de eerste dienstperiode (jan-mrt) en vandaag mag geen loondagen opleveren —
+       daar werkte je niet. Zonder fix bleef "vanaf" op de oude startdatum staan terwijl "tot" gewist
+       werd, en zag het model dat als één doorlopend dienstverband sinds januari. */
+    const gat=rijen.filter(x=>x.iso>'2026-03-31'&&x.iso<nu).map(x=>x.iso);
+    return{vanaf:c.loon.vanaf,tot:c.loon.tot,gat};
+  });
+  meld('terugkomen bij een oude werkgever: vanaf schuift mee naar het nieuwe dienstverband',
+    !r.fout&&r.extra.vanaf===nu&&r.extra.tot==='', JSON.stringify(r.extra||r.fout));
+  meld('terugkomen bij een oude werkgever: geen loondagen in het gat tussen de twee periodes',
+    !r.fout&&r.extra.gat.length===0, JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 17. Toeslag op een gedateerde kostenpost: "Waar is je saldo voor?" mag geen tekort
+//     melden voor het deel dat je nooit zelf hoefde te sparen (dat komt van de toeslag).
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const data=basis({potjes:[{n:'Kinderopvang',saldo:0,maand:0,items:[
+    {id:'i1',n:'Opvang',v:800,fn:1,fu:'m',due:'2026-01-27',
+     toeslagen:[{id:'t1',naam:'Kinderopvangtoeslag',v:600,fn:1,fu:'m',date:'2026-01-20'}]}
+  ],log:[]}]});
+  const r=run(data,a=>{
+    const it=a.db.potjes[0].items[0];
+    const nuHalverwege=new Date(2026,0,13); // halverwege de cyclus (27 dec -> 27 jan)
+    return{
+      opzijPerMaand:a.itMnd(it), // wat je écht gevraagd wordt te sparen: netto
+      gereserveerdHalverwege:a.itemGereserveerd(it,nuHalverwege)
+    };
+  });
+  meld('toeslag: "opzij zetten" is netto (bruto min toeslag)',
+    !r.fout&&r.extra.opzijPerMaand===200, JSON.stringify(r.extra||r.fout));
+  meld('toeslag: de reservering bouwt op naar het NETTO bedrag, niet het volle bruto bedrag',
+    !r.fout&&r.extra.gereserveerdHalverwege<=200, JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 18. Grillig loonritme: een gemiddelde van nul is geen garantie dat het loon op tijd komt.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const L={mode:'manual',dag:25,intervalWeeks:4,start:'',
+    dates:['2026-04-25','2026-05-25','2026-06-25']};
+  const data=basis({werkgevers:['Horeca'],werkCfg:werk('Horeca',L),loon:L,
+    loonLog:[{id:'a',date:'2026-04-19',amount:400,payIso:'2026-04-25'},  // 6 dagen te vroeg
+             {id:'b',date:'2026-05-31',amount:410,payIso:'2026-05-25'}]}); // 6 dagen te laat: gemiddeld exact 0
+  const r=run(data,a=>{
+    const kaal=s=>String(s).replace(/<[^>]+>/g,'');
+    return{
+      offs:a.loonOffsets('Horeca'),
+      tekst:kaal(a.loonHintRow({date:new Date(2026,5,25),werk:'Horeca'}))
+    };
+  });
+  meld('grillig loon: gemiddelde is (bijna) nul terwijl de spreiding groot is',
+    !r.fout&&r.extra.offs.length===2&&Math.abs(r.extra.offs.reduce((a,b)=>a+b,0)/2)<1,
+    JSON.stringify(r.extra&&r.extra.offs||r.fout));
+  meld('grillig loon: geen valse geruststelling — de tekst noemt dat het wisselt',
+    !r.fout&&r.extra.tekst.indexOf('wisselt')>=0&&r.extra.tekst.indexOf('meestal op je loondag')<0,
+    r.extra&&r.extra.tekst);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19. Onboarding met twee werkgevers in één keer: allebei moeten in dienst komen.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const r=run(basis({setup:false}),a=>{
+    a._testSetOb({step:0,naam:'T',werk:'Jumbo, Sincere',loon:a.schoonLoonCfg(a.db.loon),
+      mods:{uren:true,potjes:true,loon:true,recept:false},feat:{}});
+    a.finishOnboarding();
+    return a.db.werkgevers.map(w=>({w,actief:a.werkCfgOf(w).actief!==false}));
+  });
+  meld('onboarding: "Jumbo, Sincere" in één keer typen zet allebei in dienst',
+    !r.fout&&r.extra.length===2&&r.extra.every(x=>x.actief), JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 20. "Je loopt een maand voor" mag alleen verschijnen als het écht klopt.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const due=nu.slice(0,8)+'15';
+  const potje=(naam,saldo,items)=>({n:naam,saldo,maand:0,items,log:[]});
+  const post={id:'i1',n:'Huur',v:820,fn:1,fu:'m',due};
+
+  const ruim=run(basis({potjes:[potje('Vaste lasten',5000,[post])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: met ruim saldo zegt de app het',!ruim.fout&&ruim.extra===true,String(ruim.extra||ruim.fout));
+
+  const krap=run(basis({potjes:[potje('Vaste lasten',10,[post])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: met krap saldo zwijgt de app',!krap.fout&&krap.extra===false,String(krap.extra||krap.fout));
+
+  /* Eén potje dat tekortkomt maakt de uitspraak onwaar, ook al staan de andere er goed voor. */
+  const gemengd=run(basis({potjes:[potje('Vaste lasten',5000,[post]),
+    potje('Auto',0,[{id:'i2',n:'Verzekering',v:90,fn:1,fu:'m',due}])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: één potje tekort en de app zwijgt',
+    !gemengd.fout&&gemengd.extra===false,String(gemengd.extra||gemengd.fout));
+
+  const leeg=run(basis({potjes:[potje('Sparen',900,[])]}),a=>a.looptEenMaandVoor());
+  meld('maand voor: zonder geplande betalingen valt er niets te zeggen',
+    !leeg.fout&&leeg.extra===false,String(leeg.extra||leeg.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 21. Wim: twee vaste inkomsten zonder werkgever-gevoel (Uren-module uit).
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const AOW={mode:'month',dag:23,intervalWeeks:4,start:''};
+  const PEN={mode:'month',dag:1,intervalWeeks:4,start:''};
+  const data=basis({modules:{uren:false,potjes:true,loon:true,recept:false},
+    werkgevers:['AOW','Pensioenfonds'],
+    werkCfg:Object.assign(werk('AOW',AOW),werk('Pensioenfonds',PEN)),
+    loon:AOW,
+    loonLog:[{id:'x1',date:'2026-06-23',amount:1400,payIso:'2026-06-23',werk:'AOW'},
+             {id:'x2',date:'2026-07-01',amount:620,payIso:'2026-07-01',werk:'Pensioenfonds'}]});
+  schermen(data,'AOW en pensioen zonder Uren-module');
+  const r=run(data,a=>({
+    woord:a.bronWoord(true),enkel:a.bronWoord(false,false),
+    actiefWoord:a.bronActiefWoord(true),
+    bronnen:a.loonBronnen().length,
+    /* De lijst moet bereikbaar zijn, anders kun je je tweede inkomen niet eens invoeren. */
+    lijstZichtbaar:a.BEHEER.find(b=>b.k==='werkgevers').toon()
+  }));
+  meld('zonder Uren-module heet het "Inkomstenbronnen", niet "Werkgevers"',
+    !r.fout&&r.extra.woord==='Inkomstenbronnen'&&r.extra.enkel==='inkomstenbron', JSON.stringify(r.extra||r.fout));
+  meld('zonder Uren-module heet het "Loopt nu", niet "In dienst"',
+    !r.fout&&r.extra.actiefWoord==='Loopt nu', String(r.extra&&r.extra.actiefWoord));
+  meld('zonder Uren-module is de lijst bereikbaar en zijn er twee inkomstenbronnen',
+    !r.fout&&r.extra.lijstZichtbaar===true&&r.extra.bronnen===2, JSON.stringify(r.extra||r.fout));
+
+  /* En met de Uren-module aan blijft het gewoon "Werkgever" heten. */
+  const metUren=run(basis({modules:{uren:true,potjes:true,loon:true,recept:false},
+    werkgevers:['Jumbo'],werkCfg:werk('Jumbo',AOW)}),a=>({woord:a.bronWoord(true),actief:a.bronActiefWoord(true)}));
+  meld('met Uren-module blijft het gewoon "Werkgevers" en "In dienst"',
+    !metUren.fout&&metUren.extra.woord==='Werkgevers'&&metUren.extra.actief==='In dienst',
+    JSON.stringify(metUren.extra||metUren.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 22. Back-up en herstel: het enige vangnet dat de gebruiker heeft.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  /* De app belooft letterlijk dat je pincode niet in het bestand staat. Dan moet dat ook zo zijn. */
+  const pin=run(basis({lock:{on:true,pin:'1234'}}),a=>{
+    const b=a.backupData();
+    return{pin:b.lock.pin,slotAan:b.lock.on,inTekst:JSON.stringify(b).indexOf('1234')>=0};
+  });
+  meld('back-up: de pincode staat NIET in het bestand',
+    !pin.fout&&pin.extra.pin===''&&pin.extra.inTekst===false, JSON.stringify(pin.extra||pin.fout));
+  meld('back-up: dat het slot aanstond blijft wel bewaard',
+    !pin.fout&&pin.extra.slotAan===true, JSON.stringify(pin.extra||pin.fout));
+
+  /* Twee banen, zelfde dag, zelfde bedrag: dat zijn twee betalingen, geen duplicaat. */
+  const zelfde=run(basis({loonLog:[]}),a=>{
+    a.mergeImport({loonLog:[
+      {id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'},
+      {id:'p2',date:'2026-07-25',amount:480,werk:'Sincere'}]});
+    return a.db.loonLog.length;
+  });
+  meld('herstel: zelfde bedrag op zelfde dag van twee banen blijft twee ontvangsten',
+    !zelfde.fout&&zelfde.extra===2, String(zelfde.extra||zelfde.fout));
+
+  /* En een écht duplicaat moet nog steeds wél worden herkend. */
+  const dubbel=run(basis({loonLog:[{id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'}]}),a=>{
+    a.mergeImport({loonLog:[{id:'p1',date:'2026-07-25',amount:480,werk:'Jumbo'}]});
+    return a.db.loonLog.length;
+  });
+  meld('herstel: een echt duplicaat wordt nog steeds herkend',
+    !dubbel.fout&&dubbel.extra===1, String(dubbel.extra||dubbel.fout));
+
+  /* Je gekozen hoofdbaan hoort de overstap naar een nieuwe telefoon te overleven. */
+  const hoofd=run(basis({werkgevers:['Jumbo','Sincere'],
+    werkCfg:Object.assign(werk('Jumbo',{mode:'month',dag:4,intervalWeeks:4,start:''}),
+                          werk('Sincere',{mode:'month',dag:25,intervalWeeks:4,start:''}))}),a=>{
+    a.mergeImport({hoofdwerk:'Jumbo'});
+    return a.db.hoofdwerk;
+  });
+  meld('herstel: je gekozen hoofdbaan komt mee uit de back-up',
+    !hoofd.fout&&hoofd.extra==='Jumbo', String(hoofd.extra||hoofd.fout));
+
+  /* Een werkgever met andere schrijfwijze mag geen weesdiensten achterlaten. */
+  const schrijf=run(basis({werkgevers:['Jumbo'],werkCfg:werk('Jumbo',{mode:'month',dag:4,intervalWeeks:4,start:''}),shifts:[]}),a=>{
+    a.mergeImport({werkgevers:['jumbo'],shifts:[{id:'s9',werk:'jumbo',date:'2026-07-02',start:'09:00',end:'17:00',pauze:0}]});
+    return{werkgevers:a.db.werkgevers,dienstWerk:(a.db.shifts[0]||{}).werk};
+  });
+  meld('herstel: een dienst van "jumbo" komt onder het bestaande "Jumbo" te staan',
+    !schrijf.fout&&schrijf.extra.werkgevers.length===1&&schrijf.extra.dienstWerk==='Jumbo',
+    JSON.stringify(schrijf.extra||schrijf.fout));
+
+  /* Twee keer hetzelfde document met een andere datum mag geen dubbel id opleveren. */
+  const doc=run(basis({documenten:[{id:'d1',n:'Paspoort',type:'ID',verloopt:'2031-01-01'}]}),a=>{
+    a.mergeImport({documenten:[{id:'d1',n:'Paspoort',type:'ID',verloopt:'2026-01-01'}]});
+    const ids=a.db.documenten.map(x=>x.id);
+    return{aantal:ids.length,uniek:ids.length===new Set(ids).size};
+  });
+  meld('herstel: twee versies van hetzelfde document krijgen elk een eigen id',
+    !doc.fout&&doc.extra.aantal===2&&doc.extra.uniek===true, JSON.stringify(doc.extra||doc.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));

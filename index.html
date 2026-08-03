@@ -97,6 +97,11 @@ button.line{background:var(--card);border:1.5px solid var(--line);color:var(--te
 .stdlbl{font-size:12px;font-weight:800;letter-spacing:.4px;opacity:.7;text-transform:uppercase}
 /* Een hele zin in kapitalen leest niet. Gebruikt onder de rechtzet-knoppen, waar uitleg staat. */
 .stdlbl.zin{font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;opacity:.85;white-space:normal}
+/* Pagina's met een zwevende ＋-knop krijgen onderaan extra lucht. Zonder dit ging de knop over het
+   laatste dat op de pagina staat heen — op Potjes lag hij precies op "Beheren", die je dus niet meer
+   kon aantikken. De knop staat 96px boven de onderrand en is 60px hoog, dus daar moet het onderste
+   stuk pagina omheen. */
+body.heeft-fab{padding-bottom:calc(170px + var(--safe-b))}
 .fab{position:fixed;right:18px;bottom:calc(96px + var(--safe-b));z-index:40;width:60px;height:60px;border-radius:20px;font-size:28px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 38%,transparent);border:none;transition:transform .15s ease,border-radius .15s ease}
 .fab:active{transform:scale(.92);border-radius:26px}
 label{display:block;font-size:14px;font-weight:700;color:var(--muted);margin:12px 0 6px;letter-spacing:.1px}
@@ -840,7 +845,9 @@ function toggleModuleFeat(k){
 }
 function toggleFeat(k){db.feat[k]=featOn(k)?false:true;if(db.feat[k]===true)delete db.feat[k];save();renderFeatList();scheduleLoonMeldingen();render();}
 function applyModules(){document.querySelectorAll('#nav button').forEach(b=>{b.style.display=moduleOn(b.dataset.tab)?'flex':'none';});if(!moduleOn(cur))go('start');}
-function go(t){cur=t;document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='meer'&&(t==='instellingen'||t==='documenten'))));document.getElementById('pageTitle').textContent=TITLES[t];document.getElementById('fab').style.display=(t==='uren'||t==='recept'||t==='potjes')?'flex':'none';window.scrollTo(0,0);render();}
+function go(t){cur=t;document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='meer'&&(t==='instellingen'||t==='documenten'))));document.getElementById('pageTitle').textContent=TITLES[t];const heeftFab=(t==='uren'||t==='recept'||t==='potjes');
+  document.getElementById('fab').style.display=heeftFab?'flex':'none';
+  document.body.classList.toggle('heeft-fab',heeftFab);window.scrollTo(0,0);render();}
 /* De dikke + is waar iedereen als eerste tikt. Zonder potjes gaf hij alleen "Maak eerst een potje aan"
    - een foutmelding op de allereerste handeling in de app. Nu doet hij gewoon wat je nodig hebt. */
 function fabAction(){haptic();if(cur==='uren')openShift();else if(cur==='recept')openRecept();else if(cur==='potjes'){if(!db.potjes.length){openPotEdit();setTimeout(newPot,120);}else openUitgave();}}
@@ -3800,10 +3807,23 @@ function avgIncome(){
     /* Een vol jaar historie is het eerlijkst: dan zitten je vakantiegeld, een 13e maand en je drukke
        en rustige maanden er allemaal in. Gewoon delen door 12. */
     if(vol&&span>=12){tot+=som/12;return;}
-    /* Nog geen jaar: het gemiddelde per betaling maal hoe vaak die bron per maand betaalt. Dat klopt
-       al vanaf je eerste ingevulde loon. */
+    /* Nog geen jaar: het gemiddelde per loonperiode maal hoe vaak die bron per maand betaalt. Dat
+       klopt al vanaf je eerste ingevulde loon.
+
+       Delen door het aantal ingevulde betalingen ging mis bij een oproepkracht die wekelijks wordt
+       uitbetaald maar niet elke week werkt: twee lege weken tussen twee volle telden dan niet mee,
+       en dan zag € 840 in een maand eruit als € 1.826. Daarom delen we door het aantal loonperiodes
+       dát er tussen je eerste en je laatste betaling zat — lege periodes incluis.
+
+       Bewust tot je LAATSTE betaling en niet tot vandaag: een gat tússen twee betalingen is een week
+       waarin je niets verdiende, maar een periode ná je laatste betaling betekent meestal gewoon dat
+       je hem nog niet hebt ingevuld. Die mag je inkomen niet omlaag trekken. */
     const per=loonRitmeVan(k);
-    tot+=per?(som/g.length)*per:som/span;
+    if(!per){tot+=som/span;return;}
+    const ds=g.map(x=>parseISO(x.date)).filter(Boolean).sort((a,b)=>a-b);
+    const dagenPerPeriode=30.44/per;
+    const periodes=Math.max(1,Math.round((ds[ds.length-1]-ds[0])/86400000/dagenPerPeriode)+1);
+    tot+=(som/periodes)*per;
   });
   return round2(tot);
 }

@@ -290,6 +290,18 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   meld('bij een wisselend ritme blijft het gemiddelde over de maanden die je hebt',
     !wissel.fout&&wissel.extra===1650, String(wissel.extra||wissel.fout));
 
+  /* Oproepkracht: wekelijks uitbetaald, maar niet elke week gewerkt. De lege weken tússen twee
+     betalingen zijn echte magere weken en moeten het gemiddelde omlaag trekken. */
+  const flex=W(Lc({mode:'weeks',intervalWeeks:1}));
+  const vol=run(basis({werkgevers:['Flex'],werkCfg:{Flex:flex},loon:Lc({mode:'weeks',intervalWeeks:1}),
+    loonLog:L([dag(1,7),420,'Flex'],[dag(1,14),420,'Flex'],[dag(1,21),420,'Flex'],[dag(1,28),420,'Flex'])}),a=>a.avgIncome());
+  const gaten=run(basis({werkgevers:['Flex'],werkCfg:{Flex:flex},loon:Lc({mode:'weeks',intervalWeeks:1}),
+    loonLog:L([dag(1,7),420,'Flex'],[dag(1,21),420,'Flex'])}),a=>a.avgIncome());
+  meld('oproepkracht: elke week gewerkt geeft het volle weekloon per maand',
+    !vol.fout&&Math.abs(vol.extra-1826)<3, String(vol.extra||vol.fout));
+  meld('oproepkracht: twee lege weken ertussen trekken het gemiddelde omlaag',
+    !gaten.fout&&gaten.extra<vol.extra*0.75, String(gaten.extra||gaten.fout)+' vs '+String(vol.extra));
+
   const pm=run(basis({}),a=>({m:a.loonPerMaand({mode:'month'}),t:a.loonPerMaand({mode:'twice'}),
     w4:Math.round(a.loonPerMaand({mode:'weeks',intervalWeeks:4})*10000)/10000,
     w1:Math.round(a.loonPerMaand({mode:'weeks',intervalWeeks:1})*100)/100,man:a.loonPerMaand({mode:'manual'})}));

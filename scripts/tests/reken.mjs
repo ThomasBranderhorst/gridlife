@@ -250,6 +250,53 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
   const r4=run(basis({loonLog:[{id:'x',date:'niet-een-datum',amount:500},mk(1,1600)]}),a=>a.avgIncome());
   meld('kapotte datum in loonLog laat het gemiddelde niet ontsporen', !r4.fout && r4.extra===1600, String(r4.extra||r4.fout));
 }
+// 17b. Zonder een vol jaar historie komt het maandbedrag uit je RITME, niet uit de spanwijdte van je
+//      logs. Delen door "aantal maanden tussen eerste en laatste loonregel" klopt alleen als je precies
+//      één keer per maand betaald krijgt — bij twee keer per maand halveerde dat je inkomen, en met twee
+//      inkomstenbronnen werden ongelijke bedragen tot één nietszeggend gemiddelde gemengd.
+{
+  const Lc=o=>Object.assign({mode:'month',dagType:'nr',dag:25,dag2:31,wd:5,wdN:5,intervalWeeks:4,start:'',vanaf:'',tot:'',weekend:'',feest:true,dates:[]},o);
+  const W=loon=>({ritmeN:1,ritmeU:'dienst',klaarDag:1,correctie:'later',nabetaalMode:'loondag',nabetaalN:1,nabetaalU:'w',nabetaalDatum:'',actief:true,loon});
+  /* Datums in de maand vóór deze, zodat ze altijd binnen het rollende jaar vallen en nooit in de
+     lopende (nog niet volle) maand. */
+  const dag=(back,d)=>{const x=new Date();x.setDate(1);x.setMonth(x.getMonth()-back);
+    return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');};
+  const L=(...p)=>p.map(([d,a,w],i)=>({id:'q'+i,date:d,amount:a,payIso:d,werk:w||''}));
+
+  const twee=run(basis({werkgevers:['A'],werkCfg:{A:W(Lc({mode:'twice',dag:15,dag2:28}))},loon:Lc({mode:'twice',dag:15,dag2:28}),
+    loonLog:L([dag(1,15),950,'A'])}),a=>a.avgIncome());
+  meld('2x per maand met pas één ingevulde betaling telt als een hele maand, niet als een halve',
+    !twee.fout&&twee.extra===1900, String(twee.extra||twee.fout));
+
+  const vier=run(basis({werkgevers:['A'],werkCfg:{A:W(Lc({mode:'weeks',intervalWeeks:4}))},loon:Lc({mode:'weeks',intervalWeeks:4}),
+    loonLog:L([dag(3,8),1500,'A'],[dag(2,5),1500,'A'],[dag(1,3),1500,'A'],[dag(1,31),1500,'A'])}),a=>a.avgIncome());
+  meld('vier-wekelijks loon: een maand met twee loondagen blaast het gemiddelde niet op',
+    !vier.fout&&Math.abs(vier.extra-1630)<3, String(vier.extra||vier.fout));
+
+  const twee_bronnen=run(basis({werkgevers:['AOW','Pensioen'],werkCfg:{AOW:W(Lc({dag:23})),Pensioen:W(Lc({dag:1}))},loon:Lc({dag:23}),
+    loonLog:L([dag(2,23),1380,'AOW'],[dag(1,23),1380,'AOW'],[dag(1,1),640,'Pensioen'])}),a=>a.avgIncome());
+  meld('twee inkomstenbronnen worden apart geteld en dan opgeteld, niet door elkaar gemiddeld',
+    !twee_bronnen.fout&&twee_bronnen.extra===2020, String(twee_bronnen.extra||twee_bronnen.fout));
+
+  /* Loonregels zonder bron (ingevuld via "＋ Loon" toen dat veld er nog niet was) volgen db.loon. */
+  const zonderBron=run(basis({werkgevers:['A'],werkCfg:{A:W(Lc({mode:'twice',dag:15,dag2:28}))},loon:Lc({mode:'twice',dag:15,dag2:28}),
+    loonLog:L([dag(1,15),950])}),a=>a.avgIncome());
+  meld('een oude loonregel zonder bron volgt gewoon je eigen loonritme',
+    !zonderBron.fout&&zonderBron.extra===1900, String(zonderBron.extra||zonderBron.fout));
+
+  /* Wisselend ritme: er valt geen aantal-per-maand te bepalen, dus dan blijft het de spanwijdte. */
+  const wissel=run(basis({werkgevers:['A'],werkCfg:{A:W(Lc({mode:'manual',dates:[]}))},loon:Lc({mode:'manual',dates:[]}),
+    loonLog:L([dag(2,10),1800,'A'],[dag(1,14),1500,'A'])}),a=>a.avgIncome());
+  meld('bij een wisselend ritme blijft het gemiddelde over de maanden die je hebt',
+    !wissel.fout&&wissel.extra===1650, String(wissel.extra||wissel.fout));
+
+  const pm=run(basis({}),a=>({m:a.loonPerMaand({mode:'month'}),t:a.loonPerMaand({mode:'twice'}),
+    w4:Math.round(a.loonPerMaand({mode:'weeks',intervalWeeks:4})*10000)/10000,
+    w1:Math.round(a.loonPerMaand({mode:'weeks',intervalWeeks:1})*100)/100,man:a.loonPerMaand({mode:'manual'})}));
+  meld('betalingen per maand per ritme',
+    !pm.fout&&pm.extra.m===1&&pm.extra.t===2&&pm.extra.w4===1.0871&&pm.extra.w1===4.35&&pm.extra.man===null,
+    JSON.stringify(pm.extra||pm.fout));
+}
 // 18. brandstof-functie volgt de data (de import-bug)
 {
   const d=basis({feat:{fuel:false},potjes:[{n:'Benzine',saldo:40,log:[],items:[],fuel:true}]});

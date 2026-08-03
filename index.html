@@ -1057,8 +1057,10 @@ const GUIDE=[
   +gt(`Je potjes-checklist raak je bij zo'n wissel niet kwijt: die blijft staan tot je volgende loondag echt voorbij is.`)},
 {s:'Loon',mod:'loon',feat:'loonlog',q:'Wat betekent "hou ik over"?',a:{lbl:'Naar Loon',fn:"go('loon')"},
  v:gv(`<div class="card" style="margin-bottom:0">${GKV('Gemiddeld inkomen',eur(1780)+' per maand')}${GKV('Naar potjes','− '+eur(208.7))}${GKV('Hou je over (gemiddeld)',eur(1571.3)+' per maand','var(--ok-tx)')}</div>`),
- t:gt(`Dit is je gemiddelde netto inkomen (over het <b>laatste jaar</b>) min alles wat je maandelijks opzij zet voor je potjes. Wat overblijft is je <b>vrije ruimte</b>: boodschappen, uitjes, sparen. Het is geen uitgaven-app — de app rekent niet mee wat je daarvan uitgeeft.`)
-  +gt(`Waarom een heel jaar? Zo tellen je <b>vakantiegeld</b>, een eventuele 13e maand en drukke of rustige maanden allemaal mee in één stabiel cijfer, in plaats van dat één uitschieter je gemiddelde even flink laat springen. Nadeel: begin je bij een nieuwe, beter betaalde baan, dan trekt het oude loon het gemiddelde nog even omlaag totdat er genoeg nieuwe maanden zijn.`)},
+ t:gt(`Dit is je gemiddelde netto inkomen min alles wat je maandelijks opzij zet voor je potjes. Wat overblijft is je <b>vrije ruimte</b>: boodschappen, uitjes, sparen. Het is geen uitgaven-app — de app rekent niet mee wat je daarvan uitgeeft.`)
+  +gt(`Heb je nog geen jaar bijgehouden, dan rekent de app met je <b>ritme</b>: het gemiddelde van wat er per keer binnenkwam, maal hoe vaak die inkomstenbron per maand betaalt. Krijg je twee keer per maand € 950, dan is dat € 1.900 per maand — ook als je pas één keer hebt ingevuld. Heb je meerdere inkomsten, dan telt elke bron met zijn eigen ritme mee en worden ze bij elkaar opgeteld.`)
+  +gt(`Zodra je een <b>heel jaar</b> hebt ingevuld, stapt de app over op alles gedeeld door twaalf. Dan tellen je <b>vakantiegeld</b>, een eventuele 13e maand en drukke of rustige maanden allemaal mee in één stabiel cijfer. Onder het bedrag staat altijd welke van de twee je nu ziet.`)
+  +gt(`Let op bij een uitschieter: heb je nog geen jaar historie en zit je vakantiegeld al wél tussen je ingevulde bedragen, dan trekt dat het gemiddelde tijdelijk omhoog. Dat zakt vanzelf weg naarmate je meer maanden invult. En begin je bij een nieuwe, beter betaalde baan, dan trekt je oude loon het nog even omlaag.`)},
 {s:'Loon',mod:'loon',q:'Waarom springt "volgende loon" ineens door naar de maand erna?',
  v:gv(`<div class="dashcard" style="margin-bottom:0"><div class="muted" style="font-size:13px">Volgende loon</div><div class="big" style="font-size:19px;margin-top:3px">31 dagen</div><div class="muted" style="font-size:13px;margin-top:1px">25 aug</div></div>`),
  t:gt(`Zodra je het loon van deze periode hebt afgevinkt, weet de app dat die loondag klaar is en telt hij af naar de <b>volgende</b>. Dat geldt ook voor de potjes-checklist: die reset pas bij de eerstvolgende loondag die je nog niet ontvangen hebt.`)},
@@ -3737,17 +3739,73 @@ function renderLoon(){
    Het totaal wordt gedeeld door het aantal maanden dat de meegetelde logs beslaan (niet standaard door 12),
    zodat het ook meteen klopt als je nog geen heel jaar hebt gelogd of net begonnen bent: dan is het gewoon
    het gemiddelde over de maanden die je wél hebt. */
+/* Hoeveel betalingen levert dit ritme per maand op? Maandelijks is 1, twee keer per maand is 2, en bij
+   een weken-ritme rekenen we met echte dagen (bij 4 weken: 365,25 / 28 = ruim 13 betalingen per jaar).
+   Bij een wisselend ritme valt er niets te zeggen — dan geeft dit null. */
+function loonPerMaand(L){
+  L=schoonLoonCfg(L);
+  if(L.mode==='month')return 1;
+  if(L.mode==='twice')return 2;
+  if(L.mode==='weeks')return 365.25/(7*Math.max(1,L.intervalWeeks))/12;
+  return null;
+}
+/* Het ritme dat bij een geboekte loon-ontvangst hoort. Zonder bron (of bij een bron die je inmiddels
+   hebt weggehaald) is db.loon de werkkopie, en die volgt je hoofdbaan. */
+function loonRitmeVan(werk){
+  const c=werk&&db.werkCfg&&db.werkCfg[werk];
+  return loonPerMaand((c&&c.loon)||db.loon);
+}
+function maandSpan(dates){
+  const ds=dates.slice().sort();
+  const a=parseISO(ds[0]),b=parseISO(ds[ds.length-1]);
+  if(!a||!b)return 1;
+  return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1);
+}
+/* Waarop het gemiddelde hieronder gebaseerd is. Er stond altijd "Over je laatste 12 maanden", ook als
+   de app in werkelijkheid maar twee maanden loon van je had — dan belooft het bijschrift iets anders
+   dan de som doet. */
+function avgIncomeBasis(){
+  const logs=(db.loonLog||[]).filter(x=>x&&geldigeDatum(x.date));
+  if(!logs.length)return null;
+  const now=new Date();
+  const from=new Date(now.getFullYear(),now.getMonth()-12,1);
+  const to=new Date(now.getFullYear(),now.getMonth(),1);
+  const win=logs.filter(x=>{const d=parseISO(x.date);return d&&d>=from&&d<to;});
+  const bron=win.length?win:logs;
+  const volJaar=win.length>0&&maandSpan(bron.map(x=>x.date))>=12;
+  return volJaar
+    ? `Over je laatste 12 maanden · ${logs.length} keer loon ingevuld`
+    : `Op basis van je loonritme en ${logs.length} ingevulde ${logs.length===1?'betaling':'betalingen'} · wordt preciezer met elke keer die je invult`;
+}
 function avgIncome(){
   const logs=(db.loonLog||[]).filter(x=>x&&geldigeDatum(x.date));if(!logs.length)return null;
   const now=new Date();
   const from=new Date(now.getFullYear(),now.getMonth()-12,1);   // begin van 12 maanden geleden
   const to=new Date(now.getFullYear(),now.getMonth(),1);        // begin van de lopende (nog niet volle) maand
   const win=logs.filter(x=>{const d=parseISO(x.date);return d&&d>=from&&d<to;});
-  const bron=win.length?win:logs;                               // te weinig historie in het jaar -> alles wat er is
-  const ds=bron.map(x=>x.date).slice().sort();
-  const a=parseISO(ds[0]),b=parseISO(ds[ds.length-1]);
-  const months=Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1);
-  return round2(bron.reduce((s,x)=>s+(+x.amount||0),0)/months);
+  const vol=win.length>0;                                       // valt er iets binnen het laatste jaar?
+  const bron=vol?win:logs;                                      // zo niet: alles wat er is
+  /* Per inkomstenbron apart rekenen. Alles op één hoop middelen ging mis zodra de bedragen verschilden:
+     € 1.380 AOW en € 640 pensioen werden samen € 1.010 per maand, terwijl je ze allebei elke maand
+     krijgt. En delen door de spanwijdte van je logs klopt alleen bij precies één betaling per maand —
+     bij twee keer per maand halveerde dat je inkomen, bij vier-wekelijks loon viel het juist te hoog uit
+     zolang je nog geen jaar had ingevuld. */
+  const groepen={};
+  bron.forEach(x=>{const k=x.werk||'';(groepen[k]=groepen[k]||[]).push(x);});
+  let tot=0;
+  Object.keys(groepen).forEach(k=>{
+    const g=groepen[k];
+    const som=g.reduce((s,x)=>s+(+x.amount||0),0);
+    const span=maandSpan(g.map(x=>x.date));
+    /* Een vol jaar historie is het eerlijkst: dan zitten je vakantiegeld, een 13e maand en je drukke
+       en rustige maanden er allemaal in. Gewoon delen door 12. */
+    if(vol&&span>=12){tot+=som/12;return;}
+    /* Nog geen jaar: het gemiddelde per betaling maal hoe vaak die bron per maand betaalt. Dat klopt
+       al vanaf je eerste ingevulde loon. */
+    const per=loonRitmeVan(k);
+    tot+=per?(som/g.length)*per:som/span;
+  });
+  return round2(tot);
 }
 function renderLoonLog(){
   const lc=document.getElementById('loonLogCard');if(!lc)return;
@@ -3756,12 +3814,17 @@ function renderLoonLog(){
   const inc=avgIncome();const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));
   lc.innerHTML=`<div class="row between"><h2 style="margin:0">Netto ontvangen</h2><button class="tiny primary" onclick="openLoonLog()">＋ Loon</button></div>
     <div class="muted" style="margin:6px 0 4px">Vul elke keer in wat er op je rekening kwam. Na een paar keer weet de app wat je gemiddeld per maand verdient.</div>
-    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld per maand</span><span class="v">${eur(inc)}</span></div><div class="muted" style="font-size:13px;margin:-2px 0 6px">Over je laatste 12 maanden · nu ${logs.length} keer loon ingevuld</div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over (gemiddeld)</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} per maand</span></div>`:''}
+    ${inc!=null?`<div class="kv"><span class="k">Gemiddeld per maand</span><span class="v">${eur(inc)}</span></div><div class="muted" style="font-size:13px;margin:-2px 0 6px">${avgIncomeBasis()||''}</div><div class="kv"><span class="k">Naar potjes</span><span class="v">− ${eur(opzij)}</span></div><div class="kv"><span class="k">Hou je over (gemiddeld)</span><span class="v" style="color:${inc-opzij>=0?'var(--ok-tx)':'var(--bad-tx)'}">${eur(round2(inc-opzij))} per maand</span></div>`:''}
     ${logs.length?`<div class="muted" style="margin-top:12px;font-weight:800">Laatste ontvangsten · tik om te bewerken</div>`+logs.slice(0,6).map(x=>{const d=new Date(x.date);return `<div class="row between" style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer" onclick="openLoonLog('${x.id}')"><span class="muted">${d.getDate()} ${MND[d.getMonth()].slice(0,3)} ${d.getFullYear()}${x.note?' · '+esc(x.note):''}</span><b>${eur(x.amount)}</b></div>`;}).join(''):`<div class="muted" style="margin-top:10px">Nog geen loon gelogd.</div>`}`;
 }
 function openLoonLog(id){
   const x=id?(db.loonLog||[]).find(v=>v.id===id):{id:null,date:isoDate(new Date()),amount:'',note:''};if(!x)return;
-  openSheet(`<h2>${id?'Loon bewerken':'Loon ontvangen'}</h2>
+  /* Van wie dit geld kwam bepaalt met welk ritme het meetelt in je gemiddelde: € 950 van een baan die
+     twee keer per maand betaalt is iets heel anders dan € 950 van een maandloon. Met één bron valt er
+     niets te kiezen, dus dan laten we het veld weg. */
+  const bronnen=(db.werkgevers||[]).filter(w=>werkCfgOf(w).actief!==false||w===x.werk);
+  const kies=bronnen.length>1?`<label>Van wie?</label><select id="ll_werk">${bronnen.map(w=>`<option ${w===(x.werk||hoofdBaan())?'selected':''}>${esc(w)}</option>`).join('')}</select>`:'';
+  openSheet(`<h2>${id?'Loon bewerken':'Loon ontvangen'}</h2>${kies}
     <label>Datum van ontvangst</label><input type="date" id="ll_date" value="${x.date}">
     <label>Netto bedrag</label>${mInput('id="ll_amt"',x.amount,'bijv. 1.750')}
     <label>Notitie (optioneel)</label><input id="ll_note" value="${esc(x.note||'')}" placeholder="bijv. incl. vakantiegeld">
@@ -3771,9 +3834,13 @@ function openLoonLog(id){
 function saveLoonLog(id){
   const amt=moneyNum(val('ll_amt'));if(!amt){toast('Vul een bedrag in');return;}
   const date=val('ll_date')||isoDate(new Date());const note=val('ll_note');
+  /* Staat het keuzeveld er niet (één bron of geen), dan is de bron gewoon die ene — hoofdBaan() geeft
+     hem, en zonder bronnen blijft het leeg zoals voorheen. */
+  const el=document.getElementById('ll_werk');
+  const werk=el?el.value:(hoofdBaan()||'');
   const leg=()=>{
-    if(id){const x=db.loonLog.find(v=>v.id===id);if(x){x.date=date;x.amount=round2(amt);x.note=note;}}
-    else db.loonLog.push({id:rnd(),date,amount:round2(amt),note});
+    if(id){const x=db.loonLog.find(v=>v.id===id);if(x){x.date=date;x.amount=round2(amt);x.note=note;if(werk)x.werk=werk;}}
+    else db.loonLog.push({id:rnd(),date,amount:round2(amt),note,werk});
     haptic();save();closeSheet();render();toast('Opgeslagen');
   };
   const dub=(db.loonLog||[]).find(x=>x&&x.id!==id&&x.date===date&&Math.abs((+x.amount||0)-round2(amt))<0.005);

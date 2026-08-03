@@ -925,6 +925,115 @@ const check=[];const meld=(n,ok,det)=>{check.push((ok?'ok   ':'FOUT ')+n+(det?' 
         return som===saldo&&e.vrij>=0&&e.tekort>=0&&e.rijen.every(r=>r.bezet>=0&&r.nodig<=(mixItems.find(it=>it.n===r.n).v+0.01));
       }), 'gecontroleerd op saldo 0, 50, 200, 400, 700, 2000');
   }
+  /* ===== SALDO PER KOSTENPOST =====
+     Elke post een eigen envelop binnen het potje. De verdeling wordt afgeleid uit beginstand, uitgaven
+     met itemId en het potsaldo — nooit opgeslagen. De som van alle rijen plus het vrije geld is per
+     definitie het potsaldo; dat is wat de meeste van deze controles bewaken. */
+  const bufS=(n,v,start)=>({id:n,n,v,fn:1,fu:'m',buffer:true,start:start||0,toeslagen:[]});
+  const psRes=(saldo,items,log,pot)=>{
+    const r=run(basis({potjes:[Object.assign({n:'P',saldo,log:log||[],items},pot||{})]}),
+      a=>({ps:a.potPosten(0),res:a.potReservering(0)}));
+    return r.fout?{fout:r.fout}:r.extra;
+  };
+  const somS=ps=>Math.round((ps.rijen.reduce((a,r)=>a+r.saldo,0)+ps.vrij)*100)/100;
+  // 63. zonder beginstand en zonder uitgaven: verdeling puur naar rato van het maandbedrag
+  {
+    const e=psRes(320,[bufS('Eigen risico',14),bufS('Tandarts',13),bufS('Zelf betaald',5)]);
+    meld('postsaldo: stortingen gaan naar rato van het maandbedrag',
+      JSON.stringify(e.ps.rijen.map(r=>r.saldo))==='[140,130,50]'&&somS(e.ps)===320&&e.ps.vrij===0,
+      JSON.stringify(e.ps&&e.ps.rijen));
+  }
+  // 64. samenvoegen van twee bestaande potjes: de beginstanden blijven exact staan
+  {
+    const e=psRes(261.38,[bufS('Eigen risico',14,239.20),bufS('Tandarts',13,22.18),bufS('Zelf betaald',5,0)]);
+    meld('postsaldo: beginstanden overleven het samenvoegen ongewijzigd',
+      JSON.stringify(e.ps.rijen.map(r=>r.saldo))==='[239.2,22.18,0]',
+      JSON.stringify(e.ps&&e.ps.rijen));
+  }
+  // 65. een dure tandartsrekening komt van de tandartspost af, niet van het eigen risico
+  {
+    const log=[{id:'x1',date:'2025-12-22',amount:144.24,item:'Tandarts',itemId:'Tandarts',kind:'uitgave'}];
+    const e=psRes(117.14,[bufS('Eigen risico',14,239.20),bufS('Tandarts',13,22.18),bufS('Zelf betaald',5,0)],log);
+    const r=e.ps.rijen;
+    meld('postsaldo: een uitgave raakt alleen de post waarop hij geboekt staat',
+      r[0].saldo===239.2&&r[1].saldo===-122.06&&r[2].saldo===0&&somS(e.ps)===117.14&&e.ps.rood===true,
+      JSON.stringify(r));
+  }
+  // 66. na de volgende storting loopt de min weer terug, maar alleen naar rato
+  {
+    const log=[{id:'x1',date:'2025-12-22',amount:144.24,item:'Tandarts',itemId:'Tandarts',kind:'uitgave'}];
+    const e=psRes(149.14,[bufS('Eigen risico',14,239.20),bufS('Tandarts',13,22.18),bufS('Zelf betaald',5,0)],log);
+    meld('postsaldo: een storting van 32 wordt 14/13/5 verdeeld, som blijft het saldo',
+      JSON.stringify(e.ps.rijen.map(r=>r.saldo))==='[253.2,-109.06,5]'&&somS(e.ps)===149.14,
+      JSON.stringify(e.ps.rijen));
+  }
+  // 67. ook één post krijgt nu een saldo — daar was juist niets over te zien
+  {
+    const een=psRes(500,[bufS('Onvoorzien',50)]);
+    const leeg=psRes(500,[]);
+    meld('postsaldo: één buffer krijgt gewoon het hele saldo, een spaarpotje krijgt niets',
+      een.ps.rijen.length===1&&een.ps.rijen[0].saldo===500&&leeg.ps===null,
+      JSON.stringify({een:een.ps&&een.ps.rijen,leeg:leeg.ps}));
+  }
+  // 68. een gedateerde post houdt nooit meer dan één termijn vast; de rest is vrij te besteden
+  {
+    const e=psRes(900,[post('Huur',780,1,'m',dagOffset(3)),bufS('Onderhoud',40)]);
+    const huur=e.ps.rijen.find(r=>r.n==='Huur');
+    meld('postsaldo: een gedateerde post loopt niet boven zijn eigen termijnbedrag uit',
+      huur.saldo<=780.005&&somS(e.ps)===900, JSON.stringify({huur:huur.saldo,vrij:e.ps.vrij}));
+  }
+  // 69. som blijft het saldo, bij elk saldo-niveau en met een mix van alle soorten
+  {
+    const mix=[post('APK',50,1,'j',dagOffset(240)),post('Huur',780,1,'m',dagOffset(3)),
+      bufS('Onderhoud',40),bufS('Tandarts',20),{id:'op',n:'Onbekend',v:0,fn:1,fu:'m',toeslagen:[]}];
+    meld('postsaldo: rijen plus vrij is op elk saldo-niveau precies het potsaldo',
+      [0,50,300,900,5000].every(s=>somS(psRes(s,mix).ps)===s&&psRes(s,mix).ps.vrij>=0),
+      'gecontroleerd op saldo 0, 50, 300, 900, 5000');
+  }
+  // 70. een tekort pakt eerst het vrije geld en gaat pas daarna in de min
+  {
+    const log=[{id:'z1',date:'2026-03-01',amount:100,item:'Tandarts',itemId:'Tandarts',kind:'uitgave'}];
+    const e=psRes(700,[post('Huur',600,1,'m',dagOffset(3)),bufS('Tandarts',0)],log);
+    const t=e.ps.rijen.find(r=>r.n==='Tandarts');
+    meld('postsaldo: een post in de min wordt eerst uit het vrije geld aangevuld',
+      t.saldo===0&&somS(e.ps)===700, JSON.stringify({tandarts:t.saldo,vrij:e.ps.vrij}));
+  }
+  // 71. tankpotje: uitgaven zonder kostenpost horen bij de brandstofregel, niet bij "niet toegewezen"
+  {
+    const log=[{id:'t1',date:'2026-07-17',amount:77.73,item:'',itemId:'',kind:'uitgave'}];
+    const tank=psRes(71,[],log,{fuel:true,maand:71});
+    const gewoon=psRes(71,[bufS('Onvoorzien',20)],log);
+    meld('postsaldo: losse uitgaven zijn tankbeurten in een brandstofpotje, elders een eigen regel',
+      tank.ps.rijen.length===1&&tank.ps.rijen[0].soort==='tank'&&tank.ps.rijen[0].uit===77.73
+      &&gewoon.ps.rijen.some(r=>r.soort==='los'&&r.uit===77.73)&&somS(gewoon.ps)===71,
+      JSON.stringify({tank:tank.ps.rijen,gewoon:gewoon.ps.rijen}));
+  }
+  // 72. een ontvangst telt de andere kant op; een regel zonder saldo-effect telt niet mee
+  {
+    const log=[
+      {id:'y1',date:'2026-03-01',amount:60,item:'Tandarts',itemId:'Tandarts',kind:'uitgave'},
+      {id:'y2',date:'2026-03-09',amount:25,item:'Tandarts',itemId:'Tandarts',kind:'ontvangst'},
+      {id:'y3',date:'2026-03-10',amount:999,item:'Tandarts',itemId:'Tandarts',kind:'uitgave',geenSaldo:true},
+    ];
+    const e=psRes(100,[bufS('Onderhoud',40),bufS('Tandarts',20)],log);
+    const t=e.ps.rijen.find(r=>r.n==='Tandarts');
+    meld('postsaldo: ontvangst telt terug, een regel zonder saldo-effect telt niet mee',
+      t.uit===35&&somS(e.ps)===100, JSON.stringify({uit:t.uit,rijen:e.ps.rijen}));
+  }
+  // 73. wat een gedateerde post niet kwijt kan stroomt door naar de buffers, niet naar "vrij"
+  {
+    const e=psRes(900,[post('Huur',780,1,'m',dagOffset(3)),bufS('Onderhoud',40),bufS('Tandarts',20)]);
+    const h=e.ps.rijen.find(r=>r.n==='Huur'),o=e.ps.rijen.find(r=>r.n==='Onderhoud'),t=e.ps.rijen.find(r=>r.n==='Tandarts');
+    meld('postsaldo: overschot boven een termijnbedrag stroomt door naar de buffers, vrij blijft leeg',
+      h.saldo===780&&o.saldo>t.saldo&&Math.abs(o.saldo-2*t.saldo)<0.02&&e.ps.vrij===0&&somS(e.ps)===900,
+      JSON.stringify({huur:h.saldo,onderhoud:o.saldo,tandarts:t.saldo,vrij:e.ps.vrij}));
+  }
+  // 74. zonder buffer kan het overschot nergens heen, en dan is "vrij te besteden" ook echt waar
+  {
+    const e=psRes(900,[post('Huur',600,1,'m',dagOffset(3)),post('Gas',120,1,'m',dagOffset(9))]);
+    meld('postsaldo: zijn alle posten vol, dan blijft de rest staan als vrij te besteden',
+      e.ps.vrij===180&&somS(e.ps)===900, JSON.stringify({vrij:e.ps.vrij,rijen:e.ps.rijen.map(r=>r.saldo)}));
+  }
 }
 // 26. loon: leert de app dat het loon structureel later binnenkomt dan de ingestelde loondag?
 {

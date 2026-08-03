@@ -2549,6 +2549,120 @@ function potReservering(pi){
     :('Rest — voor '+(wacht.length>2?wacht.slice(0,2).join(', ')+' en '+(wacht.length-2)+' andere':lijstTekst(wacht)));
   return {rijen,bezet:round2(rijen.reduce((a,r)=>a+r.bezet,0)),vrij:round2(over),tekort:round2(tekort),wacht,restLabel};
 }
+/* ===== SALDO PER BUFFER =====
+   Hierboven is opgelost dat een reparatie stilletjes je APK-geld opeet. Tussen twee buffers onderling
+   speelde datzelfde probleem nog steeds: betaal je de tandarts uit een potje waar ook je eigen risico
+   in zit, dan zag je alleen "Rest — voor Tandarts, Eigen risico en 1 andere" — wel de namen, niet de
+   bedragen, en dat is nou juist de vraag. Met een cyclus valt het niet te doen, want een buffer heeft
+   geen datum.
+   Wat wél bekend is: elke uitgave draagt zijn itemId, en het deel van het saldo dat na de gedateerde
+   posten overblijft. De stortingen niet — die staan per potje, niet per kostenpost. Maar ze hoeven ook
+   niet opgeslagen te worden, want een pot is wat erin ging min wat eruit kwam:
+        stortingen = pool - beginstanden + uitgaven
+   Die verdelen we naar rato van het maandbedrag: wie 20 per maand opzij zet krijgt van elke storting
+   twee keer zoveel als wie er 10 opzij zet. Uitgaven gaan van de buffer waarop ze geboekt staan. De
+   verdeling telt daardoor per definitie op tot exact de pool, ook als je onregelmatig overmaakt — er
+   kan dus nooit een bedrag "zoek" raken tussen deze regels en het saldo erboven.
+   Een buffer mag negatief staan: dat betekent dat hij van de andere heeft geleend, en dat is precies
+   het signaal dat je zoekt. Wegpoetsen naar nul zou de vraag weer onbeantwoord laten. */
+function postUit(p,it){
+  /* Alles wat het saldo van dit potje raakte en op deze kostenpost geboekt staat. Een ontvangst telt de
+     andere kant op; wat als 'geenSaldo' gelogd is raakte het saldo per definitie niet. */
+  let uit=0;
+  (p.log||[]).forEach(x=>{
+    if(!x||x.itemId!==(it?it.id:'')||x.geenSaldo)return;
+    uit+=(x.kind==='ontvangst')?-(+x.amount||0):(+x.amount||0);
+  });
+  return round2(uit);
+}
+/* Wat er per termijn van deze kostenpost werkelijk van je rekening gaat: het bedrag min de toeslagen
+   die in dezelfde termijn binnenkomen. Dezelfde netto-aftrek als itemGereserveerd hierboven. */
+function itemTermijnNetto(it){
+  const toeslagPerTermijn=itToeslagMnd(it)*monthsPer(it.fu||'m',+it.fn||1);
+  return Math.max(0,(+it.v||0)-toeslagPerTermijn);
+}
+/* ===== SALDO PER KOSTENPOST =====
+   potReservering hierboven zegt hoeveel er KLAAR HOORT TE STAAN voor een gedateerde post — puur uit de
+   cyclus, geen echt potje binnen het potje. Daardoor was voor een buffer, of voor een post waarvan je
+   het bedrag niet weet, nooit te zien hoeveel geld er nu eigenlijk voor is. Boekte je een tandarts-
+   rekening af, dan zakte het potsaldo en wist niemand ten koste waarvan.
+   Hier krijgt elke post een eigen envelop binnen het potje, met overal dezelfde regel:
+        saldo = beginstand + toegewezen stortingen - uitgaven
+   De stortingen staan niet per post in de data (db.overboek gaat per potje), maar hoeven ook niet
+   opgeslagen te worden: een pot is wat erin ging min wat eruit kwam, dus
+        stortingen = potsaldo - beginstanden + uitgaven
+   Verdeeld naar rato van het maandbedrag. Daarna twee correcties, in deze volgorde:
+   - Een gedateerde post houdt nooit meer vast dan één termijn: wat daarboven komt is vrij geld. Een
+     buffer heeft geen plafond — die hoort juist op te lopen.
+   - Een post die in de min zou staan pakt eerst dat vrije geld, en gaat pas daarna negatief. Negatief
+     blijft toegestaan: dat is het signaal dat een post van de andere heeft geleend.
+   Beide correcties schuiven alleen bedragen tussen de rijen en 'vrij', dus de som blijft per definitie
+   exact het potsaldo — dit paneel kan het saldo erboven nooit tegenspreken.
+   null = er valt niets te verdelen: geen enkele kostenpost en geen brandstofbudget. */
+function potPosten(pi){
+  const p=db.potjes[pi];if(!p)return null;
+  const items=(p.items||[]).filter(it=>it&&it.n);
+  const fuel=!!(p.fuel&&+p.maand>0);
+  if(!items.length&&!fuel)return null;
+  const nu=new Date();nu.setHours(0,0,0,0);
+  /* Uitgaven zonder kostenpost horen in een tankpotje bij de brandstofregel — daar IS tanken de post.
+     In elk ander potje krijgen ze een eigen regel, zodat ze niet stilletjes van een envelop afgaan die
+     ze nooit gekozen hebben. */
+  const los=round2((p.log||[]).filter(x=>x&&!x.itemId&&!x.geenSaldo)
+    .reduce((a,x)=>a+((x.kind==='ontvangst')?-(+x.amount||0):(+x.amount||0)),0));
+  const rijen=items.map(it=>({
+    id:it.id,n:it.n,
+    soort:it.buffer?'buffer':(it.due?'vast':'open'),
+    datum:(it.due&&!it.buffer)?itemNextOcc(it):null,
+    nodig:itemGereserveerd(it,nu),
+    cap:(it.due&&!it.buffer)?itemTermijnNetto(it):null,
+    mnd:Math.max(0,itMnd(it)),start:+it.start||0,uit:postUit(p,it),
+  }));
+  if(fuel)rijen.push({id:'',n:'Tanken',soort:'tank',datum:null,nodig:0,cap:null,mnd:Math.max(0,+p.maand||0),start:0,uit:los});
+  else if(Math.abs(los)>0.005)rijen.push({id:'',n:'Niet toegewezen',soort:'los',datum:null,nodig:0,cap:null,mnd:0,start:0,uit:los});
+  rijen.forEach(r=>{r.deel=0;});
+  let rest=(+p.saldo||0)-rijen.reduce((a,r)=>a+r.start,0)+rijen.reduce((a,r)=>a+r.uit,0);
+  /* Verdelen naar rato van het maandbedrag, maar een gedateerde post neemt nooit meer dan één termijn.
+     Wat hij niet kwijt kan stroomt door naar de posten die nog ruimte hebben — in de praktijk je
+     buffers, want die hebben geen plafond. Vandaar de rondes: pas als niemand meer ruimte heeft blijft
+     er echt vrij geld over, en dan is "vrij te besteden" ook letterlijk waar.
+     Bij een negatief te verdelen bedrag (meer uitgegeven dan gestort) is er niets te vullen en gaat het
+     gewoon naar rato van iedereen af; plafonds knellen daar per definitie niet. */
+  let open=rijen.filter(r=>r.mnd>0);
+  if(rest<0){
+    const W=open.reduce((a,r)=>a+r.mnd,0);
+    if(W>0)open.forEach(r=>{r.deel=rest*r.mnd/W;});
+    rest=W>0?0:rest;
+  }else{
+    for(let ronde=0;ronde<20&&open.length&&rest>0.0001;ronde++){
+      const W=open.reduce((a,r)=>a+r.mnd,0);if(!(W>0))break;
+      const teDelen=rest;let gebruikt=0;const nog=[];
+      open.forEach(r=>{
+        const ruimte=(r.cap==null)?Infinity:Math.max(0,r.cap-(r.start+r.deel-r.uit));
+        const pak=Math.min(teDelen*r.mnd/W,ruimte);
+        r.deel+=pak;gebruikt+=pak;
+        if(r.cap==null||ruimte-pak>0.0001)nog.push(r);
+      });
+      rest=teDelen-gebruikt;
+      if(gebruikt<=0.0001)break;
+      open=nog;
+    }
+  }
+  rijen.forEach(r=>{r.saldo=round2(r.start+r.deel-r.uit);delete r.deel;});
+  let vrij=round2((+p.saldo||0)-rijen.reduce((a,r)=>a+r.saldo,0));
+  /* Zijn er posten in de min terwijl er vrij geld ligt, dan hoort dat vrije geld daar eerst heen — een
+     tekort naast onaangeroerd geld in hetzelfde potje zou niemand zo bedoelen. */
+  rijen.forEach(r=>{if(r.saldo<-0.005&&vrij>0.005){const k=Math.min(vrij,-r.saldo);r.saldo=round2(r.saldo+k);vrij=round2(vrij-k);}});
+  /* Centverschillen uit het afronden landen op de ruimste post zonder plafond, zodat "vrij" nooit een
+     negatief bedrag toont. */
+  if(vrij<-0.0001){
+    const doel=rijen.filter(r=>r.cap==null).sort((a,b)=>b.saldo-a.saldo)[0]||rijen[0];
+    if(doel){doel.saldo=round2(doel.saldo+vrij);vrij=0;}
+  }
+  return {rijen,vrij:round2(Math.max(0,vrij)),pool:round2(+p.saldo||0),
+    rood:rijen.some(r=>r.saldo<-0.005),
+    krap:rijen.some(r=>r.cap!=null&&r.saldo<r.nodig-0.005)};
+}
 function potNeed(pi){const ms=potMonthStatus(pi);return ms?ms.tekort:0;}
 function totalSaldo(){return db.potjes.reduce((a,p)=>a+(+p.saldo||0),0);}
 /* 'once'-uitgaven (eenmalig-vinkje) tellen niet mee in gemiddelden en buffer-adviezen; het saldo raken ze wel gewoon. */
@@ -2747,14 +2861,26 @@ function renderPotjes(){
     }}
     /* "Waar is je saldo voor?" — alleen waar het iets toevoegt. Bij een potje met louter maandelijkse
        vaste lasten zegt de badge hierboven het al, en zou dit paneel dezelfde vraag nog eens stellen. */
+    /* "Waar is je saldo voor?" — nu bij élk potje met kostenposten, ook bij louter maandelijkse vaste
+       lasten. Dat paneel werd daar bewust weggelaten toen het alleen reserveringen toonde (de badge zei
+       hetzelfde), maar een saldo per kostenpost is nieuwe informatie: het zegt hoeveel geld er voor deze
+       post ís, niet hoeveel er zou moeten staan. */
     let resPanel='';
-    const res=(!spaar&&!potIsMaandelijks(p))?potReservering(i):null;
-    if(res){
-      const rest=res.restLabel;
-      resPanel=`<div class="mini"><div class="mini-h">Waar is je saldo voor?</div>`
-        +res.rijen.map(r=>`<div class="kv"><span class="k">${esc(r.n)} <span class="muted" style="font-size:12px">· ${r.datum.getDate()} ${MND[r.datum.getMonth()].slice(0,3)}</span></span><span class="v">${eur(r.bezet)}</span></div>`).join('')
-        +`<div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k">${rest}</span><span class="v" style="color:var(--ok-tx)">${eur(res.vrij)}</span></div>`
-        +(res.tekort>0.005?`<div style="font-size:13px;margin-top:8px;color:var(--amber)">Er staat <b>${eur(res.tekort)}</b> minder klaar dan nodig voor wat eraan komt.</div>`:'')
+    const ps=spaar?null:potPosten(i);
+    if(ps){
+      const sub={vast:null,buffer:'buffer',open:'geen datum',tank:'tanken',los:'zonder kostenpost'};
+      const rijen=ps.rijen.map(r=>{
+        const bij=r.datum?`${r.datum.getDate()} ${MND[r.datum.getMonth()].slice(0,3)}`:sub[r.soort];
+        const kleur=r.saldo<-0.005?'var(--amber)':(r.saldo>0.005?'var(--ok-tx)':'var(--muted)');
+        /* Alleen bij een gedateerde post valt "te weinig" te zeggen: daar staat een bedrag en een datum
+           tegenover. Een buffer kan per definitie niet te weinig hebben. */
+        const krap=(r.cap!=null&&r.saldo<r.nodig-0.005)?` <span class="muted" style="font-size:12px">van ${eur(r.nodig)} nodig</span>`:'';
+        return `<div class="kv"><span class="k">${esc(r.n)}${bij?` <span class="muted" style="font-size:12px">· ${bij}</span>`:''}</span><span class="v" style="color:${kleur}">${eur(r.saldo)}${krap}</span></div>`;
+      }).join('');
+      const vrijRegel=ps.vrij>0.005?`<div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k">Vrij te besteden</span><span class="v" style="color:var(--ok-tx)">${eur(ps.vrij)}</span></div>`:'';
+      resPanel=`<div class="mini"><div class="mini-h">Waar is je saldo voor?</div>`+rijen+vrijRegel
+        +(ps.krap?`<div style="font-size:13px;margin-top:8px;color:var(--amber)">Bij een post staat minder dan er klaar hoort te staan voor de volgende afschrijving.</div>`:'')
+        +(ps.rood?`<div style="font-size:13px;margin-top:8px;color:var(--amber)">Een post in de min heeft geleend van de andere posten in dit potje.</div>`:'')
         +`</div>`;
     }
     // "Deze maand"-paneel (in het uitgeklapte deel)
@@ -3237,9 +3363,17 @@ function uitgaveLinkToggle(){
   if(sel)sel.innerHTML=lijst.map(d=>`<option value="${isoDate(d)}" ${isoDate(d)===kies?'selected':''}>${termijnDatumTekst(d,span,true)}</option>`).join('');
   uitgaveOccInfo();uitgaveLinkVeld();uitgaveSaldoStand();
 }
-function saveUitgave(){
+function saveUitgave(door){
   const pi=+val('u_pot');const p=db.potjes[pi];if(!p)return;
   const amt=moneyNum(val('u_amt'))||0;if(!amt){toast('Vul een bedrag in');return;}
+  /* Zonder kostenpost weet de app niet welke envelop leegloopt. Het bedrag gaat wel gewoon van je
+     saldo af, maar belandt bij "Waar is je saldo voor?" op een regel Niet toegewezen in plaats van bij
+     de post waar het hoort — en dan klopt het saldo per post niet meer. Bij één kostenpost valt er
+     niets te kiezen, en in een brandstofpotje ís tanken de post. */
+  if(!door&&!p.fuel&&(p.items||[]).length>1&&!selSplit(val('u_item')).itemId){
+    confirmSheet('Waarvoor was dit?',`Je hebt geen kostenpost gekozen. Het bedrag gaat wel van je saldo af, maar komt onder "Niet toegewezen" te staan in plaats van bij ${esc(p.items[0].n)} of een van de andere — het saldo per kostenpost klopt dan niet meer.`,'Toch toevoegen',()=>saveUitgave(true));
+    return;
+  }
   const date=val('u_date')||isoDate(new Date());
   const ontv=window._uKind==='ontvangst';
   const dub=dubbeleBoeking(p,date,amt,ontv);
@@ -3596,6 +3730,8 @@ function openItemEdit(pi,ii){
     <div id="ie_bufw" style="display:${buf?'block':'none'}">
       <label>Maandbedrag dat je opzij zet</label>${mInput('id="ie_bv"',it.v,'40')}
       <div class="muted" style="font-size:13px;margin-top:6px">Uitgaven log je met de ＋-knop; de app berekent daaruit een aanbevolen maandbedrag.</div>
+      <label style="margin-top:16px">Beginstand (optioneel)</label>${mInput('id="ie_bstart"',it.start,'0,00')}
+      <div class="muted" style="font-size:13px;margin-top:6px">Alleen nodig als er méér dan één buffer in dit potje zit. Vul in wat er nú al voor deze buffer opzij staat — bijvoorbeeld als je twee potjes samenvoegt. Zonder beginstand verdeelt de app het saldo alleen naar maandbedrag, en lijkt een buffer waar je al jaren voor spaart net zo vol als een nieuwe.</div>
     </div>
     <div class="row" style="margin-top:20px">${ii>=0?`<button class="danger" onclick="delItemEdit(${pi},${ii})">Verwijderen</button>`:''}<button class="primary" style="flex:1" onclick="saveItemEdit(${pi},${ii})">Opslaan</button></div>`,()=>openPotDetailEdit(pi));
   renderIeToeslagen(pi,ii);
@@ -3674,7 +3810,7 @@ function ieCommit(pi,ii){
   const old=ii>=0?(p.items[ii]||{}):{};
   const basis={id:old.id||rnd(),n,note:val('ie_note').trim(),paidDates:old.paidDates||{},skipDates:old.skipDates||{},toeslagen:toeslagenOf(old)};
   let item;
-  if(buf)item=Object.assign(basis,{buffer:true,v:numV('ie_bv')||0,fn:1,fu:'m'});
+  if(buf)item=Object.assign(basis,{buffer:true,v:numV('ie_bv')||0,fn:1,fu:'m',start:numV('ie_bstart')||0});
   else{
     const fr=readFreq(document.getElementById('ie_vast'),'f');
     item=Object.assign(basis,{v:numV('ie_v')||0,fn:fr.fn,fu:fr.fu,due:val('ie_due')||null,dueTot:val('ie_dueTot')||null,ov:numV('ie_ov')});

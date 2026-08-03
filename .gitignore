@@ -38,3 +38,6 @@ android/.artifacts/
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# PDF-overzichten die de app of het preview-script wegschrijft
+GridLife-overzicht-*.pdf

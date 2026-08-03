@@ -371,7 +371,7 @@ h2 .ico{width:20px;height:20px;vertical-align:-4px}
       <div id="expImpRow" class="grid2"><button id="expBtn" onclick="armNoLock();exportData()">Kopie opslaan</button><button id="impBtn" onclick="armNoLock();document.getElementById('importFile').click()">Kopie terugzetten</button></div>
       <div class="muted" id="impHint" style="margin-top:8px;font-size:13px">Opslaan maakt een bestand dat je kunt bewaren of mailen. Terugzetten voegt je lijsten samen: wat er al staat blijft staan. Je instellingen — loondag, thema, je naam en welke functies aanstaan — worden wél overgenomen uit het bestand.</div>
       <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(event)"></div>
-    <div class="card" id="pdfCard"><h2>PDF-overzicht</h2><div class="muted" style="margin-bottom:10px;font-size:13px">Een net overzicht van je uren, potjes, betalingen en uitgaven — handig om te printen of te bewaren.</div>
+    <div class="card" id="pdfCard"><h2>PDF-overzicht</h2><div class="muted" id="pdfOms" style="margin-bottom:10px;font-size:13px"></div>
       <button class="ghost" style="width:100%" onclick="exportOverzichtPDF()">Overzicht exporteren (PDF)</button></div>
     <div class="card"><h2>Gegevens wissen</h2><div class="muted" style="margin-bottom:10px">Verwijdert alle gegevens van dit apparaat.</div><button class="danger" style="width:100%" onclick="wisData()">Alles wissen…</button></div>
     <div class="muted" style="text-align:center;padding:10px">GridLife · gemaakt door Thomas Branderhorst</div>
@@ -690,9 +690,11 @@ function moneyNum(v){v=String(v||'').trim();if(!v)return null;v=v.replace(/\s/g,
 function pad(n){return String(n).padStart(2,'0');}
 function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const ys=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-ys)/86400000)+1)/7);}
 function isoWeekYear(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);return t.getUTCFullYear();}
-function hoursOf(s){let a=toMin(s.start),b=toMin(s.end);if(b<a)b+=1440;return Math.max(0,(b-a-(+s.pauze||0)))/60;}
-function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-function fmtDur(h){const tot=Math.round(h*60);return Math.floor(tot/60)+'u '+pad(tot%60)+'m';}
+/* Een negatieve pauze telde uren bij een dienst op, en een kapotte tijd uit een oude back-up zette
+   letterlijk "NaNu NaNm" op je scherm. Allebei hier afgevangen. */
+function hoursOf(s){let a=toMin(s.start),b=toMin(s.end);if(!isFinite(a)||!isFinite(b))return 0;if(b<a)b+=1440;return Math.max(0,(b-a-Math.max(0,+s.pauze||0)))/60;}
+function toMin(t){if(!t)return 0;const[h,m]=String(t).split(':').map(Number);const v=h*60+m;return isFinite(v)?v:NaN;}
+function fmtDur(h){const tot=Math.round(h*60);if(!isFinite(tot))return '0u 00m';return Math.floor(tot/60)+'u '+pad(tot%60)+'m';}
 function fmtPauze(min){min=+min||0;if(!min)return '';const h=Math.floor(min/60),m=min%60;return ((h?h+' uur':'')+(h&&m?' ':'')+(m?m+' min':''))||'0 min';}
 function monthKey(d){return d.getFullYear()+'-'+pad(d.getMonth()+1);}
 function isoDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -1233,7 +1235,11 @@ function hoofdBaan(){
    keer dat er iets bewaard wordt gaat de keuze vanzelf mee — en tot die tijd kiest dezelfde invoer
    toch weer dezelfde baan. */
 function hoofdBaanVast(){const w=hoofdBaan();if(w&&db.hoofdwerk!==w)db.hoofdwerk=w;return w;}
-function zetHoofdBaan(w){db.hoofdwerk=w||'';syncLoonVanWerk();save();scheduleLoonMeldingen();render();toast(w?w+' bepaalt nu je potjes-ritme':('Ritme volgt weer je grootste '+bronWoord(false,false)));}
+/* Ook de lijst waar je net op tikte opnieuw tekenen: die staat in een sheet bovenop de pagina, dus
+   render() alleen laat je naar de oude badge kijken tot je het scherm sluit en weer opent. */
+function zetHoofdBaan(w){db.hoofdwerk=w||'';syncLoonVanWerk();save();scheduleLoonMeldingen();render();
+  if(window._bk==='werkgevers'&&document.getElementById('bhList'))renderBhList();
+  toast(w?w+' bepaalt nu je potjes-ritme':('Ritme volgt weer je grootste '+bronWoord(false,false)));}
 /* Levert die werkgever ook je loondag? Alleen als je Uren gebruikt én er werkgevers zijn;
    anders blijft de Loon-pagina zelf instelbaar (dan is db.loon de bron). */
 /* Leveren je eigen bronnen het loonritme, of de Loon-pagina zelf? Dit hing aan de Uren-module, maar
@@ -2254,8 +2260,8 @@ function openMarkReceivedSheet(pi,itemId,iso,toeId){
     <div class="row between" style="margin-top:14px;align-items:center"><div><b>Saldo van het potje bijwerken</b><div class="muted" style="font-size:13px" id="mr_saldoUitleg"></div></div><div class="check" id="mr_saldo" onclick="tgl(this);markSaldoInfo('mr')"></div></div>
     <label>Notitie (optioneel)</label><input id="mr_note" placeholder="optioneel">
     <button class="primary" style="width:100%;margin-top:14px" onclick="confirmMarkReceived(${pi},'${itemId}','${iso}','${toeId}')">Bevestigen — boekt bij en logt ontvangst</button>
-    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst','${toeId}')">Deze betaling komt niet</button>
-    <div class="muted" style="font-size:13px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt de betaling uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="skipOccurrence(${pi},'${itemId}','${iso}','ontvangst','${toeId}')">Deze ontvangst komt niet</button>
+    <div class="muted" style="font-size:13px;margin-top:6px">Krijg je deze keer niets? Dan verdwijnt deze ontvangst uit je openstaande lijst zonder dat er iets bij je saldo komt. Je kunt dat altijd terugdraaien.</div>`);
   markSaldoStand('mr');
   setTimeout(()=>{const el=document.getElementById('mr_amt');if(el){el.focus();el.select&&el.select();}},100);
 }
@@ -2308,8 +2314,13 @@ function potIsMaandelijks(p){
 function potProjectie(pi){
   const p=db.potjes[pi];if(!p)return null;
   const now=new Date();now.setHours(0,0,0,0);const to=monthEnd(now);
-  const uit=round2(paymentRows(now,to).filter(x=>x.pi===pi&&!x.paid).reduce((a,x)=>a+(+x.bruto||0),0));
-  const inn=round2(receiptRows(now,to).filter(x=>x.pi===pi&&!x.received).reduce((a,x)=>a+(+x.amount||0),0));
+  /* Zelfde venster als potMonthStatus, anders spreken twee regels op hetzelfde scherm elkaar tegen.
+     Een huur van de 1e die je nog niet hebt afgevinkt gaat er nog steeds af, ook al is die datum
+     voorbij — die mocht niet uit de projectie vallen, want dan zei de app "je loopt een maand voor"
+     terwijl er nog een maandhuur klaarstond om af te schrijven. En wat je op "komt niet" hebt gezet
+     verlaat je rekening juist niet, dus dat hoort er ook niet vanaf. */
+  const uit=round2(paymentRows(addMonths(now,-12),to).filter(x=>x.pi===pi&&!x.paid&&!x.skipped).reduce((a,x)=>a+(+x.bruto||0),0));
+  const inn=round2(receiptRows(monthStart(now),to).filter(x=>x.pi===pi&&!x.received&&!x.skipped).reduce((a,x)=>a+(+x.amount||0),0));
   const eind=round2((+p.saldo||0)-uit+inn);
   const doel=round2(potTot(p));
   const eersteVolgende=new Date(now.getFullYear(),now.getMonth()+1,1);
@@ -2327,9 +2338,11 @@ function looptEenMaandVoor(){
     if(!(p.items||[]).some(it=>it.due&&!it.buffer))continue;
     const pr=potProjectie(i);if(!pr)continue;
     relevant++;
-    /* Maandelijkse potjes: er hoort een hele maand klaar te staan. Potjes met kwartaal- of jaarposten
-       hebben geen maandnorm; daar is "niet in de min raken" het enige eerlijke criterium. */
-    if(pr.maandelijks?(pr.verschil<-0.005):(pr.eind<-0.005))return false;
+    /* Eén maat voor elk potje: er hoort na alles wat nog gepland staat een hele maand klaar te staan.
+       Voor potjes met een jaarpost gold eerder alleen "niet in de min", maar dan zei de app "september
+       staat al klaar" terwijl er van een maandbedrag van € 732 nog € 158 over was. Een potje dat naar
+       één grote jaarafschrijving toe spaart komt hier vanzelf ruim overheen. */
+    if(pr.verschil<-0.005)return false;
   }
   return relevant>0;
 }
@@ -3691,13 +3704,15 @@ function renderLoon(){
   edit.style.display=w?'none':'block';
   if(w){
     const ws=esc(w).replace(/'/g,"\\'");
-    bron.innerHTML=`<div class="kv"><span class="k">Werkgever</span><span class="v">${esc(w)}</span></div>
+    bron.innerHTML=`<div class="kv"><span class="k">${bronWoord(false,true)}</span><span class="v">${esc(w)}</span></div>
       <div class="kv"><span class="k">Hoe vaak</span><span class="v">${loonFreqTekst(L)}</span></div>
       <div class="kv"><span class="k">Loondag</span><span class="v">${loonDagTekst(L,true)}</span></div>
       ${L.mode!=='manual'?`<div class="kv stack"><span class="k">Geen werkdag?</span><span class="v">${loonShiftTekst(L)}</span></div>`:''}
       <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,4)}</div>
       <button class="ghost" style="width:100%;margin-top:12px" onclick="openWerkCfg('${ws}','loon')">Loondag wijzigen bij ${esc(w)}</button>
-      <div class="muted" style="font-size:13px;margin-top:6px">Je loondag hoort bij je werkgever. Wissel je van baan, dan zet je de nieuwe werkgever op "in dienst" — de loondag verhuist mee.</div>`;
+      <div class="muted" style="font-size:13px;margin-top:6px">${moduleOn('uren')
+        ? 'Je loondag hoort bij je werkgever. Wissel je van baan, dan zet je de nieuwe werkgever op "in dienst" — de loondag verhuist mee.'
+        : 'Je betaaldag hoort bij de bron waar het geld vandaan komt. Stel je hem daar in, dan klopt hij overal in de app.'}</div>`;
   }else{
     bron.innerHTML=(moduleOn('uren')&&!(db.werkgevers||[]).length)
       ? `<div class="muted" style="font-size:13px;margin-bottom:4px">Nog geen werkgever toegevoegd — stel je loondag zolang hier in. Voeg je er één toe bij Instellingen → Lijsten & categorieën → Werkgevers, dan verhuist de loondag daarnaartoe.</div>`
@@ -4167,7 +4182,7 @@ function toggleFav(i){haptic();db.recepten[i].fav=!db.recepten[i].fav;save();ren
 function viewRecept(i){const r=db.recepten[i];const por=true;window._rp=por?(r.porties||4):(r.porties||4);openSheet(`<div class="row between"><div class="row" style="align-items:center;gap:6px">${true?`<button class="star" onclick="toggleFav(${i});this.innerHTML=starSvg(db.recepten[${i}].fav)">${starSvg(r.fav)}</button>`:''}<h2 style="margin:0">${esc(r.n)}</h2></div>${r.cat?`<span class="chip" style="cursor:default">${esc(r.cat)}</span>`:''}</div>${(r.ing&&r.ing.length)?`${por?`<div class="row between" style="margin-top:12px"><span class="muted">Porties</span><div class="stepper"><button onclick="stepPortie(${i},-1)">−</button><span id="portieVal">${window._rp}</span><button onclick="stepPortie(${i},1)">＋</button></div></div>`:''}<div id="ingList" style="margin-top:8px"></div>${r.body?`<label style="margin-top:14px">Bereiding</label><div class="recipe-body">${esc(r.body)}</div>`:''}`:`<div class="recipe-body" style="margin-top:12px">${esc(r.body||'')}</div>`}<div class="row" style="margin-top:16px"><button class="danger" onclick="delRecept(${i})">Verwijderen</button><button class="primary" style="flex:1" onclick="openRecept(${i})">Bewerken</button></div>`);if(r.ing&&r.ing.length)renderIngList(i);}
 function renderIngList(i){const r=db.recepten[i];const f=true?(window._rp/(r.porties||4)):1;document.getElementById('ingList').innerHTML=r.ing.map(g=>{const amt=(g.a!==''&&g.a!=null)?fmtAmt(g.a*f,g.u):'';return `<div class="row between" style="padding:7px 0;border-top:1px solid var(--line);font-size:15px"><span>${esc(g.n)}</span><b style="white-space:nowrap">${amt}</b></div>`;}).join('');}
 function stepPortie(i,d){window._rp=Math.max(1,(+window._rp||4)+d);document.getElementById('portieVal').textContent=window._rp;renderIngList(i);}
-function openRecept(i){const r=(typeof i==='number')?db.recepten[i]:{n:'',cat:'',body:'',ing:[],porties:4};const id=(typeof i==='number')?i:-1;const cats=db.receptCategorieen;const catOn=true,porOn=true;
+function openRecept(i){const r=(typeof i==='number'&&db.recepten[i])?db.recepten[i]:{n:'',cat:'',body:'',ing:[],porties:4};const id=(typeof i==='number')?i:-1;const cats=db.receptCategorieen;const catOn=true,porOn=true;
   const catBlok=catOn?`<div><label>Categorie</label><select id="r_cat">${cats.map(c=>`<option ${c===r.cat?'selected':''}>${esc(c)}</option>`).join('')}${(r.cat&&!cats.includes(r.cat))?`<option selected>${esc(r.cat)}</option>`:''}${!cats.length&&!r.cat?'<option value=""></option>':''}</select></div>`:'';
   const porBlok=porOn?`<div><label>Porties</label><input id="r_porties" type="number" value="${r.porties||4}" inputmode="numeric" min="1"></div>`:'';
   const kop=(catBlok&&porBlok)?`<div class="grid2">${catBlok}${porBlok}</div>`:(catBlok||porBlok);
@@ -4192,6 +4207,16 @@ function delRecept(i){const item=db.recepten[i];if(!item)return;
     db.recepten.splice(i,1);save();closeSheet();render();showUndo('Recept verwijderd',()=>{db.recepten.splice(i,0,item);save();render();});
   });}
 
+/* Wat er écht in de PDF komt, hangt af van wat je aan hebt staan. Zonder de Uren-module beloofde de app
+   hier "je uren" en kreeg je een overzicht zonder uren. */
+function pdfOnderdelen(){
+  const d=[];
+  if(moduleOn('uren'))d.push('uren');
+  if(moduleOn('potjes')){d.push('potjes');d.push('betalingen');d.push('uitgaven');}
+  if(moduleOn('loon'))d.push('loon');
+  if(!d.length)return '';
+  return d.length===1?d[0]:d.slice(0,-1).join(', ')+' en '+d[d.length-1];
+}
 /* ===== MEER (hub) ===== */
 function renderMeer(){
   const c=document.getElementById('meerHub');if(!c)return;
@@ -4199,7 +4224,7 @@ function renderMeer(){
   let html='';
   if(moduleOn('loon')){const nx=nextPaydayEff();html+=row('loon','Loon',nx?('Volgende loon: '+nx.getDate()+' '+MND[nx.getMonth()].slice(0,3)+' '+nx.getFullYear()):'Loondag instellen',"go('loon')");}
   if(featOn('documenten')){const nd=(db.documenten||[]).length;html+=row('doc','Documenten',nd?(nd+' document'+(nd===1?'':'en')+' · verloopdatums'):'Verloopdatums van je passen en ID',"go('documenten')");}
-  if(true)html+=row('pdf','PDF-overzicht','Je uren, potjes en betalingen als PDF','exportOverzichtPDF()');
+  html+=row('pdf','PDF-overzicht',(pdfOnderdelen()?'Je '+pdfOnderdelen():'Je gegevens')+' als PDF','exportOverzichtPDF()');
   html+=row('uitleg','Uitleg','Antwoord op alle vragen, met voorbeelden','openGuide()');
   html+=`<button class="primary" style="width:100%;margin-top:14px" onclick="go('instellingen')">${ico('gear','width:18px;height:18px;vertical-align:-3.5px;margin-right:8px;color:var(--on-accent)')}Instellingen</button>`;
   c.innerHTML=html;
@@ -4209,7 +4234,10 @@ function renderMeer(){
 /* Zelfde standaard als de meldingen (scheduleLoonMeldingen gebruikt +doc.warnN||1 met 'm'). Hier stond
    ||0, dus zonder eigen instelling waarschuwde het scherm pas op de dag zelf terwijl je al een maand
    eerder een melding kreeg: "Paspoort verloopt bijna" op je telefoon, "Alles is nog geldig" in de app. */
-function docWarnDays(d){const n=+d.warnN||1;const u=d.warnU||'m';return Math.round(n*(u==='d'?1:u==='w'?7:u==='m'?30.44:365.25));}
+/* Standaard 3 maanden — hetzelfde als wat het invoerscherm voorstelt en wat de Uitleg belooft. Hier
+   stond 1 maand, dus een document van vóór dit veld (of uit een oude back-up) waarschuwde twee maanden
+   te laat. Een zelf ingevulde 0 blijft 0: dan wil je pas op de dag zelf iets horen. */
+function docWarnDays(d){const n=(d.warnN==null||d.warnN==='')?3:Math.max(0,+d.warnN||0);const u=d.warnU||'m';return Math.round(n*(u==='d'?1:u==='w'?7:u==='m'?30.44:365.25));}
 function renderDocumenten(){
   const c=document.getElementById('docWrap');if(!c)return;
   const now=new Date();now.setHours(0,0,0,0);
@@ -4285,6 +4313,8 @@ function delDoc(id){
 function renderInstellingen(){
   const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
   show('profielCard',true);
+  const po=document.getElementById('pdfOms');
+  if(po)po.textContent='Een net overzicht van '+(pdfOnderdelen()?'je '+pdfOnderdelen():'je gegevens')+' — handig om te printen of te bewaren.';
   const pn=document.getElementById('profNaam');pn.value=db.naam||'';pn.onchange=()=>{db.naam=pn.value.trim();save();toast('Opgeslagen');};
   document.querySelectorAll('#themeChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.t===(db.theme||'system')));
   const uitL=FEATS.filter(f=>featShow(f)&&!featOn(f.k)).map(f=>f.label).concat(MODULES.filter(m=>!moduleOn(m.k)).map(m=>m.naam));
@@ -4442,7 +4472,10 @@ function renderWerkCfg(){
     <input type="date" id="wc_loonTot" value="${L.tot||''}" onchange="wcLoonSet('tot',this.value)">
     <div class="muted" style="font-size:13px;margin-top:4px">Vul dit in als je hier gestopt bent. Daarna verwacht de app geen loon meer van ${esc(w)}, maar blijft alles wat je al invulde gewoon staan.</div>
     <div class="mini" style="margin:12px 0 0;background:var(--card2)"><div class="mini-h">Je eerstvolgende loondagen</div>${loonVoorbeeldHTML(L,5)}</div>
-    <div class="muted" style="font-size:13px;margin-top:8px">${act?(w===hoofdBaan()&&(db.werkgevers||[]).filter(x=>werkCfgOf(x).actief!==false).length>1?'Dit is je hoofdbaan: deze loondag bepaalt wanneer de vinkjes van je potjes opnieuw beginnen. Je loon van je andere baan telt gewoon mee, alleen het ritme komt hiervandaan.':'Hier rekent de app mee: je meldingen, de potjes-checklist en "volgende loon".'):'Wordt pas gebruikt zodra je hier weer in dienst gaat.'}</div></div>`;
+    <div class="muted" style="font-size:13px;margin-top:8px">${act?(w===hoofdBaan()&&(db.werkgevers||[]).filter(x=>werkCfgOf(x).actief!==false).length>1
+      ? (werkt?'Dit is je hoofdbaan: deze loondag bepaalt wanneer de vinkjes van je potjes opnieuw beginnen. Je loon van je andere baan telt gewoon mee, alleen het ritme komt hiervandaan.'
+             :'Hierop loopt je ritme: deze betaaldag bepaalt wanneer de vinkjes van je potjes opnieuw beginnen. Je andere inkomsten tellen gewoon mee.')
+      :'Hier rekent de app mee: je meldingen, de potjes-checklist en "volgende loon".'):(werkt?'Wordt pas gebruikt zodra je hier weer in dienst gaat.':'Wordt pas gebruikt zodra deze inkomstenbron weer loopt.')}</div></div>`;
   /* ---- 3. Uren controleren ---- */
   const showN=c.ritmeU!=='loonperiode';
   const klaarRow=c.ritmeU==='week'
@@ -4528,7 +4561,9 @@ function wcSave(){
   const fmt=d=>(d&&!isNaN(d))?(d.getDate()+' '+MND[d.getMonth()].slice(0,3)+' '+d.getFullYear()):'—';
 
   if(act&&!oudAct&&ander)notities.push(`<b>${esc(w)}</b> komt erbij naast <b>${esc(ander)}</b>. Je uren, meldingen en potjes blijven gewoon van je huidige ritme uitgaan; ${esc(w)} telt mee met een eigen loondag.`);
-  if(!act&&oudAct)notities.push(`Je gaat <b>uit dienst</b> bij ${esc(w)}. Je krijgt hier geen controle-meldingen meer; je uren en historie blijven staan.${ander?` <b>${esc(ander)}</b> blijft je loon leveren.`:' Er is dan niemand in dienst — de app rekent door met de laatst ingestelde loondag.'}`);
+  if(!act&&oudAct)notities.push(moduleOn('uren')
+    ? `Je gaat <b>uit dienst</b> bij ${esc(w)}. Je krijgt hier geen controle-meldingen meer; je uren en historie blijven staan.${ander?` <b>${esc(ander)}</b> blijft je loon leveren.`:' Er is dan niemand in dienst — de app rekent door met de laatst ingestelde loondag.'}`
+    : `<b>${esc(w)}</b> stopt. De app verwacht hier geen geld meer van; alles wat je al invulde blijft staan.${ander?` <b>${esc(ander)}</b> loopt gewoon door.`:' Er loopt dan niets meer — de app rekent door met de laatst ingestelde betaaldag.'}`);
 
   if(moduleOn('loon')&&act){
     if(L.mode==='weeks'&&!L.start)waarschuw.push('Er is <b>geen referentiedatum</b> ingevuld. Zolang die ontbreekt kan de app géén loondag berekenen: geen melding, geen "volgende loon" en geen potjes-reset.');
@@ -4553,14 +4588,17 @@ function wcSave(){
      een tekstmuur en tikt iemand alles weg zonder te lezen. */
   let body=(totAandacht>=3?`<div class="muted" style="font-weight:700;color:var(--text);margin-bottom:8px">${totAandacht} dingen veranderen hierdoor</div>`:'')
     +waarschuw.map(t=>`<div class="cwarn">${t}</div>`).join('')+notities.map(t=>`<div class="cnote">${t}</div>`).join('');
-  body+=`<div style="margin-top:${(waarschuw.length||notities.length)?'10px':'0'}">${kv('Dienstverband',act?'In dienst':'Uit dienst')}`;
+  /* Zonder de Uren-module is dit geen dienstverband maar een inkomstenbron; dan hoort er ook geen
+     "In dienst" in deze bevestiging te staan. */
+  body+=`<div style="margin-top:${(waarschuw.length||notities.length)?'10px':'0'}">${kv(moduleOn('uren')?'Dienstverband':'Loopt deze bron nog?',bronActiefWoord(act))}`;
   if(moduleOn('loon')){
     body+=kv('Hoe vaak',loonFreqTekst(L))+kv('Loondag',loonDagTekst(L));
     if(L.mode!=='manual')body+=kv('Geen werkdag?',loonShiftTekst(L));
     const ruw=rawNextPayday(L);
-    body+=kv('Eerstvolgend loon',act?(ruw?loonDatumUitleg(L,ruw):'kan niet berekend worden'):'niet in dienst');
+    body+=kv('Eerstvolgend loon',act?(ruw?loonDatumUitleg(L,ruw):'kan niet berekend worden'):(moduleOn('uren')?'niet in dienst':'bron is gestopt'));
   }
-  if(featOn('contract')){const cv0=String(window._wcContract||'').trim();body+=kv('Vast aantal uur per week',cv0?cv0+' u/week':'nulurencontract');}
+  /* Contract-uren horen bij gewerkte uren; het invoerscherm laat ze zonder de Uren-module ook al weg. */
+  if(moduleOn('uren')&&featOn('contract')){const cv0=String(window._wcContract||'').trim();body+=kv('Vast aantal uur per week',cv0?cv0+' u/week':'nulurencontract');}
   body+='</div>';
 
   const titel=waarschuw.length?'Let op — dit verandert er':'Opslaan?';
@@ -4694,7 +4732,7 @@ function toonExportVerslag(waar,naam){
     ${naam?`<div class=\"muted\" style=\"font-size:13px;text-align:center;margin:-6px 0 14px\">${esc(naam)}<br>Bewaar dit bestand ergens buiten je telefoon.</div>`:''}
     <div class=\"mini\"><div class=\"mini-h\">Hierin bewaard</div>
     ${rij('Diensten',n(db.shifts))}${rij('Potjes',n(db.potjes))}${rij('Uitgaven en ontvangsten',logs)}
-    ${rij('Werkgevers',n(db.werkgevers))}${rij('Loon-ontvangsten',n(db.loonLog))}${rij('Recepten',n(db.recepten))}
+    ${rij(bronWoord(true,true),n(db.werkgevers))}${rij('Loon-ontvangsten',n(db.loonLog))}${rij('Recepten',n(db.recepten))}
     ${rij('Documenten',n(db.documenten))}</div>
     <div class=\"muted\" style=\"font-size:13px;margin-top:12px\">Je instellingen en welke functies aan staan zitten er ook in. Je pincode bewust niet - die hoort niet in een bestand dat je deelt.</div>
     <button class="primary" style="width:100%;margin-top:16px" onclick="closeSheet()">Klaar</button>`);
@@ -4732,10 +4770,15 @@ async function exportOverzichtPDF(){
     const opzij=round2(db.potjes.reduce((a,p)=>a+potTot(p),0));
     let needTot=0;db.potjes.forEach((p,pi)=>{needTot=round2(needTot+potNeed(pi));});
     const maandUren=db.shifts.filter(s=>s.date.slice(0,7)===isoDate(now).slice(0,7)).reduce((a,s)=>a+hoursOf(s),0);
-    const kpis=[['Totaal spaargeld',eur(totalSaldo())],['Opzij per maand',eur(opzij)],['Nog nodig deze maand',eur(needTot)],['Uren deze maand',fmtDur(maandUren)]];
-    const cw=(PW-80-30)/4;
+    /* Alleen kaarten over dingen die je ook echt bijhoudt — "Uren deze maand: 0u 00m" is misleidend
+       als de Uren-module uit staat. De breedte verdeelt zich over wat er overblijft. */
+    const kpis=[];
+    if(moduleOn('potjes'))kpis.push(['Totaal in je potjes',eur(totalSaldo())],['Opzij per maand',eur(opzij)],['Nog nodig deze maand',eur(needTot)]);
+    if(moduleOn('uren'))kpis.push(['Uren deze maand',fmtDur(maandUren)]);
+    if(!kpis.length&&moduleOn('loon'))kpis.push(['Gemiddeld netto per maand',eur(avgIncome()||0)]);
+    const cw=kpis.length?(PW-80-10*(kpis.length-1))/kpis.length:0;
     kpis.forEach((k,i)=>{const x=40+i*(cw+10);doc.setFillColor(245,250,247);doc.setDrawColor(...LINE);doc.roundedRect(x,y,cw,56,7,7,'FD');doc.setTextColor(...MUT);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.text(k[0],x+9,y+17,{maxWidth:cw-18});doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(12.5);doc.text(k[1],x+9,y+41,{maxWidth:cw-18});});
-    y+=56+26;
+    if(kpis.length)y+=56+26;
     // Loon & uitbetaling
     if(moduleOn('loon')){
       sectie('Loon & uitbetaling');
@@ -4754,7 +4797,7 @@ async function exportOverzichtPDF(){
       if(inc!=null){
         regels.push(['Gemiddeld netto per maand',eur(inc)]);
         regels.push(['Daarvan naar potjes',eur(opzij)]);
-        regels.push(['Houd je over',eur(round2(inc-opzij))]);
+        regels.push(['Hou je over',eur(round2(inc-opzij))]);
       }
       tabel(['Onderdeel','Wat er geldt'],regels);
       /* Liep alleen over db.loon (je hoofdbaan), dus de loondagen van je andere baan stonden helemaal
@@ -4827,7 +4870,7 @@ async function exportOverzichtPDF(){
       const rows=paymentRows(monthStart(now),monthEnd(now));
       if(rows.length){
         sectie('Betalingen deze maand ('+MND[now.getMonth()]+')');
-        tabel(['Vaste last','Datum','Bedrag','Betaal je zelf','Status'],rows.map(x=>[x.it.note?(x.it.n+'\n'+x.it.note):x.it.n,termijnDatumTekst(x.date,x.span||0,true),eur(x.bruto),x.toeslag>0?eur(x.bruto-x.toeslag):eur(x.bruto),x.paid?'Betaald':'Open']),{columnStyles:{2:{halign:'right'},3:{halign:'right'}}});
+        tabel(['Vaste last','Datum','Bedrag','Betaal je zelf','Status'],rows.map(x=>[x.it.note?(x.it.n+'\n'+x.it.note):x.it.n,termijnDatumTekst(x.date,x.span||0,true),eur(x.bruto),x.toeslag>0?eur(x.bruto-x.toeslag):eur(x.bruto),x.paid?'Betaald':x.skipped?'Komt niet':x.telaat?'Te laat':'Open']),{columnStyles:{2:{halign:'right'},3:{halign:'right'}}});
       }
     }
     // Uitgaven laatste 12 mnd

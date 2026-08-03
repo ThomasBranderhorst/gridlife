@@ -636,6 +636,91 @@ const loonLijst=a=>{
     !doc.fout&&doc.extra.aantal===2&&doc.extra.uniek===true, JSON.stringify(doc.extra||doc.fout));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Hoofdbaan omzetten moet je meteen zien: de lijst staat in een sheet bovenop de pagina, dus
+// render() alleen liet je naar de oude badge kijken tot je het scherm sloot en weer opende.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const L=d=>({mode:'month',dag:d,intervalWeeks:4,start:''});
+  const data=basis({werkgevers:['Baan A','Baan B'],
+    werkCfg:Object.assign(werk('Baan A',L(20)),werk('Baan B',L(8))),
+    hoofdwerk:'Baan A'});
+  const r=run(data,a=>{
+    /* Het lijst-element vasthouden, zodat we zien wat de app erin tekent. */
+    const cel={innerHTML:'',style:{},classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},setAttribute(){},removeAttribute(){}};
+    const oud=globalThis.document.getElementById;
+    globalThis.document.getElementById=id=>id==='bhList'?cel:oud(id);
+    globalThis.window._bk='werkgevers';
+    a.renderBhList();
+    const voor=cel.innerHTML;
+    a.zetHoofdBaan('Baan B');
+    const na=cel.innerHTML;
+    globalThis.document.getElementById=oud;
+    /* De badge hoort achter de naam te staan waar je net op tikte. */
+    const badgeNa=w=>new RegExp(w+'</b>[^]{0,400}?Hoofdbaan').test(na);
+    return{hoofdwerk:a.db.hoofdwerk,veranderd:voor!==na,badgeB:badgeNa('Baan B'),badgeA:badgeNa('Baan A')};
+  });
+  meld('hoofdbaan omzetten: de lijst werkt meteen bij, zonder sluiten en opnieuw openen',
+    !r.fout&&r.extra&&r.extra.veranderd&&r.extra.badgeB&&!r.extra.badgeA&&r.extra.hoofdwerk==='Baan B',
+    JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Een huur die nog openstaat gaat er nog steeds af. Viel die datum uit de projectie, dan zei de app
+// "je loopt een maand voor" terwijl er een maandhuur klaarstond om afgeschreven te worden.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const nu=run(basis(),a=>a.isoDate(a.vandaag())).extra;
+  const eerste=nu.slice(0,8)+'01';
+  const potje=extraVeld=>basis({potjes:[Object.assign({n:'Vaste lasten',maand:0,saldo:900,items:[
+    {id:'i1',n:'Huur',v:900,fn:1,fu:'m',due:eerste,paidDates:{},skipDates:{},toeslagen:[]}],uitgaven:[]},extraVeld||{})]});
+
+  const open=run(potje(),a=>({voor:a.looptEenMaandVoor(),uit:a.potProjectie(0).uit,tekort:a.potMonthStatus(0).tekort}));
+  meld('openstaande huur van de 1e telt nog mee: geen valse "je loopt een maand voor"',
+    !open.fout&&open.extra.voor===false&&open.extra.uit===900,
+    JSON.stringify(open.extra||open.fout));
+
+  /* Zelfde potje, maar de huur is betaald: dan klopt de geruststelling wél. */
+  const betaald=run(potje(),a=>{a.db.potjes[0].items[0].paidDates[eerste]=true;a.db.potjes[0].saldo=900;
+    return{voor:a.looptEenMaandVoor(),uit:a.potProjectie(0).uit};});
+  meld('is de huur afgevinkt, dan zegt de app wel gewoon dat je een maand voorloopt',
+    !betaald.fout&&betaald.extra.voor===true&&betaald.extra.uit===0,
+    JSON.stringify(betaald.extra||betaald.fout));
+
+  /* "Deze betaling komt niet" haalt geld niet van je rekening, dus hoort er ook niet vanaf. */
+  const over=run(potje(),a=>{a.db.potjes[0].items[0].skipDates[eerste]=true;
+    return{uit:a.potProjectie(0).uit,voor:a.looptEenMaandVoor()};});
+  meld('een betaling op "komt niet" wordt niet meer van je projectie afgetrokken',
+    !over.fout&&over.extra.uit===0&&over.extra.voor===true,
+    JSON.stringify(over.extra||over.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Kapotte diensten uit een oude back-up mogen nooit "NaNu NaNm" op je scherm zetten.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const r=run(basis({werkgevers:['Jumbo'],werkCfg:werk('Jumbo',{mode:'month',dag:25,intervalWeeks:4,start:''}),
+    shifts:[{id:'a',werk:'Jumbo',date:'2026-08-01',start:'x',end:'y',pauze:0},
+            {id:'b',werk:'Jumbo',date:'2026-08-02',start:'09:00',end:'17:00',pauze:-120}]}),
+    a=>({kapot:a.fmtDur(a.hoursOf(a.db.shifts[0])),negPauze:a.fmtDur(a.hoursOf(a.db.shifts[1])),nan:a.fmtDur(NaN)}));
+  meld('kapotte tijden en een negatieve pauze leveren nooit "NaN" of extra uren op',
+    !r.fout&&r.extra.kapot==='0u 00m'&&r.extra.negPauze==='8u 00m'&&r.extra.nan==='0u 00m',
+    JSON.stringify(r.extra||r.fout));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Een document zonder eigen waarschuwtermijn hoort op de standaard van 3 maanden te staan —
+// hetzelfde als wat het invoerscherm voorstelt.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const r=run(basis({documenten:[{id:'d1',n:'Paspoort',type:'Paspoort',verloopt:'2030-01-01'}]}),
+    a=>({zonder:a.docWarnDays(a.db.documenten[0]),drieMnd:a.docWarnDays({warnN:3,warnU:'m'}),nul:a.docWarnDays({warnN:0,warnU:'m'})}));
+  meld('document zonder ingestelde termijn waarschuwt 3 maanden vooraf, net als het invoerscherm belooft',
+    !r.fout&&r.extra.zonder===r.extra.drieMnd&&r.extra.nul===0,
+    JSON.stringify(r.extra||r.fout));
+}
+
 console.log(check.join('\n'));
 const fout=check.filter(c=>c.startsWith('FOUT')).length;
 console.log('\n'+(fout?fout+' SCENARIO\'S GEFAALD':'alle '+check.length+' scenariocontroles kloppen'));
